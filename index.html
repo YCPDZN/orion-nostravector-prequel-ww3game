@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#050403">
+<title>ORION — The Third World War</title>
+<style>
+:root{--gold:#c9a86a;--gold2:#e8d3a0;--red:#8e1b12;--ink:#0b0908;--serif:"Cormorant Garamond","Garamond","EB Garamond","Palatino Linotype","Book Antiqua",Georgia,"Times New Roman",serif}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+html,body{margin:0;height:100%;background:#000;overflow:hidden;color:#e9e2d4;font-family:var(--serif);touch-action:none;overscroll-behavior:none}
+#c{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;display:block}
+.layer{position:fixed;inset:0;pointer-events:none}
+.hidden{display:none!important}
+/* ---------- HUD ---------- */
+#hud{padding:max(14px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left))}
+.bars{position:absolute;left:max(18px,env(safe-area-inset-left));top:max(14px,env(safe-area-inset-top));width:min(38vw,380px)}
+.bar{height:9px;margin-bottom:5px;background:rgba(0,0,0,.6);border:1px solid rgba(201,168,106,.45);position:relative;overflow:hidden}
+.bar i{position:absolute;inset:0;transform-origin:left;transition:transform .08s linear}
+.bar b{position:absolute;inset:0;transform-origin:left;background:rgba(255,220,170,.35);transition:transform .6s ease .25s}
+#hpb i{background:linear-gradient(#b3261a,#6d120b)} #stb i{background:linear-gradient(#4f8c47,#2a5426)}
+#stb{width:80%}
+.stims{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:15px;letter-spacing:.08em;color:var(--gold2);text-shadow:0 1px 3px #000}
+.stims .vial{width:12px;height:22px;border:1px solid var(--gold);border-radius:3px 3px 5px 5px;background:linear-gradient(transparent 30%,#2fd28a 30%);box-shadow:0 0 8px #2fd28a66}
+.stims .vial.empty{background:none;box-shadow:none;opacity:.5}
+#scrap{position:absolute;right:max(20px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));font-size:20px;letter-spacing:.1em;color:var(--gold2);text-shadow:0 2px 6px #000;padding:6px 14px;border:1px solid rgba(201,168,106,.35);background:linear-gradient(90deg,transparent,rgba(0,0,0,.55))}
+#scrap small{font-size:11px;letter-spacing:.3em;color:var(--gold);margin-right:8px}
+#bossbar{position:absolute;left:50%;transform:translateX(-50%);bottom:max(38px,calc(env(safe-area-inset-bottom) + 24px));width:min(64vw,720px)}
+#bossbar .nm{font-size:17px;letter-spacing:.12em;margin-bottom:5px;text-shadow:0 2px 4px #000}
+#bossbar .bar{height:11px} #bossbar .bar i{background:linear-gradient(#a32416,#5c0f08)}
+#sub{position:absolute;left:50%;transform:translateX(-50%);bottom:22%;width:min(80vw,760px);text-align:center;font-size:clamp(15px,2.2vw,21px);line-height:1.35;text-shadow:0 2px 4px #000,0 0 12px #000;transition:opacity .4s}
+#sub b{color:var(--gold);font-weight:600;letter-spacing:.06em}
+#toast{position:absolute;left:50%;top:26%;transform:translateX(-50%);font-size:16px;letter-spacing:.2em;color:var(--gold2);text-shadow:0 2px 6px #000;opacity:0;transition:opacity .3s}
+#prompt{position:absolute;left:50%;bottom:30%;transform:translateX(-50%);padding:8px 22px;background:rgba(0,0,0,.65);border-top:1px solid rgba(201,168,106,.6);border-bottom:1px solid rgba(201,168,106,.6);font-size:16px;letter-spacing:.12em}
+#prompt kbd{font-family:inherit;color:var(--gold2);border:1px solid var(--gold);padding:0 6px;margin-right:8px;border-radius:3px}
+#lockon{position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;border:2px solid rgba(255,240,210,.85);border-radius:50%;box-shadow:0 0 10px rgba(255,200,120,.7);transform:rotate(45deg)}
+#lockon::after{content:"";position:absolute;inset:6px;background:#fff8e6;border-radius:50%}
+.ehp{position:absolute;width:70px;height:5px;margin-left:-35px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.25)}
+.ehp i{position:absolute;inset:0;background:#b3261a;transform-origin:left}
+#banner{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;opacity:0;transition:opacity 1.2s;pointer-events:none}
+#banner .band{width:100%;padding:3vh 0;background:linear-gradient(90deg,transparent,rgba(0,0,0,.78) 25%,rgba(0,0,0,.78) 75%,transparent);text-align:center}
+#banner h1{margin:0;font-weight:400;font-size:clamp(36px,8vw,92px);letter-spacing:.12em}
+#banner p{margin:.3em 0 0;font-size:clamp(13px,1.6vw,17px);letter-spacing:.35em;color:var(--gold)}
+#banner.red h1{color:#a8160c;text-shadow:0 0 30px rgba(150,0,0,.5)} #banner.gold h1{color:var(--gold2);text-shadow:0 0 30px rgba(255,210,120,.35)}
+/* ---------- menus ---------- */
+.screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;pointer-events:auto;background:radial-gradient(ellipse at center,rgba(0,0,0,.25),rgba(0,0,0,.85))}
+.panel{min-width:min(92vw,420px);max-width:92vw;max-height:88vh;overflow:auto;padding:22px 30px;background:linear-gradient(rgba(14,11,9,.94),rgba(6,5,4,.94));border:1px solid rgba(201,168,106,.5);box-shadow:0 0 60px #000}
+.panel h2{margin:0 0 12px;font-weight:400;letter-spacing:.2em;color:var(--gold2);font-size:22px;text-align:center}
+.btn{display:block;width:100%;margin:8px 0;padding:11px 16px;background:transparent;color:#e9e2d4;border:1px solid rgba(201,168,106,.35);font-family:var(--serif);font-size:18px;letter-spacing:.14em;cursor:pointer;pointer-events:auto}
+.btn:hover,.btn:focus{background:rgba(201,168,106,.12);border-color:var(--gold);outline:none}
+.btn:disabled{opacity:.35}
+.row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:6px 0;border-bottom:1px solid rgba(201,168,106,.15);font-size:17px}
+.row .v{color:var(--gold2);min-width:3ch;text-align:right}
+.row .btn{display:inline-block;width:auto;margin:0 0 0 8px;padding:2px 12px;font-size:16px}
+.row .v{display:inline-block}
+.small{font-size:13px;color:#b9ad97;letter-spacing:.05em;line-height:1.5}
+#title{background:radial-gradient(ellipse at 50% 60%,rgba(0,0,0,.05),rgba(0,0,0,.8))}
+#title h1{margin:0;font-weight:300;font-size:clamp(44px,10vw,120px);letter-spacing:.32em;padding-left:.32em;color:#efe4cc;text-shadow:0 0 40px rgba(255,170,90,.35)}
+#title .tag{letter-spacing:.55em;padding-left:.55em;color:var(--gold);font-size:clamp(12px,1.8vw,18px);margin:4px 0 6vh}
+#title .menu{width:min(80vw,320px)}
+#title .foot{position:absolute;bottom:max(14px,env(safe-area-inset-bottom));font-size:12px;letter-spacing:.2em;color:#8d826f}
+#crawl{background:#000;cursor:pointer}
+#crawl .txt{position:relative;width:min(86vw,780px);height:60vh;text-align:center;color:#d8ccb3}
+#crawl .txt p{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);margin:0;opacity:0;transition:opacity 1.2s;font-size:clamp(17px,min(3vw,5.2vh),30px);line-height:1.55}
+#crawl .txt p.first{font-size:clamp(26px,min(5vw,9vh),54px);letter-spacing:.2em;color:#efe4cc}
+#crawl .skip{position:absolute;bottom:max(18px,env(safe-area-inset-bottom));right:max(24px,env(safe-area-inset-right));font-size:13px;letter-spacing:.25em;color:#8d826f}
+#loading{background:#000}
+#loading .lt{letter-spacing:.4em;color:var(--gold);font-size:14px}
+#loading .lb{width:min(60vw,360px);height:2px;background:#222;margin-top:14px}
+#loading .lb i{display:block;height:100%;background:var(--gold);width:0;transition:width .2s}
+#rotate{background:rgba(0,0,0,.9);text-align:center;padding:30px;font-size:18px;letter-spacing:.1em;z-index:50}
+/* ---------- touch controls ---------- */
+#touch{pointer-events:none}
+#touch .btnt{position:absolute;pointer-events:auto;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:12px;letter-spacing:.12em;color:rgba(240,230,210,.92);background:radial-gradient(rgba(30,24,18,.55),rgba(10,8,6,.7));border:1.5px solid rgba(201,168,106,.55);box-shadow:0 0 14px rgba(0,0,0,.6);touch-action:none}
+#touch .btnt.on{background:radial-gradient(rgba(201,168,106,.55),rgba(80,60,30,.7));border-color:#f2dfb0}
+#touch .btnt svg{width:46%;height:46%;fill:none;stroke:currentColor;stroke-width:2}
+#touch .btnt span{position:absolute;bottom:-17px;font-size:10px;letter-spacing:.18em;color:rgba(230,215,185,.75);text-shadow:0 1px 2px #000}
+#stick{position:absolute;width:130px;height:130px;margin:-65px 0 0 -65px;border-radius:50%;border:1.5px solid rgba(201,168,106,.4);background:radial-gradient(rgba(0,0,0,.15),rgba(0,0,0,.35));pointer-events:none;opacity:.0;transition:opacity .15s}
+#stick i{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:radial-gradient(rgba(240,225,190,.55),rgba(160,130,80,.35));border:1px solid rgba(255,240,200,.6)}
+#pauseBtn{position:absolute;right:max(14px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));width:42px;height:42px;pointer-events:auto;border:1px solid rgba(201,168,106,.5);background:rgba(0,0,0,.45);color:var(--gold2);font-size:18px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+body.touchmode #scrap{bottom:auto;top:max(12px,env(safe-area-inset-top));right:calc(66px + env(safe-area-inset-right));font-size:16px;padding:4px 10px}
+body.touchmode #sub{bottom:auto;top:16%;width:min(62vw,620px)}
+body.touchmode #prompt{bottom:auto;top:58%}
+body.touchmode #toast{top:30%}
+body.touchmode #bossbar{width:min(52vw,600px);left:44%}
+@media (max-height:500px){ .bars{width:min(34vw,300px)} .bar{height:7px} #banner h1{font-size:clamp(30px,9vh,64px)} #sub{bottom:30%} }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="hud" class="layer hidden">
+  <div class="bars">
+    <div class="bar" id="hpb"><b></b><i></i></div>
+    <div class="bar" id="stb"><b></b><i></i></div>
+    <div class="stims" id="stims"></div>
+  </div>
+  <div id="scrap"><small>SCRAP</small><span id="scrapv">0</span></div>
+  <div id="bossbar" class="hidden"><div class="nm" id="bossname"></div><div class="bar"><b></b><i></i></div></div>
+  <div id="sub"></div>
+  <div id="toast"></div>
+  <div id="prompt" class="hidden"></div>
+  <div id="lockon" class="hidden"></div>
+  <div id="ehps"></div>
+  <button id="pauseBtn" aria-label="Pause">❚❚</button>
+</div>
+
+<div id="touch" class="layer hidden">
+  <div id="stick"><i></i></div>
+</div>
+
+<div id="banner"><div class="band"><h1 id="bannerT"></h1><p id="bannerS"></p></div></div>
+
+<div id="loading" class="screen"><div class="lt">LOADING</div><div class="lb"><i id="lbar"></i></div><div class="small" id="lmsg" style="margin-top:12px"></div></div>
+
+<div id="title" class="screen hidden">
+  <h1>ORION</h1>
+  <div class="tag">THE THIRD WORLD WAR</div>
+  <div class="menu">
+    <button class="btn" id="bContinue">CONTINUE</button>
+    <button class="btn" id="bNew">NEW GAME</button>
+    <button class="btn" id="bSettings">SETTINGS</button>
+    <button class="btn" id="bControls">CONTROLS</button>
+  </div>
+  <div class="foot">NEW LONDON · NOVEMBER 2090</div>
+</div>
+
+<div id="crawl" class="screen hidden"><div class="txt" id="crawlTxt"></div><div class="skip">TAP / PRESS ANY KEY TO CONTINUE</div></div>
+
+<div id="pause" class="screen hidden"><div class="panel">
+  <h2>PAUSED</h2>
+  <button class="btn" id="pResume">RESUME</button>
+  <button class="btn" id="pSettings">SETTINGS</button>
+  <button class="btn" id="pControls">CONTROLS</button>
+  <button class="btn" id="pQuit">QUIT TO TITLE</button>
+</div></div>
+
+<div id="rest" class="screen hidden" style="background:radial-gradient(ellipse at center,rgba(0,10,25,.2),rgba(0,0,0,.75))"><div class="panel">
+  <h2 id="restName">BEACON</h2>
+  <div class="small" style="text-align:center;margin-bottom:10px">Health and stims restored. The war machines stir again.</div>
+  <button class="btn" id="rLevel">REINFORCE</button>
+  <button class="btn" id="rLeave">LEAVE</button>
+</div></div>
+
+<div id="level" class="screen hidden"><div class="panel">
+  <h2>REINFORCE</h2>
+  <div class="row"><span>Rank</span><span class="v" id="lvRank"></span></div>
+  <div class="row"><span>Scrap held</span><span class="v" id="lvScrap"></span></div>
+  <div class="row"><span>Cost per upgrade</span><span class="v" id="lvCost"></span></div>
+  <div class="row"><span>Vigor <span class="small">— health</span></span><span><span class="v" id="lvVig"></span> <button class="btn" data-up="vig">+</button></span></div>
+  <div class="row"><span>Endurance <span class="small">— stamina</span></span><span><span class="v" id="lvEnd"></span> <button class="btn" data-up="end">+</button></span></div>
+  <div class="row"><span>Strength <span class="small">— blade damage</span></span><span><span class="v" id="lvStr"></span> <button class="btn" data-up="str">+</button></span></div>
+  <div class="row"><span>Stim capacity <span class="small">— every 3 ranks</span></span><span class="v" id="lvStim"></span></div>
+  <button class="btn" id="lvBack" style="margin-top:14px">BACK</button>
+</div></div>
+
+<div id="settings" class="screen hidden"><div class="panel">
+  <h2>SETTINGS</h2>
+  <div class="row"><span>Graphics</span><span><button class="btn" id="sQual"></button></span></div>
+  <div class="row"><span>Camera sensitivity</span><span><button class="btn" data-sens="-1">−</button> <span class="v" id="sSens"></span> <button class="btn" data-sens="1">+</button></span></div>
+  <div class="row"><span>Invert camera Y</span><span><button class="btn" id="sInv"></button></span></div>
+  <div class="row"><span>Volume</span><span><button class="btn" data-vol="-1">−</button> <span class="v" id="sVol"></span> <button class="btn" data-vol="1">+</button></span></div>
+  <div class="row"><span>Touch controls</span><span><button class="btn" id="sTouch"></button></span></div>
+  <div class="small" style="margin-top:10px">Graphics changes apply after reloading.</div>
+  <button class="btn" id="sBack" style="margin-top:10px">BACK</button>
+</div></div>
+
+<div id="controls" class="screen hidden"><div class="panel" style="max-width:640px">
+  <h2>CONTROLS</h2>
+  <div class="small" style="font-size:14px">
+  <b style="color:var(--gold2)">Keyboard &amp; mouse</b> — click the game to capture the mouse.<br>
+  WASD move · Mouse look · <b>Left click</b> light attack · <b>F</b> heavy attack · <b>Right click / Q</b> block (hold) ·
+  <b>Space</b> roll · <b>Shift</b> sprint (hold) · <b>R</b> use stim · <b>Tab / middle click</b> lock on · <b>E</b> interact · <b>Esc</b> pause<br><br>
+  <b style="color:var(--gold2)">Touch</b> — drag the left side to move (push to the edge to run), drag the right side to look.
+  Buttons: ATTACK, HEAVY, ROLL, BLOCK (hold), STIM, LOCK, and ACT when something can be used.<br><br>
+  <b style="color:var(--gold2)">Gamepad</b> — Left stick move · Right stick look · RB light · RT heavy · LB block · B/Circle roll · X/Square stim ·
+  R3 lock on · A/Cross interact · Start pause<br><br>
+  Rolling makes you briefly untouchable. Every swing, roll and block costs stamina. Rest at Signal Beacons to restore
+  health and stims — but every war machine you destroyed will rise again. Die, and your scrap stays where you fell.
+  </div>
+  <button class="btn" id="cBack" style="margin-top:12px">BACK</button>
+</div></div>
+
+<div id="rotate" class="screen hidden"><div>For the best experience,<br>turn your device to landscape.<br><br><button class="btn" id="rotOk" style="width:auto;display:inline-block">PLAY ANYWAY</button></div></div>
+
+<script src="js/engine.js"></script>
+<script src="js/world.js"></script>
+<script src="js/actors.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/game.js"></script>
+<script>
+// models are loaded after the page shows the loading screen
+(function () {
+  const s = document.createElement('script'); s.src = 'assets/models.js';
+  s.onload = () => window.GM && GM.boot();
+  s.onerror = () => { document.getElementById('lmsg').textContent = 'Could not load assets/models.js'; };
+  document.body.appendChild(s);
+})();
+</script>
+</body>
+</html>

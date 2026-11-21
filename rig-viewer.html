@@ -1,0 +1,36 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Orion — Rig Viewer</title>
+<style>body{margin:0;background:#000;color:#e9e2d4;font-family:Georgia,serif;overflow:hidden}#c{width:100vw;height:100vh;display:block}
+#ui{position:fixed;left:12px;top:12px;display:flex;flex-wrap:wrap;gap:6px;max-width:96vw}
+button{background:rgba(0,0,0,.6);color:#e9e2d4;border:1px solid #c9a86a88;padding:6px 10px;font-family:inherit;cursor:pointer}button.on{background:#c9a86a44}</style></head>
+<body><canvas id="c"></canvas><div id="ui"></div>
+<script src="js/engine.js"></script><script src="assets/models.js"></script>
+<script>
+(async () => {
+  OE.init(document.getElementById('c'), { shadow: 1024, dpr: 1.5, msaa: 4, bloom: true, particles: 10, shadowExt: 6, drawDist: 100, aniso: 4 });
+  OE.scene = new OE.Node(); const R = OE.R;
+  const tex = OE.proceduralTex('concrete', 256);
+  const g = new OE.Geo(); g.box([0, -0.5, 0], [30, 1, 30]);
+  OE.scene.add(new OE.Node(g.build(), { mode: 1, triA: tex.albedo, triN: tex.normal, triScale: 0.3, rough: 0.9 }));
+  const dec = s => { const b = atob(s); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u.buffer; };
+  const A = { orion: await OE.loadGLB(dec(ORION_MODELS.orion)), thomas: await OE.loadGLB(dec(ORION_MODELS.thomas)) };
+  const chars = { orion: new OE.Character(A.orion, { rim: 0.2 }), thomas: new OE.Character(A.thomas, { rim: 0.2 }) };
+  chars.orion.node.pos = [-0.8, 0, 0]; chars.thomas.node.pos = [0.8, 0, 0];
+  for (const k in chars) { OE.scene.add(chars[k].node); chars[k].play('Idle', 0); }
+  R.lights.push({ pos: [2, 2.5, 3], color: [1, 0.55, 0.25], intensity: 4, range: 12 }, { pos: [-3, 2, -2], color: [0.4, 0.6, 1], intensity: 3, range: 10 });
+  R.fogDen = 0.01; R.sky = [0.18, 0.18, 0.24]; R.ground = [0.12, 0.09, 0.07]; R.sunCol = [1.4, 1.4, 1.5];
+  const ui = document.getElementById('ui');
+  const names = [...new Set([...Object.keys(A.orion.clips), ...Object.keys(A.thomas.clips)])];
+  names.forEach(n => { const b = document.createElement('button'); b.textContent = n; b.onclick = () => { for (const k in chars) if (chars[k].a.clips[n]) chars[k].play(n, 0.2, 1, true); document.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); }; ui.appendChild(b); });
+  let ang = 0, last = performance.now(), drag = null;
+  addEventListener('pointerdown', e => drag = e.clientX); addEventListener('pointerup', () => drag = null);
+  addEventListener('pointermove', e => { if (drag !== null) { ang -= (e.clientX - drag) * 0.01; drag = e.clientX; } });
+  addEventListener('resize', () => OE.resize());
+  (function loop(t) {
+    requestAnimationFrame(loop); const dt = Math.min(0.05, (t - last) / 1000); last = t;
+    if (drag === null) ang += dt * 0.2;
+    for (const k in chars) { const c = chars[k]; c.update(dt); if (c.finished && !c.cur.loop) c.play('Idle', 0.3); }
+    OE.resize(); OE.render({ fov: 0.75, pos: [Math.sin(ang) * 5, 1.6, Math.cos(ang) * 5], target: [0, 0.95, 0] }, null);
+  })(last);
+})();
+</script></body></html>

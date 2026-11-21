@@ -1,0 +1,584 @@
+/* ORION — The Third World War. Main game controller. */
+(function () {
+'use strict';
+const GM = window.GM = {};
+const $ = (id) => document.getElementById(id);
+const rnd = Math.random, R = (a, b) => a + (b - a) * rnd();
+const isTouch = matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window && navigator.maxTouchPoints > 0);
+
+/* ---------------- settings & save ---------------- */
+const SET_KEY = 'orion_ww3_settings', SAVE_KEY = 'orion_ww3_save';
+const load = (k, d) => { try { return Object.assign({}, d, JSON.parse(localStorage.getItem(k) || '{}')); } catch (e) { return Object.assign({}, d); } };
+const store = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
+GM.settings = load(SET_KEY, { quality: 'auto', sens: 5, inv: false, vol: 8, touch: 'auto' });
+const NEW_SAVE = { started: false, vig: 0, end: 0, str: 0, rank: 1, scrap: 0, maxStims: 4, beacon: 0, lit: [true, false], bossDead: false, echo: null, seen: {} };
+GM.save = load(SAVE_KEY, NEW_SAVE);
+GM.persist = () => store(SAVE_KEY, GM.save);
+const QUALITY = {
+  low: { shadow: 1024, dpr: 1, msaa: 2, bloom: false, particles: 1200, shadowExt: 18, drawDist: 70, aniso: 2 },
+  medium: { shadow: 1536, dpr: 1.5, msaa: 4, bloom: true, particles: 2000, shadowExt: 22, drawDist: 95, aniso: 4 },
+  high: { shadow: 2048, dpr: 2, msaa: 4, bloom: true, particles: 3000, shadowExt: 26, drawDist: 130, aniso: 8 },
+};
+const qName = () => GM.settings.quality === 'auto' ? (isTouch ? 'medium' : 'high') : GM.settings.quality;
+const touchOn = () => GM.settings.touch === 'on' || (GM.settings.touch === 'auto' && isTouch);
+
+/* ---------------- state ---------------- */
+GM.state = 'loading'; GM.enemies = []; GM.projectiles = []; GM.markers = []; GM.shocks = []; GM.lock = null; GM.audio = AU;
+GM.cam = { yaw: 0, pitch: 0.28, dist: isTouch ? 4.6 : 4.2, pos: [0, 2, -4], target: [0, 1.5, 0], fov: 1.0, shake: 0 };
+let hs = 0, flashT = 8, lastT = 0, time = 0, boss = null;
+GM.hitstop = (t) => { hs = Math.max(hs, t); };
+GM.shake = (a) => { GM.cam.shake = Math.min(1, GM.cam.shake + a); };
+
+const SPAWNS = [['trooper', [2, 0, 24]], ['trooper', [-3, 0, 38.6]], ['drone', [0, 0, 46]], ['trooper', [4, 0, 53]], ['trooper', [-2, 0, 58]],
+  ['brute', [-3, 0, 64]], ['drone', [3, 0, 78]], ['trooper', [-1, 0, 87]], ['trooper', [4, 0, 91]], ['drone', [-2, 0, 93]],
+  ['brute', [1, 0, 111]], ['trooper', [-4, 0, 115.5]], ['trooper', [4, 0, 117]]];
+
+/* ---------------- boot ---------------- */
+GM.boot = async function () {
+  const msg = (t, p) => { $('lmsg').textContent = t; $('lbar').style.width = (p * 100) + '%'; };
+  try {
+    msg('Preparing renderer', 0.05); await tick();
+    OE.init($('c'), QUALITY[qName()]);
+    OE.scene = new OE.Node();
+    msg('Building New London', 0.15); await tick();
+    W.build();
+    msg('Loading Orion Mascar', 0.45); await tick();
+    const dec = (s) => { const b = atob(s); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u.buffer; };
+    const orion = await OE.loadGLB(dec(ORION_MODELS.orion));
+    msg('Loading Thomas Hawthorne', 0.7); await tick();
+    const thomas = await OE.loadGLB(dec(ORION_MODELS.thomas));
+    msg('Waking the war machines', 0.9); await tick();
+    GM.parts = new OE.Particles(QUALITY[qName()].particles);
+    GM.player = new A.Player(orion); GM.companion = new A.Companion(thomas);
+    for (const [t, p] of SPAWNS) GM.enemies.push(new A.Enemy(t, p, Math.PI));
+    boss = new A.Enemy('boss', [0, 0, 157], Math.PI); GM.enemies.push(boss); GM.boss = boss;
+    respawnAll(true);
+    setupInput(); setupUI();
+    msg('', 1);
+    $('loading').classList.add('hidden');
+    showTitle();
+    lastT = performance.now(); requestAnimationFrame(frame);
+    document.title = 'ORION — The Third World War';
+    window.__ready = true;
+  } catch (e) {
+    console.error(e); $('lmsg').textContent = 'Error: ' + e.message; document.title = 'ERR ' + e.message;
+  }
+};
+const tick = () => new Promise((r) => setTimeout(r, 16));
+
+function spawnPoint() {
+  const b = W.beacons[GM.save.beacon] || W.beacons[0];
+  return { pos: [b.pos[0] - 1.3, 0, b.pos[2] + 1.4], yaw: 0 };
+}
+function respawnAll(first) {
+  const sp = spawnPoint();
+  GM.player.reset(sp.pos, sp.yaw);
+  GM.companion.reset([sp.pos[0] - 1.6, 0, sp.pos[2] - 0.8]);
+  for (const e of GM.enemies) { if (e.boss && GM.save.bossDead) { e.alive = false; e.state = 'dead'; e.root.visible = false; continue; } e.reset(); }
+  GM.projectiles.length = 0; GM.markers.length = 0; GM.shocks.length = 0; GM.lock = null;
+  W.beacons.forEach((b, i) => setBeaconLit(b, !!GM.save.lit[i]));
+  W.gate.sealed = false; W.sealCol.off = true; W.gateCol.off = GM.save.bossDead; W.gate.node.visible = !GM.save.bossDead;
+  GM.inBoss = false; $('bossbar').classList.add('hidden'); AU.bossMusic(false);
+  GM.cam.yaw = sp.yaw; GM.cam.pitch = 0.28;
+  OE.R.desat = 0;
+}
+function setBeaconLit(b, lit) {
+  b.lit = lit; b.beam.visible = lit; b.core.mat.emissive = lit ? [1.2, 2.6, 5] : [0.2, 0.5, 1.0]; b.light.intensity = lit ? 3.5 : 0.6; b.light.range = lit ? 12 : 8;
+}
+
+/* ---------------- input ---------------- */
+const keys = {}; const edge = {}; let mdx = 0, mdy = 0, mouseL = false, mouseR = false;
+function lockPointer() {
+  if (isTouch || GM.noLock) return; const cv = $('c'); if (!cv.requestPointerLock) { GM.noLock = true; return; }
+  try { const r = cv.requestPointerLock(); if (r && r.catch) r.catch(() => { GM.noLock = true; }); } catch (e) { GM.noLock = true; }
+}
+let drag = null;
+const touch = { stickId: null, sx: 0, sy: 0, mx: 0, my: 0, camId: null, cx: 0, cy: 0, dx: 0, dy: 0, btn: {}, edge: {} };
+let padPrev = {};
+function press(name) { edge[name] = true; }
+function setupInput() {
+  addEventListener('keydown', (e) => {
+    if (e.repeat) { if (['Tab', 'Space'].includes(e.code)) e.preventDefault(); return; }
+    keys[e.code] = true; AU.init();
+    const map = { Space: 'roll', KeyR: 'heal', KeyF: 'heavy', KeyJ: 'attack', KeyK: 'heavy', KeyE: 'interact', Tab: 'lock', Escape: 'pause', KeyP: 'pause', Enter: 'confirm' };
+    if (map[e.code]) { press(map[e.code]); e.preventDefault(); }
+    if (GM.state === 'crawl') endCrawl();
+  });
+  addEventListener('keyup', (e) => { keys[e.code] = false; });
+  const cv = $('c');
+  cv.addEventListener('mousedown', (e) => {
+    AU.init();
+    if (isTouch && e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return;
+    if (GM.state !== 'play') return;
+    if (GM.noLock) { if (e.button === 0) drag = { x: e.clientX, y: e.clientY, moved: false }; else if (e.button === 2) mouseR = true; else if (e.button === 1) press('lock'); return; }
+    if (document.pointerLockElement !== cv) { lockPointer(); return; }
+    if (e.button === 0) { mouseL = true; press('attack'); } if (e.button === 2) mouseR = true; if (e.button === 1) { press('lock'); e.preventDefault(); }
+  });
+  addEventListener('mouseup', (e) => { if (e.button === 0) { mouseL = false; if (drag && !drag.moved && GM.state === 'play') press('attack'); drag = null; } if (e.button === 2) mouseR = false; });
+  addEventListener('contextmenu', (e) => e.preventDefault());
+  addEventListener('mousemove', (e) => {
+    if (document.pointerLockElement === cv) { mdx += e.movementX; mdy += e.movementY; }
+    else if (drag) { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 5) drag.moved = true; if (drag.moved) { mdx += dx * 1.4; mdy += dy * 1.4; } drag.x = e.clientX; drag.y = e.clientY; }
+  });
+  document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement && GM.state === 'play' && !isTouch && !GM.noLock) openPause(); });
+  document.addEventListener('pointerlockerror', () => { GM.noLock = true; });
+  // touch: left half = move stick, right half = camera
+  const stick = $('stick'), knob = stick.querySelector('i');
+  cv.addEventListener('touchstart', (e) => {
+    AU.init(); e.preventDefault();
+    if (GM.state === 'crawl') { endCrawl(); return; }
+    for (const t of e.changedTouches) {
+      if (t.clientX < innerWidth * 0.45 && touch.stickId === null) { touch.stickId = t.identifier; touch.sx = t.clientX; touch.sy = t.clientY; touch.mx = touch.my = 0; stick.style.left = t.clientX + 'px'; stick.style.top = t.clientY + 'px'; stick.style.opacity = 1; knob.style.transform = ''; }
+      else if (touch.camId === null) { touch.camId = t.identifier; touch.cx = t.clientX; touch.cy = t.clientY; }
+    }
+  }, { passive: false });
+  cv.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      if (t.identifier === touch.stickId) {
+        let dx = t.clientX - touch.sx, dy = t.clientY - touch.sy; const l = Math.hypot(dx, dy), max = 55;
+        if (l > max) { // drag the stick origin along
+          touch.sx += dx * (1 - max / l) * 0.5; touch.sy += dy * (1 - max / l) * 0.5; stick.style.left = touch.sx + 'px'; stick.style.top = touch.sy + 'px';
+          dx = t.clientX - touch.sx; dy = t.clientY - touch.sy;
+        }
+        const m = Math.min(1, Math.hypot(dx, dy) / max); const a = Math.atan2(dy, dx);
+        touch.mx = Math.cos(a) * m; touch.my = -Math.sin(a) * m;
+        knob.style.transform = `translate(${Math.cos(a) * m * max * 0.8}px,${Math.sin(a) * m * max * 0.8}px)`;
+      } else if (t.identifier === touch.camId) { touch.dx += t.clientX - touch.cx; touch.dy += t.clientY - touch.cy; touch.cx = t.clientX; touch.cy = t.clientY; }
+    }
+  }, { passive: false });
+  const tend = (e) => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === touch.stickId) { touch.stickId = null; touch.mx = touch.my = 0; stick.style.opacity = 0; }
+      if (t.identifier === touch.camId) touch.camId = null;
+    }
+  };
+  cv.addEventListener('touchend', tend); cv.addEventListener('touchcancel', tend);
+  buildTouchButtons();
+}
+const ICONS = {
+  attack: '<svg viewBox="0 0 24 24"><path d="M4 20 L15 9 M14 4 L20 4 L20 10 L9 21 L3 21 L3 15 Z"/></svg>',
+  heavy: '<svg viewBox="0 0 24 24"><path d="M12 2 V16 M7 7 L12 2 L17 7 M6 20 H18"/></svg>',
+  roll: '<svg viewBox="0 0 24 24"><path d="M20 12 A8 8 0 1 1 12 4 M12 4 L16 2 M12 4 L15 8"/></svg>',
+  block: '<svg viewBox="0 0 24 24"><path d="M12 2 L20 5 V12 C20 17 16 20 12 22 C8 20 4 17 4 12 V5 Z"/></svg>',
+  heal: '<svg viewBox="0 0 24 24"><path d="M9 3 H15 M10 3 V8 L6 18 C5 21 19 21 18 18 L14 8 V3 M8 14 H16"/></svg>',
+  lock: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2 V6 M12 18 V22 M2 12 H6 M18 12 H22"/></svg>',
+  interact: '<svg viewBox="0 0 24 24"><path d="M7 12 L11 16 L18 8"/></svg>',
+};
+function buildTouchButtons() {
+  const L = $('touch');
+  const defs = [['attack', 'ATTACK', 80, 26, 34], ['heavy', 'HEAVY', 58, 120, 20], ['roll', 'ROLL', 62, 30, 140], ['block', 'BLOCK', 58, 116, 106],
+    ['heal', 'STIM', 48, 196, 26], ['lock', 'LOCK', 44, 36, 230], ['interact', 'ACT', 58, 198, 104]];
+  for (const [id, label, size, right, bottom] of defs) {
+    const b = document.createElement('div'); b.className = 'btnt'; b.id = 'tb_' + id;
+    b.style.cssText = `width:${size}px;height:${size}px;right:calc(${right}px + env(safe-area-inset-right));bottom:calc(${bottom}px + env(safe-area-inset-bottom))`;
+    b.innerHTML = ICONS[id] + `<span>${label}</span>`;
+    const down = (e) => { e.preventDefault(); e.stopPropagation(); AU.init(); touch.btn[id] = true; touch.edge[id] = true; b.classList.add('on'); };
+    const up = (e) => { e.preventDefault(); touch.btn[id] = false; b.classList.remove('on'); };
+    b.addEventListener('touchstart', down, { passive: false }); b.addEventListener('touchend', up); b.addEventListener('touchcancel', up);
+    b.addEventListener('mousedown', down); b.addEventListener('mouseup', up); b.addEventListener('mouseleave', up);
+    L.appendChild(b);
+  }
+}
+function readInput(dt) {
+  const inp = { mx: 0, my: 0, cx: 0, cy: 0, attack: false, heavy: false, roll: false, heal: false, lock: false, interact: false, block: false, sprint: false, pause: false };
+  // keyboard
+  inp.mx = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
+  inp.my = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
+  if (inp.mx && inp.my) { inp.mx *= 0.7071; inp.my *= 0.7071; }
+  inp.block = mouseR || !!keys.KeyQ; inp.sprint = !!(keys.ShiftLeft || keys.ShiftRight);
+  const sens = 0.0009 + GM.settings.sens * 0.0004;
+  inp.cx = mdx * sens; inp.cy = mdy * sens; mdx = mdy = 0;
+  for (const k of ['attack', 'heavy', 'roll', 'heal', 'lock', 'interact', 'pause']) if (edge[k]) inp[k] = true;
+  for (const k in edge) edge[k] = false;
+  // touch
+  if (touch.mx || touch.my) { inp.mx = touch.mx; inp.my = touch.my; }
+  inp.cx += touch.dx * sens * 1.7; inp.cy += touch.dy * sens * 1.7; touch.dx = touch.dy = 0;
+  for (const k in touch.edge) { if (touch.edge[k]) inp[k] = true; touch.edge[k] = false; }
+  if (touch.btn.block) inp.block = true;
+  // gamepad
+  const pads = navigator.getGamepads ? navigator.getGamepads() : []; const p = pads && Array.from(pads).find((x) => x && x.connected);
+  if (p) {
+    const dz = (v) => Math.abs(v) < 0.15 ? 0 : v;
+    const lx = dz(p.axes[0] || 0), ly = dz(p.axes[1] || 0), rx = dz(p.axes[2] || 0), ry = dz(p.axes[3] || 0);
+    if (lx || ly) { inp.mx = lx; inp.my = -ly; }
+    inp.cx += rx * dt * 2.6 * (0.5 + GM.settings.sens * 0.1); inp.cy += ry * dt * 1.8 * (0.5 + GM.settings.sens * 0.1);
+    const b = (i) => p.buttons[i] && (p.buttons[i].pressed || p.buttons[i].value > 0.5);
+    const map = { 5: 'attack', 7: 'heavy', 1: 'roll', 2: 'heal', 11: 'lock', 0: 'interact', 9: 'pause' };
+    for (const i in map) { const now = b(+i); if (now && !padPrev[i]) inp[map[i]] = true; padPrev[i] = now; }
+    if (b(4)) inp.block = true; if (b(10)) inp.sprint = true;
+    if (GM.state === 'crawl' && (b(0) || b(9))) endCrawl();
+  }
+  if (GM.settings.inv) inp.cy = -inp.cy;
+  return inp;
+}
+
+/* ---------------- UI ---------------- */
+function show(id) { for (const s of ['title', 'pause', 'rest', 'level', 'settings', 'controls', 'crawl']) $(s).classList.toggle('hidden', s !== id); }
+let menuReturn = null;
+function setupUI() {
+  $('bContinue').onclick = () => { AU.init(); AU.ui(); startPlay(); };
+  $('bNew').onclick = () => { AU.init(); AU.ui(); GM.save = JSON.parse(JSON.stringify(NEW_SAVE)); GM.save.started = true; GM.persist(); respawnAll(); startCrawl(); };
+  $('bSettings').onclick = () => { menuReturn = 'title'; openSettings(); };
+  $('bControls').onclick = () => { menuReturn = 'title'; show('controls'); };
+  $('pResume').onclick = () => closePause();
+  $('pSettings').onclick = () => { menuReturn = 'pause'; openSettings(); };
+  $('pControls').onclick = () => { menuReturn = 'pause'; show('controls'); };
+  $('pQuit').onclick = () => { GM.persist(); respawnAll(); showTitle(); };
+  $('cBack').onclick = () => show(menuReturn);
+  $('sBack').onclick = () => { store(SET_KEY, GM.settings); show(menuReturn); };
+  $('sQual').onclick = () => { const o = ['auto', 'low', 'medium', 'high']; GM.settings.quality = o[(o.indexOf(GM.settings.quality) + 1) % o.length]; refreshSettings(); };
+  $('sInv').onclick = () => { GM.settings.inv = !GM.settings.inv; refreshSettings(); };
+  $('sTouch').onclick = () => { const o = ['auto', 'on', 'off']; GM.settings.touch = o[(o.indexOf(GM.settings.touch) + 1) % o.length]; refreshSettings(); };
+  document.querySelectorAll('[data-sens]').forEach((b) => b.onclick = () => { GM.settings.sens = OE.clamp(GM.settings.sens + +b.dataset.sens, 1, 10); refreshSettings(); });
+  document.querySelectorAll('[data-vol]').forEach((b) => b.onclick = () => { GM.settings.vol = OE.clamp(GM.settings.vol + +b.dataset.vol, 0, 10); AU.setVolume(GM.settings.vol / 10); refreshSettings(); });
+  $('rLevel').onclick = () => { openLevel(); };
+  $('rLeave').onclick = () => { show(null); GM.state = 'play'; GM.player.setState('move', 'Idle'); hudVisible(true); };
+  $('lvBack').onclick = () => show('rest');
+  document.querySelectorAll('[data-up]').forEach((b) => b.onclick = () => levelUp(b.dataset.up));
+  $('pauseBtn').onclick = (e) => { e.stopPropagation(); openPause(); };
+  $('pauseBtn').addEventListener('touchstart', (e) => { e.stopPropagation(); }, { passive: true });
+  $('rotOk').onclick = () => { $('rotate').classList.add('hidden'); GM.rotDismissed = true; };
+  AU.setVolume(GM.settings.vol / 10);
+  addEventListener('resize', () => { OE.resize(); checkRotate(); });
+  checkRotate();
+}
+function checkRotate() { const portrait = innerHeight > innerWidth; $('rotate').classList.toggle('hidden', !(isTouch && portrait && !GM.rotDismissed && GM.state !== 'loading')); }
+function refreshSettings() {
+  $('sQual').textContent = GM.settings.quality.toUpperCase() + (GM.settings.quality === 'auto' ? ` (${qName()})` : '');
+  $('sSens').textContent = GM.settings.sens; $('sInv').textContent = GM.settings.inv ? 'ON' : 'OFF'; $('sVol').textContent = GM.settings.vol;
+  $('sTouch').textContent = GM.settings.touch.toUpperCase(); $('touch').classList.toggle('hidden', !(touchOn() && GM.state === 'play'));
+}
+function openSettings() { refreshSettings(); show('settings'); }
+function showTitle() {
+  GM.state = 'title'; show('title'); hudVisible(false);
+  $('bContinue').style.display = GM.save.started ? '' : 'none';
+  checkRotate();
+}
+function hudVisible(v) { $('hud').classList.toggle('hidden', !v); $('touch').classList.toggle('hidden', !(v && touchOn())); document.body.classList.toggle('touchmode', touchOn()); }
+function startPlay() {
+  show(null); GM.state = 'play'; hudVisible(true);
+  if (isTouch) { try { const de = document.documentElement; if (de.requestFullscreen && !document.fullscreenElement) de.requestFullscreen({ navigationUI: 'hide' }).then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => { })).catch(() => { }); } catch (e) { } }
+  else { lockPointer(); }
+  if (!GM.save.seen.intro) {
+    GM.save.seen.intro = 1; GM.persist();
+    GM.say('thomas', 'Commander! Orion — you\'re awake. The dropship\'s gone. The whole squad... it\'s just us now.', 7.4, 1);
+    GM.say('orion', 'Then we finish the job, Tom. British Command sent us to break this siege, and the Iron Warden still holds the cathedral.', 7.9, 2);
+    GM.say('thomas', 'There\'s a signal beacon right here. Light it and Command will know we\'re still breathing.', 5.2, 3);
+  }
+}
+function openPause() { if (GM.state !== 'play') return; GM.state = 'pause'; $('prompt').classList.add('hidden'); show('pause'); hudVisible(false); if (document.pointerLockElement) document.exitPointerLock(); }
+function closePause() { show(null); GM.state = 'play'; hudVisible(true); lockPointer(); }
+
+/* ---------------- prologue crawl ---------------- */
+const CRAWL = ['November, 2090.',
+  'For ten years the Third World War has burned. Since 2080, the United States has fought the combined might of China and Russia — across every continent, every sea, every sky.',
+  'Britain stood with America. When the war machines of the Sino-Russian Pact crossed the Channel, London fell in a single night. What remains is called New London — a ruin lit only by fire.',
+  'British Command sent its youngest commander to break the siege: Orion Mascar. Born in 2069, he is twenty-one years old, and has never known a world at peace.',
+  'At his side marched his apprentice, Thomas Hawthorne, born in 2074. Their dropship never reached the line.',
+  'Now only the two of them remain. Between them and the dawn stands the Iron Warden.'];
+let crawlTimer = null, crawlIdx = -1;
+function startCrawl() {
+  GM.state = 'crawl'; show('crawl'); const box = $('crawlTxt');
+  box.innerHTML = CRAWL.map((t, i) => `<p class="${i ? '' : 'first'}">${t}</p>`).join('');
+  crawlIdx = -1; $('crawl').onclick = endCrawl; AU.musicDuck(0.4); nextCrawl();
+}
+function nextCrawl() {
+  const ps = $('crawlTxt').querySelectorAll('p'); clearTimeout(crawlTimer); clearTimeout(GM._crawlFade);
+  ps.forEach((p) => p.style.opacity = 0);
+  crawlIdx++;
+  if (crawlIdx >= ps.length) { AU.musicDuck(0.28); startPlay(); banner('NEW LONDON', 'NOVEMBER 2090', 'gold', 3.5); return; }
+  const p = ps[crawlIdx]; GM._crawlFade = setTimeout(() => { if (GM.state === 'crawl') p.style.opacity = 1; }, crawlIdx ? 700 : 200);
+  crawlTimer = setTimeout(nextCrawl, 1800 + p.textContent.length * 55);
+}
+function endCrawl() { if (GM.state === 'crawl') nextCrawl(); }
+
+/* ---------------- HUD helpers ---------------- */
+let subQ = [], subT = 0, toastT = 0, bannerT = 0;
+const NAMES = { thomas: 'Thomas', orion: 'Orion', radio: 'British Command' };
+GM.say = (who, text, dur = 4, voice = 0) => { subQ.push({ who, text, dur, voice }); };
+let voiceEl = null;
+function playVoice(n) {
+  try {
+    if (voiceEl) { voiceEl.pause(); }
+    voiceEl = new Audio('voice/' + String(n).padStart(2, '0') + '.mp3');
+    voiceEl.volume = Math.min(1, GM.settings.vol / 10 + 0.15);
+    AU.musicDuck(0.12); voiceEl.onended = () => AU.musicDuck(GM.inBoss ? 0.4 : 0.28);
+    const p = voiceEl.play(); if (p && p.catch) p.catch(() => { });
+  } catch (e) { }
+}
+GM.hud = { toast(t) { $('toast').textContent = t; $('toast').style.opacity = 1; toastT = 2.2; } };
+function banner(t, s, cls, dur = 4) { const b = $('banner'); $('bannerT').textContent = t; $('bannerS').textContent = s || ''; b.className = cls; b.style.opacity = 1; bannerT = dur; }
+function updateHud(dt) {
+  const P = GM.player;
+  const hpw = Math.min(100, 30 + P.maxHp / 420 * 32); $('hpb').style.width = hpw + '%'; $('stb').style.width = Math.min(90, 24 + P.maxStam / 100 * 30) + '%';
+  $('hpb').querySelector('i').style.transform = `scaleX(${Math.max(0, P.hp / P.maxHp)})`; $('hpb').querySelector('b').style.transform = `scaleX(${Math.max(0, P.hp / P.maxHp)})`;
+  $('stb').querySelector('i').style.transform = `scaleX(${Math.max(0, P.stam / P.maxStam)})`;
+  const st = $('stims'); const key = P.stims + '/' + GM.save.maxStims;
+  if (st.dataset.k !== key) { st.dataset.k = key; st.innerHTML = Array.from({ length: GM.save.maxStims }, (_, i) => `<div class="vial ${i < P.stims ? '' : 'empty'}"></div>`).join('') + `<span>STIM ×${P.stims}</span>`; }
+  $('scrapv').textContent = GM.save.scrap;
+  if (GM.inBoss && boss) { $('bossbar').querySelector('i').style.transform = `scaleX(${Math.max(0, boss.hp / boss.maxHp)})`; $('bossbar').querySelector('b').style.transform = `scaleX(${Math.max(0, boss.hp / boss.maxHp)})`; }
+  // subtitles
+  subT -= dt; const sub = $('sub');
+  if (subT <= 0) { if (subQ.length) { const s = subQ.shift(); sub.innerHTML = `<b>${NAMES[s.who] || s.who}:</b> ${s.text}`; sub.style.opacity = 1; subT = s.dur; if (s.voice) playVoice(s.voice); } else sub.style.opacity = 0; }
+  toastT -= dt; if (toastT <= 0) $('toast').style.opacity = 0;
+  bannerT -= dt; if (bannerT <= 0) $('banner').style.opacity = 0;
+  // lock-on marker & enemy health bars
+  const lo = $('lockon');
+  if (GM.lock && GM.lock.alive) { const s = project([GM.lock.pos[0], GM.lock.hitY(), GM.lock.pos[2]]); if (s) { lo.classList.remove('hidden'); lo.style.left = s[0] + 'px'; lo.style.top = s[1] + 'px'; } else lo.classList.add('hidden'); }
+  else lo.classList.add('hidden');
+  const box = $('ehps'); let html = '';
+  for (const e of GM.enemies) {
+    if (e.boss || !e.alive || e.showBar <= 0) continue;
+    const s = project([e.pos[0], e.hover ? e.pos[1] + 0.7 : 2.35 * e.T.s, e.pos[2]]); if (!s) continue;
+    html += `<div class="ehp" style="left:${s[0]}px;top:${s[1]}px"><i style="transform:scaleX(${Math.max(0, e.hp / e.maxHp)})"></i></div>`;
+  }
+  box.innerHTML = html;
+}
+function project(p) {
+  const m = OE.R.vp; const x = m[0] * p[0] + m[4] * p[1] + m[8] * p[2] + m[12], y = m[1] * p[0] + m[5] * p[1] + m[9] * p[2] + m[13], w = m[3] * p[0] + m[7] * p[1] + m[11] * p[2] + m[15];
+  if (w <= 0.1) return null; const cw = $('c').clientWidth, ch = $('c').clientHeight;
+  return [(x / w * 0.5 + 0.5) * cw, (1 - (y / w * 0.5 + 0.5)) * ch];
+}
+
+/* ---------------- effects ---------------- */
+const flashPool = [];
+function flashLight(pos, color, intensity, range, dur) {
+  let L = flashPool.find((f) => f.t <= 0);
+  if (!L) { if (flashPool.length >= 4) L = flashPool[0]; else { L = { light: { pos: [0, 0, 0], color: [1, 1, 1], intensity: 0, range: 1 }, t: 0 }; flashPool.push(L); OE.R.lights.push(L.light); } }
+  L.light.pos = pos.slice(); L.light.color = color; L.light.range = range; L.peak = intensity; L.t = dur; L.dur = dur;
+}
+GM.fx = {
+  sparks(p, dir, n, col) {
+    for (let i = 0; i < n; i++) {
+      const v = [dir[0] * R(1, 5) + R(-3, 3), R(0.5, 4.5) + dir[1] * 3, dir[2] * R(1, 5) + R(-3, 3)];
+      GM.parts.emit({ pos: p.slice(), vel: v, grav: 9, life: R(0.2, 0.55), size: R(0.012, 0.03), stretch: 0.06, col: [col[0], col[1], col[2], 1], soft: 0.3, drag: 1.5, floor: 0.02 });
+    }
+    flashLight(p, [1, 0.7, 0.4], 2.5, 4, 0.12);
+  },
+  blood(p) {
+    for (let i = 0; i < 14; i++) GM.parts.emit({ pos: p.slice(), vel: [R(-2, 2), R(0.5, 3), R(-2, 2)], grav: 9, life: R(0.3, 0.7), size: R(0.02, 0.05), col: [0.25, 0.01, 0.005, 0.9], add: false, soft: 0.4, floor: 0.02 });
+  },
+  dust(p, n) {
+    for (let i = 0; i < n; i++) GM.parts.emit({ pos: [p[0] + R(-0.6, 0.6), p[1] + R(0, 0.3), p[2] + R(-0.6, 0.6)], vel: [R(-2.5, 2.5), R(0.3, 1.5), R(-2.5, 2.5)], drag: 1.8, life: R(1.2, 2.4), size: R(0.3, 0.6), grow: 0.8, col: [0.22, 0.19, 0.16, 0.5], add: false, soft: 0, rot: R(0, 6), spin: R(-1, 1) });
+  },
+  explode(p, s) {
+    for (let i = 0; i < 26 * s; i++) GM.parts.emit({ pos: [p[0] + R(-0.3, 0.3) * s, p[1] + R(-0.3, 0.3) * s, p[2] + R(-0.3, 0.3) * s], vel: [R(-3, 3) * s, R(0, 4) * s, R(-3, 3) * s], drag: 3, life: R(0.3, 0.7), size: R(0.3, 0.6) * s, grow: 1.2 * s, col: [4, 1.6, 0.4, 1], soft: 0.0, rot: R(0, 6) });
+    for (let i = 0; i < 14 * s; i++) GM.parts.emit({ pos: p.slice(), vel: [R(-2, 2) * s, R(1, 3) * s, R(-2, 2) * s], drag: 1.2, life: R(1.5, 3.5), size: R(0.4, 0.8) * s, grow: 0.9 * s, col: [0.08, 0.07, 0.065, 0.65], add: false, soft: 0, rot: R(0, 6), spin: R(-1, 1) });
+    this.sparks(p, [0, 1, 0], 30 * s, [3, 1.8, 0.8]);
+    flashLight(p, [1, 0.55, 0.2], 7 * s, 9 * s, 0.5);
+    AU.explode(s > 2); GM.shake(0.25 * s);
+  },
+};
+GM.addMarker = (pos, delay, radius, dmg) => GM.markers.push({ pos, t: delay, r: radius, dmg });
+GM.addShockwave = (pos, maxR, dmg) => GM.shocks.push({ pos, r: 0.5, max: maxR, dmg, hit: new Set() });
+function updateHazards(dt) {
+  const P = GM.player, C = GM.companion;
+  for (let i = GM.projectiles.length - 1; i >= 0; i--) {
+    const p = GM.projectiles[i]; p.life -= dt;
+    const np = [p.pos[0] + p.vel[0] * dt, p.pos[1] + p.vel[1] * dt, p.pos[2] + p.vel[2] * dt];
+    GM.parts.emit({ pos: p.pos.slice(), vel: [p.vel[0] * 0.02, p.vel[1] * 0.02, p.vel[2] * 0.02], stretch: 0.25, size: 0.07, life: 0.12, col: [3.5, 0.5, 0.2, 1], soft: 0.2, fade: 0 });
+    GM.parts.emit({ pos: p.pos.slice(), vel: [0, 0, 0], size: 0.22, life: 0.05, col: [2.5, 0.3, 0.1, 0.8], soft: 0, fade: 0 });
+    let done = p.life <= 0 || np[1] < 0.05 || W.ray(p.pos, np, 0.5) < 1;
+    for (const t of [P, C]) {
+      if (done || !t.alive) continue;
+      if (Math.hypot(np[0] - t.pos[0], np[1] - 1.2, np[2] - t.pos[2]) < p.r + 0.4) { if (t.damage(p.dmg, p.pos)) done = true; else if (t === P && P.iframe) { } }
+    }
+    p.pos = np;
+    if (done) { GM.fx.sparks(p.pos, [0, 1, 0], 14, [3.5, 0.6, 0.2]); GM.projectiles.splice(i, 1); }
+  }
+  for (let i = GM.markers.length - 1; i >= 0; i--) {
+    const m = GM.markers[i]; m.t -= dt;
+    const n = 10; for (let k = 0; k < n; k++) { const a = k / n * Math.PI * 2 + time * 2; GM.parts.emit({ pos: [m.pos[0] + Math.cos(a) * m.r, 0.08, m.pos[2] + Math.sin(a) * m.r], vel: [0, 0.2, 0], size: 0.09, life: 0.08, col: [3.5, 0.3, 0.1, 1], soft: 0.1, fade: 0 }); }
+    if (m.t < 0.5 && rnd() < 0.5) GM.parts.emit({ pos: [m.pos[0], 6 - (0.5 - m.t) * 12, m.pos[2]], vel: [0, -12, 0], stretch: 0.8, size: 0.08, life: 0.06, col: [4, 1.5, 0.5, 1], soft: 0.2, fade: 0 });
+    if (m.t <= 0) {
+      GM.fx.explode([m.pos[0], 0.4, m.pos[2]], 1.3);
+      for (const t of [P, C]) if (t.alive && Math.hypot(t.pos[0] - m.pos[0], t.pos[2] - m.pos[2]) < m.r) t.damage(m.dmg, m.pos, { unblockable: false });
+      GM.markers.splice(i, 1);
+    }
+  }
+  for (let i = GM.shocks.length - 1; i >= 0; i--) {
+    const s = GM.shocks[i]; s.r += dt * 9;
+    const n = Math.floor(s.r * 3); for (let k = 0; k < n; k++) { const a = rnd() * Math.PI * 2; GM.parts.emit({ pos: [s.pos[0] + Math.cos(a) * s.r, 0.15, s.pos[2] + Math.sin(a) * s.r], vel: [Math.cos(a) * 1.5, R(0.5, 1.5), Math.sin(a) * 1.5], size: R(0.2, 0.35), grow: 0.5, life: 0.5, col: [0.3, 0.24, 0.18, 0.45], add: false, soft: 0 }); }
+    for (const t of [P, C]) { if (!t.alive || s.hit.has(t)) continue; const d = Math.hypot(t.pos[0] - s.pos[0], t.pos[2] - s.pos[2]); if (Math.abs(d - s.r) < 0.6) { s.hit.add(t); t.damage(s.dmg, s.pos, { unblockable: true }); } }
+    if (s.r > s.max) GM.shocks.splice(i, 1);
+  }
+  for (const f of flashPool) { if (f.t > 0) { f.t -= dt; f.light.intensity = f.peak * Math.max(0, f.t / f.dur); } else f.light.intensity = 0; }
+}
+
+/* ---------------- gameplay events ---------------- */
+GM.alert = (e) => {
+  const seen = GM.save.seen; const k = 'alert_' + e.type;
+  if (seen[k] || e.boss) return; seen[k] = 1;
+  const lines = { trooper: 'Contact! Pact Revenants — Russian-built. They hit hard but they\'re slow to recover. Punish the swing, like you taught me!', drone: 'Seeker drone — Chinese tech! Roll through the bolts, don\'t try to outrun them.',
+    brute: 'Juggernaut! Don\'t trade blows with that thing, Commander. Dodge the slam, then hit it from behind.' };
+  GM.say('thomas', lines[e.type], { trooper: 8.3, drone: 5.7, brute: 6.9 }[e.type], { trooper: 4, drone: 5, brute: 6 }[e.type]);
+};
+GM.onEnemyKilled = (e) => {
+  GM.save.scrap += e.T.scrap; GM.hud.toast('+' + e.T.scrap + ' SCRAP');
+  if (GM.lock === e) GM.lock = null;
+  if (e.boss) victory();
+};
+GM.onBossPhase2 = () => { GM.say('thomas', 'Its core\'s going critical — it\'s gone berserk! Keep moving, Orion!', 5.1, 13); AU.slam(); GM.shake(0.6); OE.R.flash = 0.8; };
+GM.onPlayerDeath = () => {
+  GM.state = 'dead'; AU.death(); hudVisible(false); $('hud').classList.remove('hidden');
+  if (document.pointerLockElement) document.exitPointerLock();
+  const P = GM.player;
+  if (GM.save.scrap > 0) GM.save.echo = { pos: [P.pos[0], 0, P.pos[2]], amount: GM.save.scrap }; else GM.save.echo = null;
+  GM.save.scrap = 0; GM.persist();
+  GM.deathT = 0; GM.deathBanner = false;
+};
+function updateDeath(dt) {
+  GM.deathT += dt;
+  if (!GM.deathBanner && GM.deathT > 1.3) { GM.deathBanner = true; banner('K.I.A.', 'KILLED IN ACTION', 'red', 4); }
+  if (GM.deathT > 5.8) { respawnAll(); GM.state = 'play'; hudVisible(true); OE.R.desat = 0; lockPointer(); }
+}
+function victory() {
+  GM.save.bossDead = true; GM.persist(); AU.bossMusic(false); AU.victory();
+  W.sealCol.off = true; W.gateCol.off = true; W.gate.node.visible = false;
+  setTimeout(() => banner('WARDEN DESTROYED', 'NEW LONDON BREATHES', 'gold', 6), 1800);
+  setTimeout(() => { $('bossbar').classList.add('hidden'); GM.inBoss = false; }, 2500);
+  GM.say('thomas', '...It\'s down. We actually did it.', 3.4, 14);
+  GM.say('orion', 'Ten years of war won\'t end tonight, Tom. But tonight, London breathes.', 6.1, 15);
+  GM.say('thomas', 'Then let\'s light every beacon we\'ve got. Let the whole city see it.', 4.9, 16);
+  GM.say('radio', 'British Command to Commander Mascar. We see your signal. Hold position — the Americans are crossing the Atlantic. Dawn is coming.', 8.8, 17);
+}
+function interactables() {
+  const P = GM.player; let best = null;
+  W.beacons.forEach((b, i) => { const d = Math.hypot(P.pos[0] - b.pos[0], P.pos[2] - b.pos[2]); if (d < 2.4) best = { type: 'beacon', b, i, label: b.lit ? 'Rest at beacon' : 'Light the beacon' }; });
+  if (!GM.save.bossDead && !GM.inBoss && Math.abs(P.pos[0]) < 4 && P.pos[2] > 118.5 && P.pos[2] < 122) best = { type: 'gate', label: 'Pass through the fog' };
+  return best;
+}
+function doInteract(it) {
+  const P = GM.player;
+  if (it.type === 'beacon') {
+    const first = !it.b.lit;
+    GM.save.lit[it.i] = true; GM.save.beacon = it.i; setBeaconLit(it.b, true);
+    AU.beacon(); P.hp = P.maxHp; P.stims = GM.save.maxStims; P.stam = P.maxStam;
+    if (first) { banner('BEACON LIT', it.b.name.toUpperCase(), 'gold', 3.5); if (it.i === 0) GM.say('thomas', 'Beacon\'s live! British Command will know we\'re still in the fight. If things go south, we regroup here.', 6.9, 7); else GM.say('thomas', 'Second beacon\'s up. The cathedral\'s just past those barricades, Commander.', 4.9, 8); }
+    // rest: everything respawns
+    for (const e of GM.enemies) if (!e.boss) e.reset();
+    GM.companion.reset([P.pos[0] - 1.4, 0, P.pos[2] - 0.8]);
+    GM.persist();
+    $('prompt').classList.add('hidden'); $('tb_interact') && $('tb_interact').classList.add('hidden');
+    GM.state = 'rest'; P.setState('rest', 'Idle', 0.3); $('restName').textContent = it.b.name.toUpperCase(); show('rest'); hudVisible(false); $('hud').classList.remove('hidden');
+    if (document.pointerLockElement) document.exitPointerLock();
+  } else if (it.type === 'gate') {
+    AU.gate(); P.pos = [0, 0, 127.6]; P.yaw = 0; GM.cam.yaw = 0;
+    GM.companion.pos = [1.6, 0, 126.9];
+    W.sealCol.off = false; W.gate.sealed = true; GM.inBoss = true;
+    boss.reset(); boss.active = true; boss.state = 'roar'; boss.t = 0;
+    $('bossname').textContent = boss.T.name; $('bossbar').classList.remove('hidden'); AU.bossMusic(true);
+    if (!GM.save.seen.boss) { GM.save.seen.boss = 1; GM.say('orion', 'Iron Warden. Ten years of war, and you\'re all that stands between London and the dawn. Not for long.', 7.8, 11); GM.say('thomas', 'Watch the slam — it sends out a shockwave. Roll through it, just like training!', 5.8, 12); }
+  }
+}
+function openLevel() {
+  const S = GM.save; const cost = 120 + S.rank * 80;
+  $('lvRank').textContent = S.rank; $('lvScrap').textContent = S.scrap; $('lvCost').textContent = cost;
+  $('lvVig').textContent = S.vig; $('lvEnd').textContent = S.end; $('lvStr').textContent = S.str; $('lvStim').textContent = S.maxStims;
+  document.querySelectorAll('[data-up]').forEach((b) => b.disabled = S.scrap < cost);
+  show('level');
+}
+function levelUp(stat) {
+  const S = GM.save; const cost = 120 + S.rank * 80; if (S.scrap < cost) return;
+  S.scrap -= cost; S[stat]++; S.rank++; S.maxStims = Math.min(8, 4 + Math.floor((S.rank - 1) / 3));
+  const P = GM.player; P.hp = P.maxHp; P.stam = P.maxStam; P.stims = S.maxStims; AU.heal(); GM.persist(); openLevel();
+}
+function toggleLock() {
+  if (GM.lock) { GM.lock = null; return; }
+  const P = GM.player, c = GM.cam; const f = [Math.sin(c.yaw), Math.cos(c.yaw)]; let best = null, bs = -1;
+  for (const e of GM.enemies) {
+    if (!e.alive || (e.boss && !e.active)) continue; const dx = e.pos[0] - P.pos[0], dz = e.pos[2] - P.pos[2]; const d = Math.hypot(dx, dz); if (d > (e.boss ? 32 : 20)) continue;
+    const dot = (dx * f[0] + dz * f[1]) / d; const sc = dot * 2 - d / 20; if (dot > 0.2 && sc > bs) { bs = sc; best = e; }
+  }
+  GM.lock = best;
+}
+
+/* ---------------- camera ---------------- */
+function updateCamera(dt, inp) {
+  const c = GM.cam, P = GM.player;
+  c.yaw -= inp.cx; c.pitch = OE.clamp(c.pitch + inp.cy, -0.35, 1.1);
+  const tgt = [P.pos[0], 1.55, P.pos[2]];
+  if (GM.lock && GM.lock.alive && P.alive) {
+    const ly = A.yawTo(P.pos, GM.lock.pos); c.yaw += OE.angDiff(c.yaw, ly) * Math.min(1, dt * 6);
+    const want = GM.lock.boss ? 0.38 : 0.24; c.pitch += (want - c.pitch) * Math.min(1, dt * 3);
+    if (A.dist2(P.pos, GM.lock.pos) > (GM.lock.boss ? 36 : 24)) GM.lock = null;
+  }
+  let dist = c.dist * (GM.lock && GM.lock.boss ? 1.35 : 1);
+  const cp = Math.cos(c.pitch), sp = Math.sin(c.pitch);
+  const right = [-Math.cos(c.yaw), 0, Math.sin(c.yaw)]; const sh = 0.35;
+  const look = [tgt[0] + right[0] * sh, tgt[1], tgt[2] + right[2] * sh];
+  let pos = [look[0] - Math.sin(c.yaw) * cp * dist, look[1] + sp * dist, look[2] - Math.cos(c.yaw) * cp * dist];
+  const fr = W.ray(look, pos, 0.8); if (fr < 1) { const k = Math.max(0.12, fr - 0.06); pos = [look[0] + (pos[0] - look[0]) * k, look[1] + (pos[1] - look[1]) * k, look[2] + (pos[2] - look[2]) * k]; }
+  pos[1] = Math.max(0.3, pos[1]);
+  // smooth
+  const k = 1 - Math.exp(-dt * 18);
+  for (let i = 0; i < 3; i++) { c.pos[i] += (pos[i] - c.pos[i]) * k; c.target[i] += (look[i] - c.target[i]) * k; }
+  if (c.shake > 0) { const s = c.shake * c.shake * 0.22; c.pos[0] += R(-s, s); c.pos[1] += R(-s, s); c.pos[2] += R(-s, s); c.shake = Math.max(0, c.shake - dt * 2.2); }
+  c.shadowCenter = [P.pos[0] + Math.sin(c.yaw) * 6, 0, P.pos[2] + Math.cos(c.yaw) * 6];
+  c.camPos = c.pos;
+}
+
+/* ---------------- main loop ---------------- */
+let titleAng = 0;
+function frame(ts) {
+  requestAnimationFrame(frame);
+  let dt = Math.min(0.05, (ts - lastT) / 1000); lastT = ts;
+  if (document.hidden || GM.simulating) return;
+  OE.resize();
+  step(dt, readInput(dt));
+  OE.render(GM.cam, GM.parts);
+}
+function step(dt, inp) {
+  time += dt;
+  const R_ = OE.R;
+  // world ambience
+  flashT -= dt; if (flashT <= 0) { flashT = R(6, 15); R_.flash = R(0.4, 1.0); AU.thunder(R(0.6, 2.0)); }
+  R_.flash = Math.max(0, R_.flash - dt * 2.5); R_.hurt = Math.max(0, R_.hurt - dt * 1.5);
+  const st = GM.state;
+  if (inp.pause) { if (st === 'play') openPause(); else if (st === 'pause') closePause(); }
+  let sdt = dt; if (hs > 0) { hs -= dt; sdt = dt * 0.06; }
+  if (st === 'title' || st === 'crawl' || st === 'loading') {
+    titleAng += dt * 0.05; const P = GM.player;
+    GM.cam.pos = [P.pos[0] + Math.sin(titleAng) * 6.5, 2.0 + Math.sin(titleAng * 0.7) * 0.4, P.pos[2] + 6 + Math.cos(titleAng) * 3]; GM.cam.target = [P.pos[0] - 0.5, 1.3, P.pos[2] + 1];
+    GM.cam.shadowCenter = P.pos; P.ch.update(dt); GM.companion.ch.update(dt); P.syncNode(); GM.companion.sync();
+    for (const e of GM.enemies) e.update(0);
+  } else if (st === 'play' || st === 'dead') {
+    if (inp.lock) toggleLock();
+    const P = GM.player;
+    if (P.state === 'rest') P.setState('move', null);
+    P.update(sdt, st === 'play' ? inp : { mx: 0, my: 0 });
+    GM.companion.update(sdt);
+    for (const e of GM.enemies) { if (A.dist2(e.pos, P.pos) < 55 || e.state === 'dead') e.update(sdt); }
+    updateHazards(sdt);
+    // echo pickup
+    const ec = GM.save.echo;
+    if (ec) {
+      if (rnd() < 0.6) GM.parts.emit({ pos: [ec.pos[0] + R(-0.25, 0.25), 0.2, ec.pos[2] + R(-0.25, 0.25)], vel: [0, R(0.6, 1.4), 0], size: R(0.04, 0.08), life: 1.2, col: [1.2, 2.8, 1.6, 1], soft: 0.2 });
+      if (P.alive && st === 'play' && Math.hypot(P.pos[0] - ec.pos[0], P.pos[2] - ec.pos[2]) < 1.4) { GM.save.scrap += ec.amount; GM.hud.toast('SCRAP RECOVERED  +' + ec.amount); GM.save.echo = null; GM.persist(); AU.heal(); }
+    }
+    // interaction prompt
+    const it = st === 'play' && P.alive && P.state === 'move' ? interactables() : null;
+    const pr = $('prompt');
+    if (it) { pr.classList.remove('hidden'); pr.innerHTML = (touchOn() ? '' : '<kbd>E</kbd>') + it.label; if (inp.interact) doInteract(it); } else pr.classList.add('hidden');
+    $('tb_interact') && $('tb_interact').classList.toggle('hidden', !it);
+    if (!P.alive) OE.R.desat = Math.min(0.85, OE.R.desat + dt * 0.4);
+    if (st === 'dead') updateDeath(dt);
+    if (!GM.debug || !GM.debug.freeze) updateCamera(dt, st === 'play' ? inp : { cx: 0, cy: 0 });
+    updateHud(dt);
+  } else {
+    // menus: keep world gently alive
+    GM.player.ch.update(dt); GM.companion.ch.update(dt);
+  }
+  // beacons pulse
+  for (const b of W.beacons) if (b.lit) { b.light.intensity = 3.2 + Math.sin(time * 2.2) * 0.5; if (rnd() < 0.3) GM.parts.emit({ pos: [b.pos[0] + R(-0.15, 0.15), 1.8, b.pos[2] + R(-0.15, 0.15)], vel: [R(-0.2, 0.2), R(0.8, 1.6), R(-0.2, 0.2)], size: 0.04, life: 1.4, col: [0.8, 1.8, 3.5, 1], soft: 0.2 }); }
+  if (W.gate.node.visible) { W.gate.node.mat.alpha = 0.28 + Math.sin(time * 1.7) * 0.06; if (rnd() < 0.5) GM.parts.emit({ pos: [R(-3.5, 3.5), R(0.2, 6.5), 122 + R(-0.1, 0.1)], vel: [0, R(0.1, 0.4), 0], size: R(0.1, 0.25), life: 1.5, col: [1.2, 1.1, 0.9, 0.35], soft: 0 }); }
+  // ash & embers around camera
+  const cp = GM.cam.pos;
+  for (let i = 0; i < 2; i++) GM.parts.emit({ pos: [cp[0] + R(-14, 14), R(4, 9), cp[2] + R(-14, 14)], vel: [R(0.2, 0.6), R(-0.5, -0.9), R(-0.2, 0.2)], size: R(0.012, 0.03), life: 8, col: [0.5, 0.48, 0.45, 0.8], add: false, soft: 0.3, spin: 1 });
+  if (rnd() < 0.3) GM.parts.emit({ pos: [cp[0] + R(-10, 10), R(0, 2), cp[2] + R(-10, 10)], vel: [R(-0.3, 0.6), R(0.5, 1.5), R(-0.3, 0.3)], size: 0.02, life: 3, col: [4, 1.4, 0.3, 1], soft: 0.3 });
+  W.update(sdt, time, { parts: GM.parts, camPos: GM.cam.pos });
+  GM.parts.update(sdt);
+}
+GM.debug = { sim(sec, inpF) { GM.simulating = true; const n = Math.round(sec * 60); for (let i = 0; i < n; i++) step(1 / 60, Object.assign({ mx: 0, my: 0, cx: 0, cy: 0 }, inpF ? inpF(i) : {})); GM.simulating = false; }, startPlay, respawnAll, doInteract, interactables, toggleLock, show, banner, get boss() { return boss; } };
+})();
