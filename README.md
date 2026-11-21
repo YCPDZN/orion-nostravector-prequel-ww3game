@@ -49,7 +49,7 @@ Each chapter opens with its own prologue and title card and ends with a *Chapter
 - **Thomas** follows you, picks targets, shoulders his rifle and fires aimed 3-round bursts (muzzle flash, tracers, ejected casings), rifle-bashes enemies that get close, and gets back up if he goes down.
 - **Codex** (title screen and pause menu): lore entries for Orion and Thomas with live 3D turntables of their models. Adversary entries unlock as you meet each war machine.
 - Fully voiced dialogue: 17 lines for Thomas, Orion and British Command, synced with subtitles.
-- Progress saves automatically in the browser.
+- **Manual saving:** the game never autosaves. Use **Save Game** from the pause menu, a beacon or the Chapter Complete screen; there are 3 slots. Load from **Load Game** on the title screen or pause menu, and **Continue** loads your most recent save. You can't save during a boss fight. Saves are stored in the browser you play in.
 
 ## Graphics
 The game uses a custom WebGL2 engine (no libraries): GPU-skinned characters with their original PBR and normal-map textures, PCF shadows, HDR bloom, ACES tone mapping, fog, a procedural night sky with artillery flashes, fire and ember particles, and procedural concrete, brick, metal and ground materials.

@@ -12,8 +12,19 @@ const load = (k, d) => { try { return Object.assign({}, d, JSON.parse(localStora
 const store = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
 GM.settings = load(SET_KEY, { quality: 'auto', sens: 5, inv: false, vol: 8, touch: 'auto' });
 const NEW_SAVE = { started: false, chapter: 1, done: {}, stats: { time: 0, deaths: 0, kills: 0 }, vig: 0, end: 0, str: 0, rank: 1, scrap: 0, maxStims: 4, beacon: 0, lit: [true, false], bossDead: false, echo: null, seen: {} };
-GM.save = load(SAVE_KEY, JSON.parse(JSON.stringify(NEW_SAVE)));
-GM.persist = () => store(SAVE_KEY, GM.save);
+GM.save = JSON.parse(JSON.stringify(NEW_SAVE));
+GM.persist = () => { }; // no autosave: progress is only written when the player saves
+const SLOT_KEY = 'orion_ww3_slots', NSLOTS = 3;
+function readSlots() { try { const a = JSON.parse(localStorage.getItem(SLOT_KEY) || '[]'); while (a.length < NSLOTS) a.push(null); return a.slice(0, NSLOTS); } catch (e) { return [null, null, null]; } }
+function writeSlots(a) { try { localStorage.setItem(SLOT_KEY, JSON.stringify(a)); return true; } catch (e) { return false; } }
+(function migrateAutosave() { // bring progress from older versions (which autosaved) into slot 1
+  try {
+    const old = localStorage.getItem(SAVE_KEY); if (!old) return; const slots = readSlots();
+    if (!slots.some(Boolean)) { const sv = Object.assign(JSON.parse(JSON.stringify(NEW_SAVE)), JSON.parse(old));
+      if (sv.started) { slots[0] = { when: Date.now(), loc: 'Last beacon (imported)', save: sv, world: null }; writeSlots(slots); } }
+    localStorage.removeItem(SAVE_KEY);
+  } catch (e) { }
+})();
 const QUALITY = {
   low: { shadow: 1024, dpr: 1, msaa: 2, bloom: false, particles: 1200, shadowExt: 18, drawDist: 70, aniso: 2 },
   medium: { shadow: 1536, dpr: 1.5, msaa: 4, bloom: true, particles: 2000, shadowExt: 22, drawDist: 95, aniso: 4 },
@@ -215,16 +226,22 @@ function readInput(dt) {
 }
 
 /* ---------------- UI ---------------- */
-function show(id) { for (const s of ['title', 'pause', 'rest', 'level', 'settings', 'controls', 'crawl', 'codex', 'chapters', 'complete']) $(s).classList.toggle('hidden', s !== id); }
+function show(id) { for (const s of ['title', 'pause', 'rest', 'level', 'settings', 'controls', 'crawl', 'codex', 'chapters', 'complete', 'saves']) $(s).classList.toggle('hidden', s !== id); }
 let menuReturn = null;
 function setupUI() {
-  $('bContinue').onclick = () => { AU.init(); AU.ui(); startPlay(); };
+  $('bContinue').onclick = () => { AU.init(); AU.ui(); const sl = readSlots(); let bi = -1; sl.forEach((x, i) => { if (x && (bi < 0 || x.when > sl[bi].when)) bi = i; }); if (bi >= 0) loadSlot(bi); };
+  $('bLoad').onclick = () => { AU.init(); AU.ui(); openSaves('load', 'title'); };
+  $('pSave').onclick = () => { AU.ui(); openSaves('save', 'pause'); };
+  $('pLoad').onclick = () => { AU.ui(); openSaves('load', 'pause'); };
+  $('rSave').onclick = () => { AU.ui(); openSaves('save', 'rest'); };
+  $('svBack').onclick = () => { AU.ui(); show(savesReturn); };
   $('bNew').onclick = () => { AU.init(); AU.ui(); GM.save = JSON.parse(JSON.stringify(NEW_SAVE)); startChapter(1); };
   $('bChapters').onclick = () => { AU.init(); AU.ui(); openChapters('title'); };
   $('chBack').onclick = () => { AU.ui(); show(chapterReturn); };
   $('cmpContinue').onclick = () => { AU.ui(); show(null); GM.state = 'play'; hudVisible(true); lockPointer(); };
   $('cmpChapters').onclick = () => { AU.ui(); openChapters('complete'); };
-  $('cmpTitle').onclick = () => { AU.ui(); GM.persist(); respawnAll(); showTitle(); };
+  $('cmpTitle').onclick = () => { AU.ui(); GM.save = JSON.parse(JSON.stringify(NEW_SAVE)); respawnAll(); showTitle(); };
+  $('cmpSave').onclick = () => { AU.ui(); openSaves('save', 'complete'); };
   $('bSettings').onclick = () => { menuReturn = 'title'; openSettings(); };
   $('bControls').onclick = () => { menuReturn = 'title'; show('controls'); };
   $('bCodex').onclick = () => { AU.init(); AU.ui(); GM.codex.open('title'); };
@@ -232,7 +249,9 @@ function setupUI() {
   $('pResume').onclick = () => closePause();
   $('pSettings').onclick = () => { menuReturn = 'pause'; openSettings(); };
   $('pControls').onclick = () => { menuReturn = 'pause'; show('controls'); };
-  $('pQuit').onclick = () => { GM.persist(); respawnAll(); showTitle(); };
+  $('pQuit').onclick = () => {
+    const b = $('pQuit'); if (!b.dataset.confirm) { b.dataset.confirm = 1; b.textContent = 'QUIT? UNSAVED PROGRESS IS LOST'; setTimeout(() => { delete b.dataset.confirm; b.textContent = 'QUIT TO TITLE'; }, 3500); return; }
+    delete b.dataset.confirm; b.textContent = 'QUIT TO TITLE'; GM.save = JSON.parse(JSON.stringify(NEW_SAVE)); respawnAll(); showTitle(); };
   $('cBack').onclick = () => show(menuReturn);
   $('sBack').onclick = () => { store(SET_KEY, GM.settings); show(menuReturn); };
   $('sQual').onclick = () => { const o = ['auto', 'low', 'medium', 'high']; GM.settings.quality = o[(o.indexOf(GM.settings.quality) + 1) % o.length]; refreshSettings(); };
@@ -260,8 +279,9 @@ function refreshSettings() {
 function openSettings() { refreshSettings(); show('settings'); }
 function showTitle() {
   GM.state = 'title'; show('title'); hudVisible(false);
-  $('bContinue').style.display = GM.save.started ? '' : 'none';
-  $('bContinue').textContent = 'CONTINUE — CHAPTER ' + chapterDef(GM.save.chapter).numeral;
+  const sl = readSlots(); const latest = sl.filter(Boolean).sort((a, b) => b.when - a.when)[0];
+  $('bContinue').style.display = latest ? '' : 'none'; $('bLoad').style.display = latest ? '' : 'none';
+  if (latest) $('bContinue').textContent = 'CONTINUE — CHAPTER ' + chapterDef(latest.save.chapter).numeral;
   checkRotate();
 }
 function hudVisible(v) { $('hud').classList.toggle('hidden', !v); $('touch').classList.toggle('hidden', !(v && touchOn())); document.body.classList.toggle('touchmode', touchOn()); }
@@ -282,6 +302,61 @@ function closePause() { show(null); GM.state = 'play'; hudVisible(true); lockPoi
 /* ---------------- prologue crawl ---------------- */
 const chapterDef = (n) => CHAPTERS.find((c) => c.id === n) || CHAPTERS[0];
 let crawlTimer = null, crawlIdx = -1;
+
+/* ---------------- manual save / load ---------------- */
+let savesReturn = 'title', savesMode = 'load';
+function locationName(z) { return z < 14 ? 'Crash Site' : z < 72 ? 'The Burning Street' : z < 104 ? 'Overpass Ruins' : z < 123 ? 'Cathedral Approach' : 'Cathedral Plaza'; }
+function snapshot() {
+  const P = GM.player, C = GM.companion;
+  return { when: Date.now(), loc: locationName(P.pos[2]), save: JSON.parse(JSON.stringify(GM.save)),
+    world: { p: { pos: P.pos.slice(), yaw: P.yaw, hp: P.hp, stims: P.stims }, t: { pos: C.pos.slice() },
+      dead: GM.enemies.map((e, i) => (!e.alive && !e.boss ? i : -1)).filter((i) => i >= 0) } };
+}
+function saveToSlot(i) {
+  if (GM.inBoss) { $('svMsg').textContent = 'You cannot save during a boss fight.'; return; }
+  if (!GM.player.alive) { $('svMsg').textContent = 'You cannot save right now.'; return; }
+  const sl = readSlots(); sl[i] = snapshot();
+  if (writeSlots(sl)) { $('svMsg').textContent = 'Game saved to slot ' + (i + 1) + '.'; AU.heal(); } else $('svMsg').textContent = 'Could not save: browser storage is unavailable.';
+  renderSlots();
+}
+function loadSlot(i) {
+  const d = readSlots()[i]; if (!d) return;
+  GM.save = Object.assign(JSON.parse(JSON.stringify(NEW_SAVE)), JSON.parse(JSON.stringify(d.save)));
+  GM.chapterEndT = 0; respawnAll();
+  if (d.world) {
+    const P = GM.player, w = d.world; P.pos = w.p.pos.slice(); P.yaw = w.p.yaw; P.hp = Math.min(P.maxHp, w.p.hp); P.stims = w.p.stims;
+    GM.companion.pos = w.t.pos.slice(); GM.cam.yaw = P.yaw;
+    for (const idx of w.dead) { const e = GM.enemies[idx]; if (e && !e.boss) { e.alive = false; e.state = 'dead'; e.deadT = 99; e.root.visible = false; } }
+  }
+  P_sync();
+  GM.save.seen.intro = 1; startPlay(); GM.hud.toast('GAME LOADED');
+}
+function P_sync() { GM.player.syncNode(); GM.companion.sync(); }
+function renderSlots() {
+  const sl = readSlots();
+  $('slotList').innerHTML = sl.map((d, i) => {
+    let info = '<div class="sum">Empty</div>';
+    if (d) { const c = chapterDef(d.save.chapter); const dt = new Date(d.when);
+      info = `<div class="ttl">Chapter ${c.numeral} — ${c.title}</div><div class="meta">${d.loc} · Rank ${d.save.rank} · ${fmtTime((d.save.stats && d.save.stats.time) || 0)} played</div>
+        <div class="sum">${dt.toLocaleDateString()} ${dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`; }
+    const btns = savesMode === 'save' ? `<button class="btn" data-sv="save" data-i="${i}">${d ? 'OVERWRITE' : 'SAVE HERE'}</button>`
+      : `<button class="btn" data-sv="load" data-i="${i}" ${d ? '' : 'disabled'}>LOAD</button>`;
+    return `<div class="chap ${d ? '' : 'locked'}"><div class="num">SLOT ${i + 1}</div>${info}<div class="bt">${btns}${d ? `<button class="btn" data-sv="del" data-i="${i}">DELETE</button>` : ''}</div></div>`;
+  }).join('');
+  $('slotList').querySelectorAll('[data-sv]').forEach((b) => b.onclick = () => {
+    const i = +b.dataset.i, act = b.dataset.sv;
+    if ((act === 'del' || (act === 'save' && readSlots()[i]) || (act === 'load' && savesReturn !== 'title')) && !b.dataset.confirm) {
+      b.dataset.confirm = 1; b.textContent = act === 'del' ? 'CONFIRM DELETE' : act === 'save' ? 'CONFIRM OVERWRITE' : 'LOAD? UNSAVED PROGRESS IS LOST'; return; }
+    AU.ui();
+    if (act === 'save') saveToSlot(i);
+    else if (act === 'load') loadSlot(i);
+    else { const sl = readSlots(); sl[i] = null; writeSlots(sl); $('svMsg').textContent = 'Slot ' + (i + 1) + ' deleted.'; renderSlots(); }
+  });
+}
+function openSaves(mode, ret) {
+  savesMode = mode; savesReturn = ret; $('svTitle').textContent = mode === 'save' ? 'SAVE GAME' : 'LOAD GAME';
+  $('svMsg').textContent = mode === 'save' && GM.inBoss ? 'You cannot save during a boss fight.' : ''; renderSlots(); show('saves');
+}
 
 /* ---------------- chapters ---------------- */
 let chapterReturn = 'title';

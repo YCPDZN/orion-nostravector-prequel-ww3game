@@ -157,6 +157,7 @@ body.touchmode #bossbar{width:min(52vw,600px);left:44%}
   <div class="menu">
     <button class="btn" id="bContinue">CONTINUE</button>
     <button class="btn" id="bNew">NEW GAME</button>
+    <button class="btn" id="bLoad">LOAD GAME</button>
     <button class="btn" id="bChapters">CHAPTERS</button>
     <button class="btn" id="bCodex">CODEX</button>
     <button class="btn" id="bSettings">SETTINGS</button>
@@ -171,6 +172,8 @@ body.touchmode #bossbar{width:min(52vw,600px);left:44%}
   <h2>PAUSED</h2>
   <div class="small" id="pChapter" style="text-align:center;letter-spacing:.2em;margin:-4px 0 10px;color:var(--gold)"></div>
   <button class="btn" id="pResume">RESUME</button>
+  <button class="btn" id="pSave">SAVE GAME</button>
+  <button class="btn" id="pLoad">LOAD GAME</button>
   <button class="btn" id="pCodex">CODEX</button>
   <button class="btn" id="pSettings">SETTINGS</button>
   <button class="btn" id="pControls">CONTROLS</button>
@@ -181,6 +184,7 @@ body.touchmode #bossbar{width:min(52vw,600px);left:44%}
   <h2 id="restName">BEACON</h2>
   <div class="small" style="text-align:center;margin-bottom:10px">Health and stims restored. The war machines stir again.</div>
   <button class="btn" id="rLevel">REINFORCE</button>
+  <button class="btn" id="rSave">SAVE GAME</button>
   <button class="btn" id="rLeave">LEAVE</button>
 </div></div>
 
@@ -229,11 +233,19 @@ body.touchmode #bossbar{width:min(52vw,600px);left:44%}
   <button class="btn" id="chBack" style="margin-top:12px">BACK</button>
 </div></div>
 
+<div id="saves" class="screen hidden"><div class="panel" style="width:min(92vw,620px)">
+  <h2 id="svTitle">SAVE GAME</h2>
+  <div class="small" id="svMsg" style="text-align:center;min-height:1.4em;color:var(--gold2)"></div>
+  <div id="slotList" class="chlist"></div>
+  <button class="btn" id="svBack" style="margin-top:12px">BACK</button>
+</div></div>
+
 <div id="complete" class="screen hidden"><div class="panel" style="text-align:center;width:min(92vw,520px)">
   <div id="cmpNum" style="letter-spacing:.4em;color:var(--gold);font-size:14px">CHAPTER I COMPLETE</div>
   <div id="cmpTitle2" style="font-size:clamp(26px,4vw,40px);margin:8px 0 14px;color:#f1e6cf"></div>
   <div id="cmpStats" style="text-align:left"></div>
   <div class="small" id="cmpNext" style="margin:14px 0 6px;font-style:italic"></div>
+  <button class="btn" id="cmpSave">SAVE GAME</button>
   <button class="btn" id="cmpContinue">CONTINUE EXPLORING</button>
   <button class="btn" id="cmpChapters">CHAPTER SELECT</button>
   <button class="btn" id="cmpTitle">RETURN TO TITLE</button>
@@ -250,17 +262,17 @@ body.touchmode #bossbar{width:min(52vw,600px);left:44%}
 
 <div id="rotate" class="screen hidden"><div>For the best experience,<br>turn your device to landscape.<br><br><button class="btn" id="rotOk" style="width:auto;display:inline-block">PLAY ANYWAY</button></div></div>
 
-<script src="js/engine.js?v=6"></script>
-<script src="js/world.js?v=6"></script>
-<script src="js/actors.js?v=6"></script>
-<script src="js/audio.js?v=6"></script>
-<script src="js/chapters.js?v=6"></script>
-<script src="js/game.js?v=6"></script>
-<script src="js/codex.js?v=6"></script>
+<script src="js/engine.js?v=7"></script>
+<script src="js/world.js?v=7"></script>
+<script src="js/actors.js?v=7"></script>
+<script src="js/audio.js?v=7"></script>
+<script src="js/chapters.js?v=7"></script>
+<script src="js/game.js?v=7"></script>
+<script src="js/codex.js?v=7"></script>
 <script>
 // models are loaded after the page shows the loading screen
 (function () {
-  const s = document.createElement('script'); s.src = 'assets/models.js?v=6';
+  const s = document.createElement('script'); s.src = 'assets/models.js?v=7';
   s.onload = () => window.GM && GM.boot();
   s.onerror = () => { document.getElementById('lmsg').textContent = 'Could not load assets/models.js'; };
   document.body.appendChild(s);

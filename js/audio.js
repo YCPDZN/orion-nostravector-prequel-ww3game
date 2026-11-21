@@ -15,7 +15,7 @@ AU.init = function () {
   mus = ctx.createGain(); mus.gain.value = 0.28; mus.connect(comp);
   const len = ctx.sampleRate * 2; noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
   const d = noiseBuf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-  startAmbience(); startMusic();
+  startAmbience(); // background drone music removed
 };
 AU.setVolume = function (v) { AU.volume = v; if (master) master.gain.value = v; };
 const now = () => ctx.currentTime;
