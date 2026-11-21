@@ -85,6 +85,16 @@ body.touchmode #sub{bottom:auto;top:16%;width:min(62vw,620px)}
 body.touchmode #prompt{bottom:auto;top:58%}
 body.touchmode #toast{top:30%}
 body.touchmode #bossbar{width:min(52vw,600px);left:44%}
+/* ---------- opening memory ---------- */
+#birth{position:fixed;inset:0;background:#120b07;z-index:40;cursor:pointer;overflow:hidden}
+#birthCv{position:absolute;inset:-40px;width:calc(100% + 80px);height:calc(100% + 80px)}
+#birth .by{position:absolute;top:max(22px,env(safe-area-inset-top));left:0;right:0;text-align:center;letter-spacing:.6em;padding-left:.6em;font-size:13px;color:rgba(60,40,28,.75)}
+#birth .bt{position:absolute;left:50%;bottom:15%;transform:translateX(-50%);width:min(86vw,760px);min-height:5em}
+#birth .bt p{position:absolute;left:0;right:0;bottom:0;margin:0;text-align:center;font-style:italic;font-size:clamp(17px,min(2.8vw,5vh),28px);line-height:1.5;
+  color:#fffaf0;text-shadow:0 1px 3px rgba(60,30,10,.9),0 0 22px rgba(80,40,10,.6);opacity:0;transition:opacity 1.4s;padding:18px 26px;
+  background:radial-gradient(ellipse at center,rgba(45,24,12,.5),rgba(45,24,12,.28) 45%,rgba(45,24,12,0) 72%)}
+#birth .bskip{position:absolute;right:max(20px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));background:rgba(0,0,0,.25);border:1px solid rgba(255,240,220,.35);
+  color:rgba(255,245,230,.8);font-family:var(--serif);letter-spacing:.3em;font-size:12px;padding:8px 14px;cursor:pointer}
 /* ---------- chapters ---------- */
 .chlist{display:grid;gap:12px}
 .chap{border:1px solid rgba(201,168,106,.35);padding:14px 18px;background:linear-gradient(90deg,rgba(201,168,106,.07),transparent)}
@@ -164,6 +174,13 @@ body.touchmode #bossbar{width:min(52vw,600px);left:44%}
     <button class="btn" id="bControls">CONTROLS</button>
   </div>
   <div class="foot">NEW LONDON · NOVEMBER 2090</div>
+</div>
+
+<div id="birth" class="hidden">
+  <canvas id="birthCv"></canvas>
+  <div class="by" id="birthYear">2069 AD</div>
+  <div class="bt" id="birthTxt"></div>
+  <button class="bskip" id="birthSkip">SKIP</button>
 </div>
 
 <div id="crawl" class="screen hidden"><div class="txt" id="crawlTxt"></div><div class="skip">TAP / PRESS ANY KEY TO CONTINUE</div></div>
@@ -262,17 +279,18 @@ body.touchmode #bossbar{width:min(52vw,600px);left:44%}
 
 <div id="rotate" class="screen hidden"><div>For the best experience,<br>turn your device to landscape.<br><br><button class="btn" id="rotOk" style="width:auto;display:inline-block">PLAY ANYWAY</button></div></div>
 
-<script src="js/engine.js?v=7"></script>
-<script src="js/world.js?v=7"></script>
-<script src="js/actors.js?v=7"></script>
-<script src="js/audio.js?v=7"></script>
-<script src="js/chapters.js?v=7"></script>
-<script src="js/game.js?v=7"></script>
-<script src="js/codex.js?v=7"></script>
+<script src="js/engine.js?v=8"></script>
+<script src="js/world.js?v=8"></script>
+<script src="js/actors.js?v=8"></script>
+<script src="js/audio.js?v=8"></script>
+<script src="js/chapters.js?v=8"></script>
+<script src="js/game.js?v=8"></script>
+<script src="js/codex.js?v=8"></script>
+<script src="js/opening.js?v=8"></script>
 <script>
 // models are loaded after the page shows the loading screen
 (function () {
-  const s = document.createElement('script'); s.src = 'assets/models.js?v=7';
+  const s = document.createElement('script'); s.src = 'assets/models.js?v=8';
   s.onload = () => window.GM && GM.boot();
   s.onerror = () => { document.getElementById('lmsg').textContent = 'Could not load assets/models.js'; };
   document.body.appendChild(s);

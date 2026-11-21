@@ -6,6 +6,18 @@ window.CHAPTERS = [
     available: true,
     summary: 'Shot down short of the line, Commander Orion Mascar and his apprentice Thomas Hawthorne must fight through the burning ruins of London, light the signal beacons, and destroy the Iron Warden in the cathedral plaza.',
     objective: 'Destroy the Iron Warden',
+    // first-person memory narrated by Orion before the chapter begins
+    opening: {
+      year: '2069 AD',
+      lines: [
+        'I was born in London, in the spring of 2069.',
+        'I don\'t remember it, of course. Nobody does. But sometimes, in the quiet before a battle, I think I can.',
+        'A blur of white light. Warm hands. Voices I couldn\'t understand yet — soft, and tired, and happy.',
+        'Somewhere beyond the window, the city was still whole. Still lit. Still breathing.',
+        'My mother used to say I didn\'t cry. I just opened my eyes and stared at the light, as if I was waiting for something.',
+        'Eleven years later, the war came. I think it had been waiting for me too.',
+      ],
+    },
     prologue: ['November, 2090.',
   'For ten years the Third World War has burned. Since 2080, the United States has fought the combined might of China and Russia — across every continent, every sea, every sky.',
   'Britain stood with America. When the war machines of the Sino-Russian Pact crossed the Channel, London fell in a single night. What remains is called New London — a ruin lit only by fire.',

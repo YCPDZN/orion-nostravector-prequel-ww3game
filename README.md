@@ -37,7 +37,7 @@ The game is split into chapters, each a self-contained mission. Pick one from **
 - **Chapter I — The Siege of New London** *(New London, November 2090)*: fight through the ruined city, light the signal beacons and destroy the Iron Warden.
 - **Chapter II — Classified**: coming soon.
 
-Each chapter opens with its own prologue and title card and ends with a *Chapter Complete* screen showing your time, kills, deaths and rank. Replaying a chapter keeps Orion's rank and upgrades. Chapters are defined in `js/chapters.js`.
+Chapter I begins with a first-person memory: Orion recalls his birth in London in 2069 AD, shown as a soft, out-of-focus dream with a heartbeat. Each chapter then opens with its own title card and prologue and ends with a *Chapter Complete* screen showing your time, kills, deaths and rank. Replaying a chapter keeps Orion's rank and upgrades. Chapters are defined in `js/chapters.js`.
 
 ## Souls-like systems
 - **Stamina** for every swing, roll and block. Run dry and your guard breaks.
@@ -64,7 +64,8 @@ js/world.js           New London level: street, overpass, fog gate, cathedral ar
 js/actors.js          Orion, Thomas, enemies, boss, weapons
 js/game.js            input (keyboard, touch, gamepad), camera, HUD, saves, story
 js/audio.js           procedural sound effects, ambience and music
-js/chapters.js        chapter list: titles, prologues, summaries
+js/chapters.js        chapter list: titles, openings, prologues, summaries
+js/opening.js         the dreamlike first-person opening scene
 js/codex.js           the Codex: character and adversary entries with 3D turntables
 voice/01-17.mp3       voiced dialogue lines (played with the subtitles)
 assets/models.js      the rigged characters embedded for offline play

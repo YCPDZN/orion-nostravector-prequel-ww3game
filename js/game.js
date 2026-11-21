@@ -114,7 +114,7 @@ function setupInput() {
     keys[e.code] = true; AU.init();
     const map = { Space: 'roll', KeyR: 'heal', KeyF: 'heavy', KeyJ: 'attack', KeyK: 'heavy', KeyE: 'interact', Tab: 'lock', Escape: 'pause', KeyP: 'pause', Enter: 'confirm' };
     if (map[e.code]) { press(map[e.code]); e.preventDefault(); }
-    if (GM.state === 'crawl') endCrawl();
+    if (GM.state === 'crawl') endCrawl(); else if (GM.state === 'birth') { if (e.code === 'Escape') GM.birth.skip(); else GM.birth.advance(); }
   });
   addEventListener('keyup', (e) => { keys[e.code] = false; });
   const cv = $('c');
@@ -219,7 +219,7 @@ function readInput(dt) {
     const map = { 5: 'attack', 7: 'heavy', 1: 'roll', 2: 'heal', 11: 'lock', 0: 'interact', 9: 'pause' };
     for (const i in map) { const now = b(+i); if (now && !padPrev[i]) inp[map[i]] = true; padPrev[i] = now; }
     if (b(4)) inp.block = true; if (b(10)) inp.sprint = true;
-    if (GM.state === 'crawl' && (b(0) || b(9))) endCrawl();
+    const skipNow = b(0) || b(9); if (skipNow && !GM._padSkip) { if (GM.state === 'crawl') endCrawl(); else if (GM.state === 'birth') GM.birth.advance(); } GM._padSkip = skipNow;
   }
   if (GM.settings.inv) inp.cy = -inp.cy;
   return inp;
@@ -236,6 +236,7 @@ function setupUI() {
   $('rSave').onclick = () => { AU.ui(); openSaves('save', 'rest'); };
   $('svBack').onclick = () => { AU.ui(); show(savesReturn); };
   $('bNew').onclick = () => { AU.init(); AU.ui(); GM.save = JSON.parse(JSON.stringify(NEW_SAVE)); startChapter(1); };
+  $('birth').onclick = (e) => { if (e.target.id === 'birthSkip') GM.birth.skip(); else GM.birth.advance(); };
   $('bChapters').onclick = () => { AU.init(); AU.ui(); openChapters('title'); };
   $('chBack').onclick = () => { AU.ui(); show(chapterReturn); };
   $('cmpContinue').onclick = () => { AU.ui(); show(null); GM.state = 'play'; hudVisible(true); lockPointer(); };
@@ -365,7 +366,9 @@ function startChapter(n) {
   // replaying keeps Orion's rank and stats, but the mission itself starts over
   const keep = { vig: GM.save.vig, end: GM.save.end, str: GM.save.str, rank: GM.save.rank, maxStims: GM.save.maxStims, done: GM.save.done || {} };
   GM.save = Object.assign(JSON.parse(JSON.stringify(NEW_SAVE)), keep, { started: true, chapter: n });
-  GM.chapterEndT = 0; GM.persist(); respawnAll(); startCrawl();
+  GM.chapterEndT = 0; respawnAll();
+  const ch = chapterDef(n);
+  if (ch.opening) { GM.state = 'birth'; show(null); hudVisible(false); AU.musicDuck(0.1); GM.birth.start(ch.opening, startCrawl); } else startCrawl();
 }
 function openChapters(ret) {
   chapterReturn = ret; const S = GM.save;

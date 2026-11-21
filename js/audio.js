@@ -52,6 +52,7 @@ AU.death = () => { tone(4, { f: 110, f2: 55, type: 'sawtooth', gain: 0.12, attac
 AU.victory = () => { [196, 247, 294, 392, 494, 587].forEach((f, i) => tone(5, { f, gain: 0.06, delay: i * 0.25, attack: 1.0, type: 'triangle' })); };
 AU.gate = () => { noise(1.5, { f: 1200, f2: 200, q: 2, gain: 0.3, attack: 0.4 }); tone(1.5, { f: 60, gain: 0.4, attack: 0.3 }); };
 AU.ui = () => tone(0.12, { f: 880, gain: 0.05 });
+AU.heartbeat = () => { tone(0.16, { f: 58, f2: 42, gain: 0.32, attack: 0.01 }); tone(0.14, { f: 52, f2: 40, gain: 0.22, attack: 0.01, delay: 0.22 }); };
 AU.thunder = (delay) => { noise(3.5, { f: 160, f2: 40, type: 'lowpass', gain: 0.7, attack: 0.15, out: amb, delay }); };
 
 function startAmbience() {
