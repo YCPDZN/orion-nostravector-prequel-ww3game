@@ -85,6 +85,17 @@ body.touchmode #sub{bottom:auto;top:16%;width:min(62vw,620px)}
 body.touchmode #prompt{bottom:auto;top:58%}
 body.touchmode #toast{top:30%}
 body.touchmode #bossbar{width:min(52vw,600px);left:44%}
+/* ---------- chapters ---------- */
+.chlist{display:grid;gap:12px}
+.chap{border:1px solid rgba(201,168,106,.35);padding:14px 18px;background:linear-gradient(90deg,rgba(201,168,106,.07),transparent)}
+.chap .num{font-size:12px;letter-spacing:.35em;color:var(--gold)}
+.chap .ttl{font-size:clamp(22px,3vw,30px);color:#f1e6cf;margin:2px 0}
+.chap .meta{font-size:13px;color:#9d917b;letter-spacing:.1em}
+.chap .sum{font-size:15px;line-height:1.5;color:#d8ccb3;margin:8px 0}
+.chap .st{font-size:12px;letter-spacing:.2em;color:#9d917b}.chap .st.done{color:#8fd29b}
+.chap .bt{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.chap .bt .btn{width:auto;margin:0;padding:8px 16px;font-size:15px}
+.chap.locked{opacity:.55;border-style:dashed}
+#crawl .txt p.first small{display:block;font-size:.42em;letter-spacing:.5em;color:var(--gold);margin-bottom:.5em}
 /* ---------- codex ---------- */
 #codex{position:fixed;inset:0;pointer-events:none}
 #codex .cx-panel{pointer-events:auto;position:absolute;top:0;right:0;bottom:0;width:min(50vw,580px);display:flex;flex-direction:column;
@@ -146,6 +157,7 @@ body.touchmode #bossbar{width:min(52vw,600px);left:44%}
   <div class="menu">
     <button class="btn" id="bContinue">CONTINUE</button>
     <button class="btn" id="bNew">NEW GAME</button>
+    <button class="btn" id="bChapters">CHAPTERS</button>
     <button class="btn" id="bCodex">CODEX</button>
     <button class="btn" id="bSettings">SETTINGS</button>
     <button class="btn" id="bControls">CONTROLS</button>
@@ -157,6 +169,7 @@ body.touchmode #bossbar{width:min(52vw,600px);left:44%}
 
 <div id="pause" class="screen hidden"><div class="panel">
   <h2>PAUSED</h2>
+  <div class="small" id="pChapter" style="text-align:center;letter-spacing:.2em;margin:-4px 0 10px;color:var(--gold)"></div>
   <button class="btn" id="pResume">RESUME</button>
   <button class="btn" id="pCodex">CODEX</button>
   <button class="btn" id="pSettings">SETTINGS</button>
@@ -210,6 +223,22 @@ body.touchmode #bossbar{width:min(52vw,600px);left:44%}
   <button class="btn" id="cBack" style="margin-top:12px">BACK</button>
 </div></div>
 
+<div id="chapters" class="screen hidden"><div class="panel" style="width:min(92vw,760px)">
+  <h2>CHAPTERS</h2>
+  <div id="chList" class="chlist"></div>
+  <button class="btn" id="chBack" style="margin-top:12px">BACK</button>
+</div></div>
+
+<div id="complete" class="screen hidden"><div class="panel" style="text-align:center;width:min(92vw,520px)">
+  <div id="cmpNum" style="letter-spacing:.4em;color:var(--gold);font-size:14px">CHAPTER I COMPLETE</div>
+  <div id="cmpTitle2" style="font-size:clamp(26px,4vw,40px);margin:8px 0 14px;color:#f1e6cf"></div>
+  <div id="cmpStats" style="text-align:left"></div>
+  <div class="small" id="cmpNext" style="margin:14px 0 6px;font-style:italic"></div>
+  <button class="btn" id="cmpContinue">CONTINUE EXPLORING</button>
+  <button class="btn" id="cmpChapters">CHAPTER SELECT</button>
+  <button class="btn" id="cmpTitle">RETURN TO TITLE</button>
+</div></div>
+
 <div id="codex" class="hidden">
   <div class="cx-hint">DRAG TO ROTATE</div>
   <div class="cx-panel">
@@ -221,16 +250,17 @@ body.touchmode #bossbar{width:min(52vw,600px);left:44%}
 
 <div id="rotate" class="screen hidden"><div>For the best experience,<br>turn your device to landscape.<br><br><button class="btn" id="rotOk" style="width:auto;display:inline-block">PLAY ANYWAY</button></div></div>
 
-<script src="js/engine.js?v=5"></script>
-<script src="js/world.js?v=5"></script>
-<script src="js/actors.js?v=5"></script>
-<script src="js/audio.js?v=5"></script>
-<script src="js/game.js?v=5"></script>
-<script src="js/codex.js?v=5"></script>
+<script src="js/engine.js?v=6"></script>
+<script src="js/world.js?v=6"></script>
+<script src="js/actors.js?v=6"></script>
+<script src="js/audio.js?v=6"></script>
+<script src="js/chapters.js?v=6"></script>
+<script src="js/game.js?v=6"></script>
+<script src="js/codex.js?v=6"></script>
 <script>
 // models are loaded after the page shows the loading screen
 (function () {
-  const s = document.createElement('script'); s.src = 'assets/models.js?v=5';
+  const s = document.createElement('script'); s.src = 'assets/models.js?v=6';
   s.onload = () => window.GM && GM.boot();
   s.onerror = () => { document.getElementById('lmsg').textContent = 'Could not load assets/models.js'; };
   document.body.appendChild(s);

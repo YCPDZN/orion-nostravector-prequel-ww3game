@@ -11,8 +11,8 @@ const SET_KEY = 'orion_ww3_settings', SAVE_KEY = 'orion_ww3_save';
 const load = (k, d) => { try { return Object.assign({}, d, JSON.parse(localStorage.getItem(k) || '{}')); } catch (e) { return Object.assign({}, d); } };
 const store = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
 GM.settings = load(SET_KEY, { quality: 'auto', sens: 5, inv: false, vol: 8, touch: 'auto' });
-const NEW_SAVE = { started: false, vig: 0, end: 0, str: 0, rank: 1, scrap: 0, maxStims: 4, beacon: 0, lit: [true, false], bossDead: false, echo: null, seen: {} };
-GM.save = load(SAVE_KEY, NEW_SAVE);
+const NEW_SAVE = { started: false, chapter: 1, done: {}, stats: { time: 0, deaths: 0, kills: 0 }, vig: 0, end: 0, str: 0, rank: 1, scrap: 0, maxStims: 4, beacon: 0, lit: [true, false], bossDead: false, echo: null, seen: {} };
+GM.save = load(SAVE_KEY, JSON.parse(JSON.stringify(NEW_SAVE)));
 GM.persist = () => store(SAVE_KEY, GM.save);
 const QUALITY = {
   low: { shadow: 1024, dpr: 1, msaa: 2, bloom: false, particles: 1200, shadowExt: 18, drawDist: 70, aniso: 2 },
@@ -215,11 +215,16 @@ function readInput(dt) {
 }
 
 /* ---------------- UI ---------------- */
-function show(id) { for (const s of ['title', 'pause', 'rest', 'level', 'settings', 'controls', 'crawl', 'codex']) $(s).classList.toggle('hidden', s !== id); }
+function show(id) { for (const s of ['title', 'pause', 'rest', 'level', 'settings', 'controls', 'crawl', 'codex', 'chapters', 'complete']) $(s).classList.toggle('hidden', s !== id); }
 let menuReturn = null;
 function setupUI() {
   $('bContinue').onclick = () => { AU.init(); AU.ui(); startPlay(); };
-  $('bNew').onclick = () => { AU.init(); AU.ui(); GM.save = JSON.parse(JSON.stringify(NEW_SAVE)); GM.save.started = true; GM.persist(); respawnAll(); startCrawl(); };
+  $('bNew').onclick = () => { AU.init(); AU.ui(); GM.save = JSON.parse(JSON.stringify(NEW_SAVE)); startChapter(1); };
+  $('bChapters').onclick = () => { AU.init(); AU.ui(); openChapters('title'); };
+  $('chBack').onclick = () => { AU.ui(); show(chapterReturn); };
+  $('cmpContinue').onclick = () => { AU.ui(); show(null); GM.state = 'play'; hudVisible(true); lockPointer(); };
+  $('cmpChapters').onclick = () => { AU.ui(); openChapters('complete'); };
+  $('cmpTitle').onclick = () => { AU.ui(); GM.persist(); respawnAll(); showTitle(); };
   $('bSettings').onclick = () => { menuReturn = 'title'; openSettings(); };
   $('bControls').onclick = () => { menuReturn = 'title'; show('controls'); };
   $('bCodex').onclick = () => { AU.init(); AU.ui(); GM.codex.open('title'); };
@@ -256,6 +261,7 @@ function openSettings() { refreshSettings(); show('settings'); }
 function showTitle() {
   GM.state = 'title'; show('title'); hudVisible(false);
   $('bContinue').style.display = GM.save.started ? '' : 'none';
+  $('bContinue').textContent = 'CONTINUE — CHAPTER ' + chapterDef(GM.save.chapter).numeral;
   checkRotate();
 }
 function hudVisible(v) { $('hud').classList.toggle('hidden', !v); $('touch').classList.toggle('hidden', !(v && touchOn())); document.body.classList.toggle('touchmode', touchOn()); }
@@ -270,27 +276,64 @@ function startPlay() {
     GM.say('thomas', 'There\'s a signal beacon right here. Light it and Command will know we\'re still breathing.', 5.2, 3);
   }
 }
-function openPause() { if (GM.state !== 'play') return; GM.state = 'pause'; $('prompt').classList.add('hidden'); show('pause'); hudVisible(false); if (document.pointerLockElement) document.exitPointerLock(); }
+function openPause() { if (GM.state !== 'play') return; GM.state = 'pause'; const pc = chapterDef(GM.save.chapter); $('pChapter').textContent = `CHAPTER ${pc.numeral} · ${pc.title.toUpperCase()}`; $('prompt').classList.add('hidden'); show('pause'); hudVisible(false); if (document.pointerLockElement) document.exitPointerLock(); }
 function closePause() { show(null); GM.state = 'play'; hudVisible(true); lockPointer(); }
 
 /* ---------------- prologue crawl ---------------- */
-const CRAWL = ['November, 2090.',
-  'For ten years the Third World War has burned. Since 2080, the United States has fought the combined might of China and Russia — across every continent, every sea, every sky.',
-  'Britain stood with America. When the war machines of the Sino-Russian Pact crossed the Channel, London fell in a single night. What remains is called New London — a ruin lit only by fire.',
-  'British Command sent its youngest commander to break the siege: Orion Mascar. Born in 2069, he is twenty-one years old, and has never known a world at peace.',
-  'At his side marched his apprentice, Thomas Hawthorne, born in 2074. Their dropship never reached the line.',
-  'Now only the two of them remain. Between them and the dawn stands the Iron Warden.'];
+const chapterDef = (n) => CHAPTERS.find((c) => c.id === n) || CHAPTERS[0];
 let crawlTimer = null, crawlIdx = -1;
+
+/* ---------------- chapters ---------------- */
+let chapterReturn = 'title';
+const fmtTime = (t) => { t = Math.floor(t); const h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, s2 = t % 60; return (h ? h + 'h ' : '') + m + 'm ' + String(s2).padStart(2, '0') + 's'; };
+function startChapter(n) {
+  // replaying keeps Orion's rank and stats, but the mission itself starts over
+  const keep = { vig: GM.save.vig, end: GM.save.end, str: GM.save.str, rank: GM.save.rank, maxStims: GM.save.maxStims, done: GM.save.done || {} };
+  GM.save = Object.assign(JSON.parse(JSON.stringify(NEW_SAVE)), keep, { started: true, chapter: n });
+  GM.chapterEndT = 0; GM.persist(); respawnAll(); startCrawl();
+}
+function openChapters(ret) {
+  chapterReturn = ret; const S = GM.save;
+  $('chList').innerHTML = CHAPTERS.map((c) => {
+    const done = S.done && S.done[c.id]; const inProg = S.started && S.chapter === c.id && !S.bossDead;
+    let status = !c.available ? 'COMING SOON' : done ? `COMPLETED · ${fmtTime(done.time)} · ${done.deaths} deaths` : inProg ? 'IN PROGRESS' : 'NOT STARTED';
+    let btns = '';
+    if (c.available) {
+      if (S.started && S.chapter === c.id) btns += `<button class="btn" data-ch="cont" data-id="${c.id}">CONTINUE</button>`;
+      btns += `<button class="btn" data-ch="start" data-id="${c.id}">${done || (S.started && S.chapter === c.id) ? 'REPLAY CHAPTER' : 'START CHAPTER'}</button>`;
+    }
+    return `<div class="chap ${c.available ? '' : 'locked'}"><div class="num">CHAPTER ${c.numeral}</div><div class="ttl">${c.title}</div>
+      ${c.place ? `<div class="meta">${c.place} · ${c.date}</div>` : ''}<div class="sum">${c.summary}</div><div class="st ${done ? 'done' : ''}">${status}</div><div class="bt">${btns}</div></div>`;
+  }).join('');
+  $('chList').querySelectorAll('[data-ch]').forEach((b) => b.onclick = () => {
+    AU.init(); AU.ui(); const id = +b.dataset.id;
+    if (b.dataset.ch === 'cont') { if (GM.state === 'complete') { show(null); GM.state = 'play'; hudVisible(true); lockPointer(); } else startPlay(); }
+    else startChapter(id);
+  });
+  show('chapters');
+}
+function chapterComplete() {
+  const S = GM.save; const c = chapterDef(S.chapter);
+  S.done = S.done || {}; S.done[c.id] = { time: S.stats.time, deaths: S.stats.deaths, kills: S.stats.kills, rank: S.rank }; GM.persist();
+  GM.state = 'complete'; hudVisible(false); if (document.pointerLockElement) document.exitPointerLock();
+  $('cmpNum').textContent = `CHAPTER ${c.numeral} COMPLETE`; $('cmpTitle2').textContent = c.title;
+  $('cmpStats').innerHTML = [['Time', fmtTime(S.stats.time)], ['War machines destroyed', S.stats.kills], ['Times killed in action', S.stats.deaths], ['Rank', S.rank]]
+    .map(([k, v]) => `<div class="row"><span>${k}</span><span class="v">${v}</span></div>`).join('');
+  const next = CHAPTERS.find((x) => x.id === c.id + 1);
+  $('cmpNext').textContent = next ? (next.available ? `Next: Chapter ${next.numeral} — ${next.title}` : `Chapter ${next.numeral}: ${next.summary}`) : '';
+  $('banner').style.opacity = 0; show('complete'); AU.beacon();
+}
 function startCrawl() {
   GM.state = 'crawl'; show('crawl'); const box = $('crawlTxt');
-  box.innerHTML = CRAWL.map((t, i) => `<p class="${i ? '' : 'first'}">${t}</p>`).join('');
+  const ch = chapterDef(GM.save.chapter);
+  box.innerHTML = `<p class="first"><small>CHAPTER ${ch.numeral}</small>${ch.title}</p>` + ch.prologue.map((t) => `<p>${t}</p>`).join('');
   crawlIdx = -1; $('crawl').onclick = endCrawl; AU.musicDuck(0.4); nextCrawl();
 }
 function nextCrawl() {
   const ps = $('crawlTxt').querySelectorAll('p'); clearTimeout(crawlTimer); clearTimeout(GM._crawlFade);
   ps.forEach((p) => p.style.opacity = 0);
   crawlIdx++;
-  if (crawlIdx >= ps.length) { AU.musicDuck(0.28); startPlay(); banner('NEW LONDON', 'NOVEMBER 2090', 'gold', 3.5); return; }
+  if (crawlIdx >= ps.length) { AU.musicDuck(0.28); startPlay(); const ch = chapterDef(GM.save.chapter); banner(ch.title.toUpperCase(), `CHAPTER ${ch.numeral} · ${ch.place.toUpperCase()}, ${ch.date.toUpperCase()}`, 'gold', 4.5); return; }
   const p = ps[crawlIdx]; GM._crawlFade = setTimeout(() => { if (GM.state === 'crawl') p.style.opacity = 1; }, crawlIdx ? 700 : 200);
   crawlTimer = setTimeout(nextCrawl, 1800 + p.textContent.length * 55);
 }
@@ -418,13 +461,13 @@ GM.alert = (e) => {
   GM.say('thomas', lines[e.type], { trooper: 8.3, drone: 5.7, brute: 6.9 }[e.type], { trooper: 4, drone: 5, brute: 6 }[e.type]);
 };
 GM.onEnemyKilled = (e) => {
-  GM.save.scrap += e.T.scrap; GM.hud.toast('+' + e.T.scrap + ' SCRAP');
+  GM.save.scrap += e.T.scrap; GM.hud.toast('+' + e.T.scrap + ' SCRAP'); GM.save.stats.kills++;
   if (GM.lock === e) GM.lock = null;
   if (e.boss) victory();
 };
 GM.onBossPhase2 = () => { GM.say('thomas', 'Its core\'s going critical — it\'s gone berserk! Keep moving, Orion!', 5.1, 13); AU.slam(); GM.shake(0.6); OE.R.flash = 0.8; };
 GM.onPlayerDeath = () => {
-  GM.state = 'dead'; AU.death(); hudVisible(false); $('hud').classList.remove('hidden');
+  GM.state = 'dead'; AU.death(); hudVisible(false); GM.save.stats.deaths++; $('hud').classList.remove('hidden');
   if (document.pointerLockElement) document.exitPointerLock();
   const P = GM.player;
   if (GM.save.scrap > 0) GM.save.echo = { pos: [P.pos[0], 0, P.pos[2]], amount: GM.save.scrap }; else GM.save.echo = null;
@@ -444,6 +487,7 @@ function victory() {
   GM.say('thomas', '...It\'s down. We actually did it.', 3.4, 14);
   GM.say('orion', 'Ten years of war won\'t end tonight, Tom. But tonight, London breathes.', 6.1, 15);
   GM.say('thomas', 'Then let\'s light every beacon we\'ve got. Let the whole city see it.', 4.9, 16);
+  GM.chapterEndT = 25;
   GM.say('radio', 'British Command to Commander Mascar. We see your signal. Hold position — the Americans are crossing the Atlantic. Dawn is coming.', 8.8, 17);
 }
 function interactables() {
@@ -548,6 +592,7 @@ function step(dt, inp) {
     GM.cam.shadowCenter = P.pos; P.ch.update(dt); GM.companion.ch.update(dt); P.syncNode(); GM.companion.sync();
     for (const e of GM.enemies) e.update(0);
   } else if (st === 'play' || st === 'dead') {
+    if (st === 'play') { GM.save.stats.time += dt; if (GM.chapterEndT > 0) { GM.chapterEndT -= dt; if (GM.chapterEndT <= 0) chapterComplete(); } }
     if (inp.lock) toggleLock();
     const P = GM.player;
     if (P.state === 'rest') P.setState('move', null);

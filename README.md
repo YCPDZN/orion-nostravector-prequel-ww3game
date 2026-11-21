@@ -32,6 +32,13 @@ On iPhone/Android you can use *Add to Home Screen* to get a full-screen app icon
 | Sprint | Shift (hold) | Push stick fully | L3 |
 | Pause | Esc | ❚❚ button | Start |
 
+## Chapters
+The game is split into chapters, each a self-contained mission. Pick one from **CHAPTERS** on the title screen.
+- **Chapter I — The Siege of New London** *(New London, November 2090)*: fight through the ruined city, light the signal beacons and destroy the Iron Warden.
+- **Chapter II — Classified**: coming soon.
+
+Each chapter opens with its own prologue and title card and ends with a *Chapter Complete* screen showing your time, kills, deaths and rank. Replaying a chapter keeps Orion's rank and upgrades. Chapters are defined in `js/chapters.js`.
+
 ## Souls-like systems
 - **Stamina** for every swing, roll and block. Run dry and your guard breaks.
 - **Stims** (your flasks) refill at **Signal Beacons**. Resting also respawns every war machine.
@@ -57,6 +64,7 @@ js/world.js           New London level: street, overpass, fog gate, cathedral ar
 js/actors.js          Orion, Thomas, enemies, boss, weapons
 js/game.js            input (keyboard, touch, gamepad), camera, HUD, saves, story
 js/audio.js           procedural sound effects, ambience and music
+js/chapters.js        chapter list: titles, prologues, summaries
 js/codex.js           the Codex: character and adversary entries with 3D turntables
 voice/01-17.mp3       voiced dialogue lines (played with the subtitles)
 assets/models.js      the rigged characters embedded for offline play
