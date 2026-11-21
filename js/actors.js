@@ -33,6 +33,8 @@ function buildWeapons() {
   rifleGlow = rg.build();
 }
 const metalMat = () => ({ mode: 1, triA: W.tex.metal.albedo, triN: W.tex.metal.normal, triScale: 2.5, rough: 0.35, metal: 0.8, color: [1, 1, 1] });
+A.weapons = () => { if (!swordMesh) buildWeapons(); return { swordMesh, swordGlow, rifleMesh, rifleGlow, metalMat }; };
+A.TYPES = () => TYPES;
 
 /* ---------------- player: Orion Mascar ---------------- */
 const ATK = {

@@ -40,6 +40,7 @@ On iPhone/Android you can use *Add to Home Screen* to get a full-screen app icon
 - **Enemies**: Pact Revenants (blade troopers), Seeker Drones (ranged plasma; roll through the bolts) and Juggernauts (slow, heavy slams).
 - **Boss: the Iron Warden.** Sweeping cleaves, a slam that sends out a shockwave (roll through it), a charge, and a second phase at half health with an orbital barrage.
 - **Thomas** follows you, picks targets, shoulders his rifle and fires aimed 3-round bursts (muzzle flash, tracers, ejected casings), rifle-bashes enemies that get close, and gets back up if he goes down.
+- **Codex** (title screen and pause menu): lore entries for Orion and Thomas with live 3D turntables of their models. Adversary entries unlock as you meet each war machine.
 - Fully voiced dialogue: 17 lines for Thomas, Orion and British Command, synced with subtitles.
 - Progress saves automatically in the browser.
 
@@ -56,6 +57,7 @@ js/world.js           New London level: street, overpass, fog gate, cathedral ar
 js/actors.js          Orion, Thomas, enemies, boss, weapons
 js/game.js            input (keyboard, touch, gamepad), camera, HUD, saves, story
 js/audio.js           procedural sound effects, ambience and music
+js/codex.js           the Codex: character and adversary entries with 3D turntables
 voice/01-17.mp3       voiced dialogue lines (played with the subtitles)
 assets/models.js      the rigged characters embedded for offline play
 models/*_rigged.glb   the rigged, animated characters as standard glTF files (Unity/Blender/Godot)

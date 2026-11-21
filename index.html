@@ -85,6 +85,31 @@ body.touchmode #sub{bottom:auto;top:16%;width:min(62vw,620px)}
 body.touchmode #prompt{bottom:auto;top:58%}
 body.touchmode #toast{top:30%}
 body.touchmode #bossbar{width:min(52vw,600px);left:44%}
+/* ---------- codex ---------- */
+#codex{position:fixed;inset:0;pointer-events:none}
+#codex .cx-panel{pointer-events:auto;position:absolute;top:0;right:0;bottom:0;width:min(50vw,580px);display:flex;flex-direction:column;
+  padding:max(18px,env(safe-area-inset-top)) max(22px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) 26px;
+  background:linear-gradient(90deg,rgba(6,5,4,0),rgba(6,5,4,.86) 9%,rgba(6,5,4,.95));border-left:1px solid rgba(201,168,106,.18)}
+#codex .cx-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#codex .cx-head h2{margin:0;font-weight:400;letter-spacing:.35em;color:var(--gold2);font-size:20px}
+#codex .cx-close{width:auto;margin:0;padding:6px 16px;font-size:14px}
+#codex .cx-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 10px;padding-bottom:10px;border-bottom:1px solid rgba(201,168,106,.25)}
+#codex .cx-sec{width:100%;font-size:11px;letter-spacing:.3em;color:#8d826f;margin:4px 0 0}
+#codex .cx-tab{pointer-events:auto;background:transparent;border:1px solid rgba(201,168,106,.25);color:#d9cfbd;font-family:var(--serif);font-size:14px;letter-spacing:.06em;padding:7px 12px;cursor:pointer;min-height:36px}
+#codex .cx-tab.on{border-color:var(--gold);background:rgba(201,168,106,.16);color:#fff3d6}
+#codex .cx-tab.locked{color:#6f6656;border-style:dashed}
+#codex .cx-body{overflow-y:auto;flex:1;padding-right:6px;-webkit-overflow-scrolling:touch}
+#codex .cx-body h1{margin:4px 0 0;font-weight:400;font-size:clamp(26px,3.4vw,40px);letter-spacing:.06em;color:#f1e6cf;line-height:1.1}
+#codex .cx-role{color:var(--gold);letter-spacing:.22em;font-size:12px;margin:6px 0 14px;text-transform:uppercase}
+#codex .cx-facts{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:15px;margin-bottom:14px;padding:10px 0;border-top:1px solid rgba(201,168,106,.2);border-bottom:1px solid rgba(201,168,106,.2)}
+#codex .cx-facts dt{color:#9d917b}#codex .cx-facts dd{margin:0;color:#efe4cc}
+#codex .cx-body p{font-size:16px;line-height:1.6;color:#d8ccb3;margin:0 0 12px}
+#codex .cx-body h3{font-weight:400;font-size:13px;letter-spacing:.28em;color:var(--gold);margin:18px 0 6px}
+#codex .cx-quote{font-style:italic;color:#f1e6cf;border-left:2px solid var(--gold);padding:4px 0 4px 14px;margin:16px 0 8px!important}
+#codex .cx-lockedmsg{color:#8d826f;font-style:italic;margin-top:30px}
+#codex .cx-hint{position:absolute;left:max(18px,env(safe-area-inset-left));bottom:max(14px,env(safe-area-inset-bottom));font-size:11px;letter-spacing:.3em;color:rgba(230,215,185,.55)}
+@media (max-width:700px) and (orientation:portrait){#codex .cx-panel{top:45%;width:100%;background:rgba(6,5,4,.94);border-left:0;border-top:1px solid rgba(201,168,106,.3)}}
+@media (max-height:500px){#codex .cx-panel{width:min(56vw,560px)}#codex .cx-body p{font-size:14px;line-height:1.5}#codex .cx-body h1{font-size:24px}#codex .cx-facts{font-size:13px}}
 @media (max-height:500px){ .bars{width:min(34vw,300px)} .bar{height:7px} #banner h1{font-size:clamp(30px,9vh,64px)} #sub{bottom:30%} }
 </style>
 </head>
@@ -121,6 +146,7 @@ body.touchmode #bossbar{width:min(52vw,600px);left:44%}
   <div class="menu">
     <button class="btn" id="bContinue">CONTINUE</button>
     <button class="btn" id="bNew">NEW GAME</button>
+    <button class="btn" id="bCodex">CODEX</button>
     <button class="btn" id="bSettings">SETTINGS</button>
     <button class="btn" id="bControls">CONTROLS</button>
   </div>
@@ -132,6 +158,7 @@ body.touchmode #bossbar{width:min(52vw,600px);left:44%}
 <div id="pause" class="screen hidden"><div class="panel">
   <h2>PAUSED</h2>
   <button class="btn" id="pResume">RESUME</button>
+  <button class="btn" id="pCodex">CODEX</button>
   <button class="btn" id="pSettings">SETTINGS</button>
   <button class="btn" id="pControls">CONTROLS</button>
   <button class="btn" id="pQuit">QUIT TO TITLE</button>
@@ -183,17 +210,27 @@ body.touchmode #bossbar{width:min(52vw,600px);left:44%}
   <button class="btn" id="cBack" style="margin-top:12px">BACK</button>
 </div></div>
 
+<div id="codex" class="hidden">
+  <div class="cx-hint">DRAG TO ROTATE</div>
+  <div class="cx-panel">
+    <div class="cx-head"><h2>CODEX</h2><button class="btn cx-close" id="cxClose">BACK</button></div>
+    <div class="cx-tabs" id="cxTabs"></div>
+    <div class="cx-body" id="cxBody"></div>
+  </div>
+</div>
+
 <div id="rotate" class="screen hidden"><div>For the best experience,<br>turn your device to landscape.<br><br><button class="btn" id="rotOk" style="width:auto;display:inline-block">PLAY ANYWAY</button></div></div>
 
-<script src="js/engine.js?v=4"></script>
-<script src="js/world.js?v=4"></script>
-<script src="js/actors.js?v=4"></script>
-<script src="js/audio.js?v=4"></script>
-<script src="js/game.js?v=4"></script>
+<script src="js/engine.js?v=5"></script>
+<script src="js/world.js?v=5"></script>
+<script src="js/actors.js?v=5"></script>
+<script src="js/audio.js?v=5"></script>
+<script src="js/game.js?v=5"></script>
+<script src="js/codex.js?v=5"></script>
 <script>
 // models are loaded after the page shows the loading screen
 (function () {
-  const s = document.createElement('script'); s.src = 'assets/models.js?v=4';
+  const s = document.createElement('script'); s.src = 'assets/models.js?v=5';
   s.onload = () => window.GM && GM.boot();
   s.onerror = () => { document.getElementById('lmsg').textContent = 'Could not load assets/models.js'; };
   document.body.appendChild(s);

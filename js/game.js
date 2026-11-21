@@ -49,6 +49,7 @@ GM.boot = async function () {
     const thomas = await OE.loadGLB(dec(ORION_MODELS.thomas));
     msg('Waking the war machines', 0.9); await tick();
     GM.parts = new OE.Particles(QUALITY[qName()].particles);
+    GM.assets = { orion, thomas };
     GM.player = new A.Player(orion); GM.companion = new A.Companion(thomas);
     for (const [t, p] of SPAWNS) GM.enemies.push(new A.Enemy(t, p, Math.PI));
     boss = new A.Enemy('boss', [0, 0, 157], Math.PI); GM.enemies.push(boss); GM.boss = boss;
@@ -214,13 +215,15 @@ function readInput(dt) {
 }
 
 /* ---------------- UI ---------------- */
-function show(id) { for (const s of ['title', 'pause', 'rest', 'level', 'settings', 'controls', 'crawl']) $(s).classList.toggle('hidden', s !== id); }
+function show(id) { for (const s of ['title', 'pause', 'rest', 'level', 'settings', 'controls', 'crawl', 'codex']) $(s).classList.toggle('hidden', s !== id); }
 let menuReturn = null;
 function setupUI() {
   $('bContinue').onclick = () => { AU.init(); AU.ui(); startPlay(); };
   $('bNew').onclick = () => { AU.init(); AU.ui(); GM.save = JSON.parse(JSON.stringify(NEW_SAVE)); GM.save.started = true; GM.persist(); respawnAll(); startCrawl(); };
   $('bSettings').onclick = () => { menuReturn = 'title'; openSettings(); };
   $('bControls').onclick = () => { menuReturn = 'title'; show('controls'); };
+  $('bCodex').onclick = () => { AU.init(); AU.ui(); GM.codex.open('title'); };
+  $('pCodex').onclick = () => { AU.ui(); GM.codex.open('pause'); };
   $('pResume').onclick = () => closePause();
   $('pSettings').onclick = () => { menuReturn = 'pause'; openSettings(); };
   $('pControls').onclick = () => { menuReturn = 'pause'; show('controls'); };
@@ -527,10 +530,11 @@ function frame(ts) {
   if (document.hidden || GM.simulating) return;
   OE.resize();
   step(dt, readInput(dt));
-  OE.render(GM.cam, GM.parts);
+  OE.render(GM.cam, GM.state === 'codex' ? null : GM.parts);
 }
 function step(dt, inp) {
   time += dt;
+  if (GM.state === 'codex') { GM.codex.update(dt, inp); return; }
   const R_ = OE.R;
   // world ambience
   flashT -= dt; if (flashT <= 0) { flashT = R(6, 15); R_.flash = R(0.4, 1.0); AU.thunder(R(0.6, 2.0)); }
@@ -580,5 +584,6 @@ function step(dt, inp) {
   W.update(sdt, time, { parts: GM.parts, camPos: GM.cam.pos });
   GM.parts.update(sdt);
 }
+GM.ui = { show, hudVisible };
 GM.debug = { sim(sec, inpF) { GM.simulating = true; const n = Math.round(sec * 60); for (let i = 0; i < n; i++) step(1 / 60, Object.assign({ mx: 0, my: 0, cx: 0, cy: 0 }, inpF ? inpF(i) : {})); GM.simulating = false; }, startPlay, respawnAll, doInteract, interactables, toggleLock, show, banner, get boss() { return boss; } };
 })();
