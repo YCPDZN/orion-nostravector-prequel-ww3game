@@ -37,7 +37,7 @@ The game is split into chapters, each a self-contained mission. Pick one from **
 - **Chapter I — The Siege of New London** *(New London, November 2090)*: fight through the ruined city, light the signal beacons and destroy the Iron Warden.
 - **Chapter II — Classified**: coming soon.
 
-Chapter I begins with a first-person memory: Orion recalls his birth in London in 2069 AD, shown as a soft, out-of-focus dream with a heartbeat. Each chapter then opens with its own title card and prologue and ends with a *Chapter Complete* screen showing your time, kills, deaths and rank. Replaying a chapter keeps Orion's rank and upgrades. Chapters are defined in `js/chapters.js`.
+Chapter I begins with a first-person memory: Orion recalls his birth in London in 2069 AD, shown as a soft, out-of-focus dream with a heartbeat, narrated by Orion (voice/intro1-6.mp3). Each chapter then opens with its own title card and prologue and ends with a *Chapter Complete* screen showing your time, kills, deaths and rank. Replaying a chapter keeps Orion's rank and upgrades. Chapters are defined in `js/chapters.js`.
 
 ## Souls-like systems
 - **Stamina** for every swing, roll and block. Run dry and your guard breaks.

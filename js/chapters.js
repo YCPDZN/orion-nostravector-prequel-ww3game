@@ -9,6 +9,8 @@ window.CHAPTERS = [
     // first-person memory narrated by Orion before the chapter begins
     opening: {
       year: '2069 AD',
+      // narration recordings, one per line: [file, seconds]
+      voice: [['voice/intro1.mp3', 4.6], ['voice/intro2.mp3', 8.9], ['voice/intro3.mp3', 9.3], ['voice/intro4.mp3', 7.1], ['voice/intro5.mp3', 8.2], ['voice/intro6.mp3', 6.1]],
       lines: [
         'I was born in London, in the spring of 2069.',
         'I don\'t remember it, of course. Nobody does. But sometimes, in the quiet before a battle, I think I can.',

@@ -4,6 +4,7 @@
 'use strict';
 const $ = (id) => document.getElementById(id);
 const B = window.GM.birth = { active: false };
+let voices = [], voiceEl = null;
 let cv, cx, raf = 0, t0 = 0, lineIdx = -1, lineTimer = 0, fadeTimer = 0, onDone = null, lines = [], beatT = 0;
 const rnd = (a, b) => a + (b - a) * Math.random();
 const bokeh = Array.from({ length: 34 }, () => ({ x: Math.random(), y: Math.random(), r: rnd(0.02, 0.09), s: rnd(0.004, 0.015), a: rnd(0.15, 0.5), warm: Math.random() < 0.7 }));
@@ -58,20 +59,28 @@ function draw(now) {
 }
 
 function next() {
-  clearTimeout(lineTimer); clearTimeout(fadeTimer);
+  clearTimeout(lineTimer); clearTimeout(fadeTimer); stopVoice();
   const ps = $('birthTxt').querySelectorAll('p'); ps.forEach((p) => p.style.opacity = 0);
   lineIdx++;
   if (lineIdx >= lines.length) return finish();
-  const p = ps[lineIdx]; fadeTimer = setTimeout(() => { if (B.active) p.style.opacity = 1; }, lineIdx ? 900 : 1600);
-  lineTimer = setTimeout(next, (lineIdx ? 900 : 1600) + 2200 + p.textContent.length * 60);
+  const p = ps[lineIdx]; const delay = lineIdx ? 900 : 1600; const v = voices[lineIdx];
+  fadeTimer = setTimeout(() => { if (!B.active) return; p.style.opacity = 1; if (v) playVoice(v[0]); }, delay);
+  const readT = 2200 + p.textContent.length * 60; // hold each line until Orion has finished speaking
+  lineTimer = setTimeout(next, delay + (v ? Math.max(readT, v[1] * 1000 + 1300) : readT));
+}
+function stopVoice() { if (voiceEl) { try { voiceEl.pause(); } catch (e) { } voiceEl = null; } }
+function playVoice(src) {
+  stopVoice();
+  try { voiceEl = new Audio(src); voiceEl.volume = Math.min(1, ((window.GM && GM.settings ? GM.settings.vol : 8) / 10) + 0.15); const pr = voiceEl.play(); if (pr && pr.catch) pr.catch(() => { }); } catch (e) { }
 }
 function finish() {
+  stopVoice();
   if (!B.active) return; B.active = false; clearTimeout(lineTimer); clearTimeout(fadeTimer);
   const el = $('birth'); el.style.transition = 'opacity 2.2s'; el.style.opacity = 0;
   setTimeout(() => { cancelAnimationFrame(raf); el.classList.add('hidden'); el.style.opacity = 1; if (onDone) onDone(); }, 2300);
 }
 B.start = function (opening, done) {
-  lines = opening.lines; onDone = done; lineIdx = -1; B.active = true; t0 = performance.now(); beatT = 0;
+  lines = opening.lines; voices = opening.voice || []; onDone = done; lineIdx = -1; B.active = true; t0 = performance.now(); beatT = 0;
   cv = $('birthCv'); cx = cv.getContext('2d');
   $('birthYear').textContent = opening.year;
   $('birthTxt').innerHTML = lines.map((l) => `<p>${l}</p>`).join('');
