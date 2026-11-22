@@ -36,6 +36,7 @@ const touchOn = () => GM.settings.touch === 'on' || (GM.settings.touch === 'auto
 /* ---------------- state ---------------- */
 GM.state = 'loading'; GM.enemies = []; GM.projectiles = []; GM.markers = []; GM.shocks = []; GM.lock = null; GM.audio = AU;
 GM.cam = { yaw: 0, pitch: 0.28, dist: isTouch ? 4.6 : 4.2, pos: [0, 2, -4], target: [0, 1.5, 0], fov: 1.0, shake: 0 };
+GM.camFov = GM.cam.fov; // gameplay lens; menu/codex stages restore this
 let hs = 0, flashT = 8, lastT = 0, time = 0, boss = null;
 GM.hitstop = (t) => { hs = Math.max(hs, t); };
 GM.shake = (a) => { GM.cam.shake = Math.min(1, GM.cam.shake + a); };

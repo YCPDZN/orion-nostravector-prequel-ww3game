@@ -116,6 +116,7 @@ MN.update = function (dt) {
   if (cap) { const key = tier; if (cap.dataset.k !== key) { cap.dataset.k = key; cap.innerHTML = `<i style="background:${info.css};box-shadow:0 0 10px ${info.css}"></i>${info.name}`; cap.style.color = info.css; } }
 };
 MN.leave = function () {
+  GM.cam.fov = GM.camFov || 1.0; // give the game its own camera lens back
   if (!lights) return;
   OE.R.lights = OE.R.lights.filter((l) => !Object.values(lights).includes(l)); OE.R.skyOff = false;
 };
