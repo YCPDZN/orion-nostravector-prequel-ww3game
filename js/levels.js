@@ -3,6 +3,8 @@
 (function () {
 'use strict';
 const say = (...a) => GM.say(...a);
+/* numbered Chapter II lines: plays voice/doverNN.mp3 when that recording exists, and keeps the subtitle up for as long as it plays */
+const sayN = (n, who, text, dur) => GM.say(who, text, GM.voDur(n, dur), GM.vo(n));
 
 window.LEVELS = {
   /* ---------------- Chapter I: New London ---------------- */
@@ -67,32 +69,32 @@ window.LEVELS = {
     env: { sunDir: [0.72, 0.3, 0.3], sunCol: [1.05, 0.9, 0.78], sky: [0.2, 0.22, 0.26], ground: [0.11, 0.1, 0.095], fogCol: [0.27, 0.29, 0.33], fogDen: 0.013, exposure: 1.05,
       skyPal: { top: [0.13, 0.15, 0.19], hor: [0.5, 0.47, 0.45], glow: [0.18, 0.07, 0.02], clLo: [0.16, 0.17, 0.19], clHi: [0.44, 0.43, 0.43], stars: 0, moon: 0 } },
     // Talina speaks English with some Spanish; subtitles only for now
-    voice: { who: 'talina', lang: null, file: null, lines: {
-      intro: [null, 'Commander Mascar. I hoped they\'d send someone I didn\'t have to respect.'],
+    voice: { who: 'talina', lang: null, file: null, vo: true, lines: {
+      intro: [null, 'Commander Mascar. I hoped they\'d send someone I didn\'t have to respect.', 15],
       taunts: [
-        [null, 'The Red Sun and the Bear don\'t need Britain. But they wanted me.'],
-        [null, '¡Vamos, niño! Is that all?'],
-        [null, 'Too slow, Commander.'],
-        [null, 'I trained half of Command\'s cadets. Who do you think taught your teachers?'],
-        [null, 'Britain is already dead. You just haven\'t noticed.'],
+        [null, 'The Red Sun and the Bear don\'t need Britain. But they wanted me.', 18],
+        [null, '¡Vamos, niño! Is that all?', 19],
+        [null, 'Too slow, Commander.', 20],
+        [null, 'I trained half of Command\'s cadets. Who do you think taught your teachers?', 21],
+        [null, 'Britain is already dead. You just haven\'t noticed.', 22],
       ],
-      phase2: [null, 'Basta de juegos. Enough games.'],
-      kill: [null, 'Lo siento, Orion. You were good. Just not good enough.'],
-      death: [null, 'Bien hecho, Comandante... You really are what they say.'],
+      phase2: [null, 'Basta de juegos. Enough games.', 23],
+      kill: [null, 'Lo siento, Orion. You were good. Just not good enough.', 24],
+      death: [null, 'Bien hecho, Comandante... You really are what they say.', 25],
     } },
     intro() {
-      say('radio', 'Command to Mascar. Hawthorne\'s with the assault force on the beach. Pact spotters in Dover Castle are calling the fleet\'s guns down on them. Clear the clifftop.', 8.5);
-      say('orion', 'Understood. Tell Tom to keep his head down. I\'ll be back for him.', 5);
-      say('radio', 'One more thing, Commander. The castle garrison answers to Talina Alvarez.', 5);
-      say('orion', '...Alvarez. She trained half of Command. She was one of us.', 5);
+      sayN(6, 'radio', 'Command to Mascar. Hawthorne\'s with the assault force on the beach. Pact spotters in Dover Castle are calling the fleet\'s guns down on them. Clear the clifftop.', 8.5);
+      sayN(7, 'orion', 'Understood. Tell Tom to keep his head down. I\'ll be back for him.', 5);
+      sayN(8, 'radio', 'One more thing, Commander. The castle garrison answers to Talina Alvarez.', 5);
+      sayN(9, 'orion', '...Alvarez. She trained half of Command. She was one of us.', 5);
     },
     beacon(i) {
-      if (i === 0) say('orion', 'Beacon\'s lit. Command knows I\'m up here.', 3.5);
-      else say('orion', 'The old Roman lighthouse. Two thousand years it\'s watched the Channel. It can watch one more fight.', 6);
+      if (i === 0) sayN(10, 'orion', 'Beacon\'s lit. Command knows I\'m up here.', 3.5);
+      else sayN(11, 'orion', 'The old Roman lighthouse. Two thousand years it\'s watched the Channel. It can watch one more fight.', 6);
     },
     bossIntro() {
-      say('orion', 'Talina Alvarez. You swore the same oath I did.', 4);
-      say('talina', 'And I watched London burn while Command hid underground. The Pact keeps its promises, Orion. Does Britain?', 7);
+      sayN(16, 'orion', 'Talina Alvarez. You swore the same oath I did.', 4);
+      sayN(17, 'talina', 'And I watched London burn while Command hid underground. The Pact keeps its promises, Orion. Does Britain?', 7);
     },
     phase2() { },
     victory() { return { endIn: 4.4 }; },
@@ -114,40 +116,40 @@ window.LEVELS = {
       fogCol: [0.27, 0.29, 0.33], fogDen: 0.013, exposure: 1.05,
       skyPal: { top: [0.13, 0.15, 0.19], hor: [0.5, 0.47, 0.45], glow: [0.18, 0.07, 0.02], clLo: [0.16, 0.17, 0.19], clHi: [0.44, 0.43, 0.43], stars: 0, moon: 0 },
     },
-    voice: { who: 'tide', lang: 'ru-RU', file: null, lines: {
-      intro: ['Британские дети. Флот уже у ваших берегов.', 'British children. The fleet is already at your shores.'],
-      children: ['Ваша Англия послала мальчиков против стали.', 'Your England sent boys against steel.'],
+    voice: { who: 'tide', lang: 'ru-RU', file: null, vo: true, lines: {
+      intro: ['Британские дети. Флот уже у ваших берегов.', 'British children. The fleet is already at your shores.', 58],
+      children: ['Ваша Англия послала мальчиков против стали.', 'Your England sent boys against steel.', 65],
       taunts: [
-        ['Красное Солнце и Медведь — под одним знаменем.', 'The Red Sun and the Bear — under one banner.'],
-        ['На колени!', 'Kneel!'],
-        ['Море заберёт вас.', 'The sea will take you.'],
-        ['Этот берег наш.', 'This shore is ours.'],
-        ['За Союз!', 'For the Pact!'],
+        ['Красное Солнце и Медведь — под одним знаменем.', 'The Red Sun and the Bear — under one banner.', 60],
+        ['На колени!', 'Kneel!', 61],
+        ['Море заберёт вас.', 'The sea will take you.', 62],
+        ['Этот берег наш.', 'This shore is ours.', 63],
+        ['За Союз!', 'For the Pact!', 64],
       ],
-      barrage: ['Флот, огонь по моей позиции!', 'Fleet — fire on my position!'],
-      phase2: ['Реактор на пределе… Я не отступлю!', 'Reactor at its limit… I will not retreat!'],
-      kill: ['Ещё один англичанин — в море.', 'Another Englishman for the sea.'],
-      death: ['Берег… потерян…', 'The shore… is lost…'],
+      barrage: ['Флот, огонь по моей позиции!', 'Fleet — fire on my position!', 66],
+      phase2: ['Реактор на пределе… Я не отступлю!', 'Reactor at its limit… I will not retreat!', 67],
+      kill: ['Ещё один англичанин — в море.', 'Another Englishman for the sea.', 69],
+      death: ['Берег… потерян…', 'The shore… is lost…', 70],
     } },
     intro() {
-      say('radio', 'Command to Hawthorne. Commander Mascar is being flown out. He\'s alive, Tom — but he\'s out of this fight.', 7);
-      say('thomas', '...What happened up there?', 3);
-      if (GM.save.talina === 'executed') say('radio', 'Alvarez is dead. He... did it himself. Hawthorne, the beachhead still has to fall, and you\'re all we\'ve got left on the shingle.', 8);
-      else say('radio', 'Alvarez. She got away. The beachhead still has to fall, and you\'re all we\'ve got left on the shingle. It\'s down to you.', 7.5);
-      say('thomas', 'Understood. I won\'t let him down. Beacon first — then the Tidebreaker.', 5.5);
+      sayN(48, 'radio', 'Command to Hawthorne. Commander Mascar is being flown out. He\'s alive, Tom — but he\'s out of this fight.', 7);
+      sayN(49, 'thomas', '...What happened up there?', 3);
+      if (GM.save.talina === 'executed') sayN(51, 'radio', 'Alvarez is dead. He... did it himself. Hawthorne, the beachhead still has to fall, and you\'re all we\'ve got left on the shingle.', 8);
+      else sayN(50, 'radio', 'Alvarez. She got away. The beachhead still has to fall, and you\'re all we\'ve got left on the shingle. It\'s down to you.', 7.5);
+      sayN(52, 'thomas', 'Understood. I won\'t let him down. Beacon first — then the Tidebreaker.', 5.5);
     },
     beacon(i) {
-      if (i === 0) say('thomas', 'Beacon\'s live. Command can see me from across the water.', 4.5);
-      else say('thomas', 'The old pillbox. It held this beach once before. The landing zone\'s just past that ship.', 5.5);
+      if (i === 0) sayN(53, 'thomas', 'Beacon\'s live. Command can see me from across the water.', 4.5);
+      else sayN(54, 'thomas', 'The old pillbox. It held this beach once before. The landing zone\'s just past that ship.', 5.5);
     },
     bossIntro() {
-      say('thomas', 'So you\'re what\'s been holding the beach. The Commander\'s not here. You\'ve got me instead.', 6);
+      sayN(59, 'thomas', 'So you\'re what\'s been holding the beach. The Commander\'s not here. You\'ve got me instead.', 6);
     },
-    phase2() { say('thomas', 'Its reactor\'s spiking — it\'s calling the fleet down! Keep moving, Tom. Keep moving...', 5); },
+    phase2() { sayN(68, 'thomas', 'Its reactor\'s spiking — it\'s calling the fleet down! Keep moving, Tom. Keep moving...', 5); },
     victory() {
-      say('thomas', 'It\'s down... It\'s down! Command, the beachhead\'s broken!', 4.5);
-      say('radio', 'We see it, Hawthorne. The American fleet is turning for Dover. ...He\'d be proud of you, son.', 7);
-      say('thomas', 'Something\'s moving in the wreck.', 3.5);
+      sayN(71, 'thomas', 'It\'s down... It\'s down! Command, the beachhead\'s broken!', 4.5);
+      sayN(72, 'radio', 'We see it, Hawthorne. The American fleet is turning for Dover. ...He\'d be proud of you, son.', 7);
+      sayN(73, 'thomas', 'Something\'s moving in the wreck.', 3.5);
       return { banner: ['TIDEBREAKER DESTROYED', 'THE BEACH IS OURS'], endIn: 16 };
     },
     endings: { good: 'Thomas let him go. Somewhere, a boy from that wreck is alive because of him.', neutral: 'Thomas followed his orders to the letter. The beach is clear, and the fleet can land.', evil: 'The beach is clear. But Thomas Hawthorne came back from Dover colder than he went.' },

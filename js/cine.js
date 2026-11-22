@@ -10,30 +10,30 @@ const C = GM.cine = { t: 0, on: false };
 const fwd = (y) => [Math.sin(y), 0, Math.cos(y)];
 
 const OPEN = [ // shared, up to the strike
-  [0.4, 'orion', 'It\'s over, Talina. Get up. You\'re coming back to London to answer for this.', 5],
-  [5.6, 'talina', 'London? London is ash, Comandante. And you are a boy with a sword.', 4.6],
-  [10.4, 'orion', 'Last chance.', 2],
-  [12.5, 'talina', 'Then let me leave you something to remember me by.', 3.3],
-  [16.2, 'orion', 'Argh — !', 1.6],
-  [18.4, 'talina', 'Hasta luego, Orion.', 2.4],
+  [0.4, 'orion', 'It\'s over, Talina. Get up. You\'re coming back to London to answer for this.', 5, 26],
+  [5.6, 'talina', 'London? London is ash, Comandante. And you are a boy with a sword.', 4.6, 27],
+  [10.4, 'orion', 'Last chance.', 2, 28],
+  [12.5, 'talina', 'Then let me leave you something to remember me by.', 3.3, 29],
+  [16.2, 'orion', 'Argh — !', 1.6, 30],
+  [18.4, 'talina', 'Hasta luego, Orion.', 2.4, 31],
 ];
 const BRANCH = {
   spare: { fate: 'fled', end: 46.5, fadeOut: 40.9, lines: [
-    [23.0, 'orion', 'Talina — wait.', 2],
-    [25.2, 'talina', '...¿Qué?', 1.8],
-    [27.2, 'orion', 'Since the academy. Since the day you put me on my back in the training hall... I\'ve had a crush on you.', 5.5],
-    [32.9, 'talina', '...You tell me this now? With my blade still warm? Idiota.', 4.2],
-    [37.3, 'talina', 'Go home, Orion. Before I change my mind.', 3.4],
-    [41.6, 'thomas', 'Commander? Commander, respond! ...Orion! ORION!', 4.6],
+    [23.0, 'orion', 'Talina — wait.', 2, 32],
+    [25.2, 'talina', '...¿Qué?', 1.8, 33],
+    [27.2, 'orion', 'Since the academy. Since the day you put me on my back in the training hall... I\'ve had a crush on you.', 5.5, 34],
+    [32.9, 'talina', '...You tell me this now? With my blade still warm? Idiota.', 4.2, 35],
+    [37.3, 'talina', 'Go home, Orion. Before I change my mind.', 3.4, 36],
+    [41.6, 'thomas', 'Commander? Commander, respond! ...Orion! ORION!', 4.6, 37],
   ] },
   execute: { fate: 'executed', end: 60, fadeOut: 54, lines: [
-    [20.9, 'orion', 'Talina.', 1.6],
-    [24.5, 'orion', 'You should have finished it. You had your blade at my face, and you chose to leave me something to remember you by.', 5.7],
-    [30.4, 'orion', 'So here is mine. Feel how cold the steel is. Feel your strength run out through your fingers, onto the stones you sold.', 5.7],
-    [36.3, 'orion', 'You taught Command\'s cadets to aim for the heart. I aimed lower. I wanted you to have time to understand.', 5.7],
-    [42.2, 'orion', 'Seville. London. The Pact. None of it matters now. The Channel wind is the only thing that will remember your name.', 5.7],
-    [48.1, 'orion', 'And when the Red Sun and the Bear ask what became of their traitor... I\'ll tell them. Slowly.', 5.4],
-    [54.6, 'thomas', 'Commander? Commander, respond! ...Orion? What happened up there?', 5],
+    [20.9, 'orion', 'Talina.', 1.6, 38],
+    [24.5, 'orion', 'You should have finished it. You had your blade at my face, and you chose to leave me something to remember you by.', 5.7, 39],
+    [30.4, 'orion', 'So here is mine. Feel how cold the steel is. Feel your strength run out through your fingers, onto the stones you sold.', 5.7, 40],
+    [36.3, 'orion', 'You taught Command\'s cadets to aim for the heart. I aimed lower. I wanted you to have time to understand.', 5.7, 41],
+    [42.2, 'orion', 'Seville. London. The Pact. None of it matters now. The Channel wind is the only thing that will remember your name.', 5.7, 42],
+    [48.1, 'orion', 'And when the Red Sun and the Bear ask what became of their traitor... I\'ll tell them. Slowly.', 5.4, 43],
+    [54.6, 'thomas', 'Commander? Commander, respond! ...Orion? What happened up there?', 5, 44],
   ] },
 };
 const IMPACT = 15.9, BLACK_UNTIL = 17.8;
@@ -42,7 +42,7 @@ function black(v, secs) { const b = $('cineBlack'); b.style.transition = secs ? 
 
 C.start = function (name) {
   if (name !== 'eye') return;
-  C.name = name; C.t = 0; C.on = true; C.flags = {};
+  C.name = name; C.t = 0; C.real = 0; C.busy = 0; C.on = true; C.flags = {};
   C.br = GM.align.tier('o') === 'evil' ? BRANCH.execute : BRANCH.spare;
   C.lines = OPEN.concat(C.br.lines); C.li = 0; C.end = C.br.end;
   GM.state = 'cutscene'; GM.lock = null; GM.clearSubs();
@@ -57,7 +57,7 @@ C.start = function (name) {
 };
 C.skip = function () {
   if (!C.on) return;
-  if (C.t < IMPACT - 0.1) { C.t = IMPACT - 0.05; GM.clearSubs(); C.li = C.lines.findIndex((l) => l[0] >= IMPACT); }
+  if (C.t < IMPACT - 0.1) { C.t = IMPACT - 0.05; C.busy = 0; GM.clearSubs(); C.li = C.lines.findIndex((l) => l[0] >= IMPACT); }
   else C.t = C.end;
 };
 
@@ -72,8 +72,14 @@ const faceTo = (a, b, dt, rate) => { a.yaw += OE.angDiff(a.yaw, Math.atan2(b.pos
 
 C.update = function (dt) {
   if (!C.on) return;
-  C.t += dt; const t = C.t, P = GM.player, T = GM.boss, cam = GM.cam, F = C.flags, d = C.dir, r = C.right, evil = C.br === BRANCH.execute;
-  while (C.li >= 0 && C.li < C.lines.length && C.lines[C.li][0] <= t) { const l = C.lines[C.li++]; GM.say(l[1], l[2], l[3]); }
+  /* script clock: runs in real time, but holds at a line's cue until the previous line's recording has finished */
+  C.real += dt; let step = dt; const nx = C.li >= 0 ? C.lines[C.li] : null;
+  if (nx && C.t + dt >= nx[0]) {
+    if (C.real < C.busy) { C.t = Math.max(C.t, nx[0] - 1e-4); step = 0; }
+    else { const D = GM.voDur(nx[4], nx[3]); GM.say(nx[1], nx[2], D, GM.vo(nx[4])); C.busy = C.real + D - 0.25; C.li++; }
+  }
+  C.t += step;
+  const t = C.t, P = GM.player, T = GM.boss, cam = GM.cam, F = C.flags, d = C.dir, r = C.right, evil = C.br === BRANCH.execute;
 
   if (t < IMPACT) { // Orion walks up and stands over her
     const u = Math.min(1, t / 2.2);

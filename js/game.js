@@ -510,7 +510,8 @@ function startCrawl(part) {
   GM.crawlPart = pt;
   const head = pt ? `<p class="first"><small>CHAPTER ${ch.numeral} · PART ${pt.numeral}</small>${pt.title}</p>` : `<p class="first"><small>CHAPTER ${ch.numeral}</small>${ch.title}</p>`;
   const lines = (pt && pt.prologue) || ch.prologue;
-  box.innerHTML = (pt && pt.numeral === 'I' ? `<p class="first"><small>CHAPTER ${ch.numeral}</small>${ch.title}</p>` : '') + head + lines.map((t) => `<p>${t}</p>`).join('');
+  const vo = (pt && pt.vo) || [];
+  box.innerHTML = (pt && pt.numeral === 'I' ? `<p class="first"><small>CHAPTER ${ch.numeral}</small>${ch.title}</p>` : '') + head + lines.map((t, i) => `<p${vo[i] ? ` data-vo="${vo[i]}"` : ''}>${t}</p>`).join('');
   crawlIdx = -1; $('crawl').onclick = endCrawl; AU.musicDuck(0.4); nextCrawl();
 }
 function nextCrawl() {
@@ -521,7 +522,9 @@ function nextCrawl() {
     if (pt) banner(pt.title.toUpperCase(), `CHAPTER ${ch.numeral} · PART ${pt.numeral} · ${pt.place.toUpperCase()}`, 'gold', 4.5);
     else banner(ch.title.toUpperCase(), `CHAPTER ${ch.numeral} · ${ch.place.toUpperCase()}, ${ch.date.toUpperCase()}`, 'gold', 4.5); return; }
   const p = ps[crawlIdx]; GM._crawlFade = setTimeout(() => { if (GM.state === 'crawl') p.style.opacity = 1; }, crawlIdx ? 700 : 200);
-  crawlTimer = setTimeout(nextCrawl, 1800 + p.textContent.length * 55);
+  let ms = 1800 + p.textContent.length * 55;
+  const vn = +p.dataset.vo; if (GM.vo(vn)) { playVoice(GM.vo(vn)); ms = Math.max(ms, (window.DOVER_VO[vn] + 1.1) * 1000); } // narrated line
+  crawlTimer = setTimeout(nextCrawl, ms);
 }
 function endCrawl() { if (GM.state === 'crawl') nextCrawl(); }
 
@@ -555,6 +558,10 @@ GM.warden = (key, story = true) => {
   if (key === 'taunts') line = nextTaunt();
   if (story && ['intro', 'phase2', 'death', 'kill'].includes(key)) { subQ.length = 0; subT = 0; try { if (voiceEl) voiceEl.pause(); } catch (e) { } } // boss moments cut in
   const [zh, en, file, secs] = line;
+  if (V.vo) { // numbered Chapter II line: its recording if there is one, else text-to-speech (if any)
+    const f = GM.vo(file), base = Math.max(3.2, en.length * 0.06 + 1.4, zh ? zh.length * (V.lang === 'zh-CN' ? 0.34 : 0.075) + 1.2 : 0);
+    GM.say(V.who, en, GM.voDur(file, base), { zh: f ? null : zh, lang: V.lang, file: f || null }); return;
+  }
   const dur = file && V.file ? Math.max(2.6, secs + 1.0) : Math.max(3.2, en.length * 0.06 + 1.4, zh ? zh.length * (V.lang === 'zh-CN' ? 0.34 : 0.075) + 1.2 : 0);
   GM.say(V.who, en, dur, { zh, lang: V.lang, file: file && V.file ? V.file(file) : null });
 };
@@ -680,7 +687,8 @@ GM.alert = (e) => {
     const solo = GM.heroKey === 'thomas'
       ? { trooper: 'Revenants. Hit hard, slow to recover. Punish the swing — just like he taught me.', drone: 'Seeker drone. Don\'t outrun the bolts. Roll through them.', brute: 'Juggernaut. Don\'t trade blows. Dodge the slam, then hit it from behind.' }
       : { trooper: 'Revenants. Slow to recover — punish the swing.', drone: 'Seeker drone. Roll through the bolts, then close in.', brute: 'Juggernaut. Don\'t trade blows with it. Dodge the slam.' };
-    GM.say(GM.heroKey === 'thomas' ? 'thomas' : 'orion', solo[e.type], 5); return;
+    const n = (GM.heroKey === 'thomas' ? { trooper: 55, drone: 56, brute: 57 } : { trooper: 12, drone: 13, brute: 14 })[e.type]; // numbered Chapter II lines
+    GM.say(GM.heroKey === 'thomas' ? 'thomas' : 'orion', solo[e.type], GM.voDur(n, 5), GM.vo(n)); return;
   }
   GM.say('thomas', lines[e.type], { trooper: 8.3, drone: 5.7, brute: 6.9 }[e.type], { trooper: 4, drone: 5, brute: 6 }[e.type]);
 };

@@ -35,11 +35,11 @@ const CHOICES = [
     ] },
   { id: 'pilot', chapter: 2, title: 'The Pilot', auto: true, chooser: 't', asker: 'pilot',
     scene: 'The Tidebreaker\'s cockpit splits open. Its pilot drags himself out of the burning wreck onto the shingle and raises his empty hands. He can\'t be much older than Thomas.',
-    thomas: 'Please... I am nineteen. I did not choose this. Please.',
+    thomas: 'Please... I am nineteen. I did not choose this. Please.', vo: 74,
     options: [
-      { align: 'good', say: 'Go. Run, and don\'t ever come back.', reply: '...Thank you. Thank you.', result: 'He stumbles away into the smoke. Thomas watches him until he is gone.' },
-      { align: 'neutral', say: 'Hands where I can see them. Command decides what happens to you.', reply: '...Yes. Yes, okay.', result: 'Thomas binds his wrists and radios his position for pickup.', reward: { scrap: 100 } },
-      { align: 'evil', say: 'You don\'t get to walk away. Not after what your lot did to the Commander.', reply: 'No — please —', result: 'Thomas takes his kit and leaves him on the beach. Behind him, the drones are already circling.', reward: { scrap: 220 } },
+      { align: 'good', say: 'Go. Run, and don\'t ever come back.', reply: '...Thank you. Thank you.', vo: [75, 76], result: 'He stumbles away into the smoke. Thomas watches him until he is gone.' },
+      { align: 'neutral', say: 'Hands where I can see them. Command decides what happens to you.', reply: '...Yes. Yes, okay.', vo: [77, 78], result: 'Thomas binds his wrists and radios his position for pickup.', reward: { scrap: 100 } },
+      { align: 'evil', say: 'You don\'t get to walk away. Not after what your lot did to the Commander.', reply: 'No — please —', vo: [79, 80], result: 'Thomas takes his kit and leaves him on the beach. Behind him, the drones are already circling.', reward: { scrap: 220 } },
     ] },
   { id: 'hospital', chapter: 3, title: 'The Field Hospital',
     scene: 'An abandoned field hospital. Wounded soldiers on every cot, and a handful of stims left on the shelf.',
@@ -97,7 +97,8 @@ AL.open = function (id, after) {
   $('chResult').textContent = ''; $('chResult').style.display = 'none';
   $('chOpts').innerHTML = `<div class="orionsay">${chN}</div>` + c.options.map((o, i) => `<button class="btn chopt" data-i="${i}" style="border-color:${AL.TIERS[o.align].css}"><span class="dot" style="background:${AL.TIERS[o.align].css}"></span>“${o.say}”</button>`).join('');
   $('chOpts').querySelectorAll('.chopt').forEach((b) => b.onclick = () => choose(+b.dataset.i));
-  GM.say(c.asker || 'thomas', c.thomas, Math.max(4, c.thomas.length * 0.06));
+  if (c.vo) GM.say(c.asker || 'thomas', c.thomas, GM.voDur(c.vo, Math.max(4, c.thomas.length * 0.06)), GM.vo(c.vo));
+  else GM.say(c.asker || 'thomas', c.thomas, Math.max(4, c.thomas.length * 0.06));
   $('chLeave').style.display = c.auto ? 'none' : ''; $('chLeave').textContent = 'STEP AWAY';
   $('choice').classList.remove('hidden');
 };
@@ -122,7 +123,7 @@ function choose(i) {
   $('chLeave').style.display = ''; $('chLeave').textContent = 'CONTINUE';
   subQ_clear();
   if (o.voice) { GM.say('orion', o.say, o.voice[1] + 0.6, o.voice[0]); GM.say('thomas', o.reply, o.voice[3] + 0.8, o.voice[2]); } // recorded lines
-  else { GM.say(c.chooser === 't' ? 'thomas' : 'orion', o.say, Math.max(3, o.say.length * 0.055)); GM.say(c.asker || 'thomas', o.reply, Math.max(3, o.reply.length * 0.065)); }
+  else { const v = o.vo || []; GM.say(c.chooser === 't' ? 'thomas' : 'orion', o.say, GM.voDur(v[0], Math.max(3, o.say.length * 0.055)), GM.vo(v[0])); GM.say(c.asker || 'thomas', o.reply, GM.voDur(v[1], Math.max(3, o.reply.length * 0.065)), GM.vo(v[1])); }
   const after = [AL.tier('o'), AL.tier('t')];
   if (after[0] !== before[0]) GM.pendingAlignBanner = 'o';
   else if (after[1] !== before[1]) GM.pendingAlignBanner = 't';
