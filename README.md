@@ -75,12 +75,12 @@ tools/*.py            the rigging pipeline used to build them
 
 ## The rigged models
 `models/OrionMascar_rigged.glb` and `models/ThomasHawthorne_rigged.glb` are standard skinned glTF 2.0 files that import into Unity, Blender, Godot or Unreal.
-- **Skeleton:** 21 bones (Hips, Spine, Chest, Neck, Head, Shoulder/UpperArm/ForeArm/Hand ×2, UpLeg/Leg/Foot/Toe ×2).
+- **Skeleton:** 24 bones (Hips, Spine, Chest, Neck, Head, Shoulder/UpperArm/ForeArm/Hand ×2, UpLeg/Leg/Foot/Toe ×2, and a Cape1–Cape3 chain down Orion's back).
 - **Scale:** real-world metres, about 1.82 m tall.
 - **Mesh:** optimised for mobile from about 1.9M to about 50k triangles, with the original 1024² colour, normal and metal/roughness textures kept.
 - **Orion's clips:** Idle, Walk, Run, Attack1, Attack2, Heavy, Roll, Block, Hit, Death, Heal.
 - **Thomas's clips:** Idle, Walk, Run, WalkAim, Aim, Shoot (3-round burst with recoil), Attack1 (rifle bash), Roll, Hit, Death. In game his rifle is aimed procedurally at his target.
-- The weighting is region-aware: Orion's cloak follows his hips and spine instead of his arms, and fused hand/thigh geometry was separated.
+- The weighting is region-aware: Orion's cape is skinned to its own bone chain (smoothly by height, with the side panels gently pushed by the upper arms), and fused hand/thigh geometry was separated. In game the cape bones are driven by spring physics, so the cape trails behind when he runs, sways on turns and flutters in the wind.
 
 ### Rebuilding the rig (optional)
 This needs Python 3 with numpy and scipy. Put the original Tripo files in `source_models/`, then run:

@@ -9,7 +9,8 @@ PARENT = {'Hips': None, 'Spine': 'Hips', 'Chest': 'Spine', 'Neck': 'Chest', 'Hea
           'L_Shoulder': 'Chest', 'L_UpperArm': 'L_Shoulder', 'L_ForeArm': 'L_UpperArm', 'L_Hand': 'L_ForeArm',
           'R_Shoulder': 'Chest', 'R_UpperArm': 'R_Shoulder', 'R_ForeArm': 'R_UpperArm', 'R_Hand': 'R_ForeArm',
           'L_UpLeg': 'Hips', 'L_Leg': 'L_UpLeg', 'L_Foot': 'L_Leg', 'L_Toe': 'L_Foot',
-          'R_UpLeg': 'Hips', 'R_Leg': 'R_UpLeg', 'R_Foot': 'R_Leg', 'R_Toe': 'R_Foot'}
+          'R_UpLeg': 'Hips', 'R_Leg': 'R_UpLeg', 'R_Foot': 'R_Leg', 'R_Toe': 'R_Foot',
+          'Cape1': 'Chest', 'Cape2': 'Cape1', 'Cape3': 'Cape2'}
 BONES = anims.BONES
 
 def mirror(j):
@@ -24,7 +25,8 @@ CHARS = {
  'ThomasHawthorne': dict(
    joints=mirror({'Hips': (0, .50, -.01), 'Spine': (0, .60, -.01), 'Chest': (0, .70, -.01), 'Neck': (0, .83, -.005), 'Head': (0, .875, 0),
           'L_Shoulder': (.04, .80, -.02), 'L_UpperArm': (.16, .77, -.02), 'L_ForeArm': (.19, .605, -.02), 'L_Hand': (.20, .475, 0),
-          'L_UpLeg': (.075, .49, -.01), 'L_Leg': (.09, .27, 0), 'L_Foot': (.10, .065, -.02), 'L_Toe': (.10, .02, .07)}),
+          'L_UpLeg': (.075, .49, -.01), 'L_Leg': (.09, .27, 0), 'L_Foot': (.10, .065, -.02), 'L_Toe': (.10, .02, .07),
+          'Cape1': (0, .74, -.11), 'Cape2': (0, .52, -.13), 'Cape3': (0, .32, -.14)}),
    ends=mirror({'Head': (0, .98, 0), 'L_Hand': (.205, .40, .01), 'L_Toe': (.10, .02, .12), 'Hips': (0, .44, -.01)}),
    radius=mirror({'Hips': .11, 'Spine': .11, 'Chest': .12, 'Neck': .05, 'Head': .075, 'L_Shoulder': .05,
           'L_UpperArm': .062, 'L_ForeArm': .056, 'L_Hand': .04, 'L_UpLeg': .072, 'L_Leg': .058, 'L_Foot': .05, 'L_Toe': .04}),
@@ -32,7 +34,8 @@ CHARS = {
  'OrionMascar': dict(
    joints=mirror({'Hips': (0, .49, 0), 'Spine': (0, .60, 0), 'Chest': (0, .70, -.01), 'Neck': (0, .835, -.01), 'Head': (0, .88, 0),
           'L_Shoulder': (.04, .80, -.02), 'L_UpperArm': (.135, .78, -.02), 'L_ForeArm': (.15, .625, -.02), 'L_Hand': (.16, .48, 0),
-          'L_UpLeg': (.065, .48, 0), 'L_Leg': (.07, .27, 0), 'L_Foot': (.08, .065, -.02), 'L_Toe': (.08, .02, .07)}),
+          'L_UpLeg': (.065, .48, 0), 'L_Leg': (.07, .27, 0), 'L_Foot': (.08, .065, -.02), 'L_Toe': (.08, .02, .07),
+          'Cape1': (0, .74, -.11), 'Cape2': (0, .52, -.13), 'Cape3': (0, .32, -.14)}),
    ends=mirror({'Head': (0, .98, 0), 'L_Hand': (.165, .42, .01), 'L_Toe': (.08, .02, .12), 'Hips': (0, .43, 0)}),
    radius=mirror({'Hips': .10, 'Spine': .10, 'Chest': .11, 'Neck': .05, 'Head': .075, 'L_Shoulder': .045,
           'L_UpperArm': .05, 'L_ForeArm': .046, 'L_Hand': .038, 'L_UpLeg': .068, 'L_Leg': .055, 'L_Foot': .05, 'L_Toe': .04}),
@@ -59,6 +62,8 @@ def dist_matrix(P, cfg):
     E = {k: np.array(v, float) for k, v in cfg['ends'].items()}
     D = np.zeros((len(P), len(BONES)))
     for i, b in enumerate(BONES):
+        if b.startswith('Cape'):
+            D[:, i] = 1e6; continue
         a = J[b]; c = CHILD_FOR_SEG[b]
         if b == 'Hips':
             a, e = E['Hips'], J['Spine']
@@ -87,6 +92,10 @@ def regions(P, cfg, N=None):
             isarm = (reg == 1) | (reg == 2)
             cloak |= th & isarm & (y < 0.76) & (arm > 0.55)
             cloak &= ~(isarm & ~th & (arm < 1.6))
+            # thin cloth hanging from the torso (back panel, side panels) is cape too
+            cloak |= th & (reg == 0) & (y < 0.79) & (y > 0.1) & ((tor > 0.9) | (z < -0.06))
+            # anything well outside the body and legs below the shoulders
+            cloak |= (reg == 0) & (y < 0.7) & (tor > 1.35) & (leg > 1.2) & (arm > 1.2)
             print('  thin verts', int(th.sum()), 'of', len(P))
         reg[cloak] = 5
     return reg, D
@@ -131,16 +140,32 @@ def compute_weights(P, Fp, cfg, reg):
     W /= W.sum(1, keepdims=True)
     c = reg == 5
     if c.any():
-        y = P[c, 1]
-        tgt = np.zeros((c.sum(), len(BONES)))
-        tgt[:, bi['Hips']] = np.clip((0.66 - y) / 0.12, 0, 1)
-        tgt[:, bi['Spine']] = 1 - tgt[:, bi['Hips']]
-        upper = np.clip((y - 0.66) / 0.08, 0, 1)
-        tgt[:, bi['Chest']] = upper; tgt[:, bi['Spine']] *= (1 - upper)
-        Wl = W[c].copy(); Wl[:, [bi[b] for b in BONES if b not in ('L_UpLeg', 'R_UpLeg', 'L_Leg', 'R_Leg')]] = 0
-        Wl /= Wl.sum(1, keepdims=True) + 1e-9
-        hem = (np.clip((0.5 - y) / 0.3, 0, 1) * 0.4)[:, None]
-        W[c] = tgt * (1 - hem) + Wl * hem
+        # cape: a smooth function of height along the cape chain, blended towards the torso for the side panels.
+        # No leg influence at all — that is what used to tear the hem into strips.
+        y, z, x = P[c, 1], P[c, 2], P[c, 0]
+        n = c.sum(); Wc = np.zeros((n, len(BONES)))
+        chain = [('Chest', 0.80), ('Cape1', 0.74), ('Cape2', 0.52), ('Cape3', 0.32)]
+        for (b0, h0), (b1, h1) in zip(chain[:-1], chain[1:]):
+            m = (y <= h0) & (y > h1); t = (h0 - y[m]) / (h0 - h1)
+            Wc[np.where(m)[0], bi[b0]] += 1 - t; Wc[np.where(m)[0], bi[b1]] += t
+        Wc[y > 0.80, bi['Chest']] = 1; Wc[y <= 0.32, bi['Cape3']] = 1
+        Wt = np.zeros((n, len(BONES)))  # torso-by-height for the side/front panels
+        th = np.clip((y - 0.5) / 0.2, 0, 1); Wt[:, bi['Spine']] = th * 0.6; Wt[:, bi['Chest']] = th * 0.4; Wt[:, bi['Hips']] = 1 - th
+        back = np.clip((-z + 0.1) / 0.14, 0.4, 1)  # side/front panels ride the cape chain too, just less
+        Wcape = Wc * back[:, None] + Wt * (1 - back[:, None])
+        # side panels drape over the arms: let them be pushed by the upper arm / forearm, strongest at the
+        # shoulder and fading out towards the hem, so the cloth lifts with the arm instead of splitting
+        Dc = D[c]
+        for side in ('L', 'R'):
+            ua, fa = bi[side + '_UpperArm'], bi[side + '_ForeArm']
+            near = np.clip(1 - (np.minimum(Dc[:, ua], Dc[:, fa]) - 1.0) / 1.6, 0, 1)
+            sidew = np.clip((x * (1 if side == 'L' else -1) - 0.06) / 0.08, 0, 1)
+            hgt = np.clip((y - 0.36) / 0.38, 0, 1)
+            hgt = np.clip((y - 0.45) / 0.3, 0, 1)
+            wa = (0.4 * near * sidew * hgt)[:, None]
+            Wa = np.zeros_like(Wcape); Wa[:, ua] = 1.0
+            Wcape = Wcape * (1 - wa) + Wa * wa
+        W[c] = Wcape
     import scipy.sparse as sp
     r = np.concatenate([Fp[:, 0], Fp[:, 1], Fp[:, 2]]); cc = np.concatenate([Fp[:, 1], Fp[:, 2], Fp[:, 0]])
     same = reg[r] == reg[cc]
@@ -233,7 +258,12 @@ def build(name, dec_path, tex_prefix, out_path, scale, clipset):
     has_arm = isarm.any(1); omax = other.max(1)
     cy = P[Fp].mean(1)[:, 1]
     mixed_arms = ((R3 == 1).any(1) & (R3 == 2).any(1))
-    bad = has_arm & ((omax >= 3) | ((omax == 0) & (cy < cfg['joints']['L_UpperArm'][1] - 0.09))) | mixed_arms
+    # cut fused arm<->leg and arm<->hip bridges; arm<->cape triangles stay connected (the cape side panels
+    # follow the arm partially, so the cloth stretches a little instead of leaving a hole)
+    omax_nc = np.where(R3 == 5, -1, other).max(1)
+    elbow_y = cfg['joints']['L_ForeArm'][1]
+    cape_low = (R3 == 5).any(1) & (cy < elbow_y + 0.03)   # forearm/hand touching the cape: separate them
+    bad = has_arm & ((omax_nc >= 3) | ((omax_nc == 0) & (cy < cfg['joints']['L_UpperArm'][1] - 0.09)) | cape_low) | mixed_arms
     F = F[~bad]; Fp = prep[F]
     print('  regions', np.bincount(reg, minlength=6), 'cut', int(bad.sum()))
     ji, jw = compute_weights(P, Fp, cfg, reg)

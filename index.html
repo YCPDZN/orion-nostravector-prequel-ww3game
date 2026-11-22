@@ -279,18 +279,18 @@ body.touchmode #bossbar{width:min(52vw,600px);left:44%}
 
 <div id="rotate" class="screen hidden"><div>For the best experience,<br>turn your device to landscape.<br><br><button class="btn" id="rotOk" style="width:auto;display:inline-block">PLAY ANYWAY</button></div></div>
 
-<script src="js/engine.js?v=11"></script>
-<script src="js/world.js?v=11"></script>
-<script src="js/actors.js?v=11"></script>
-<script src="js/audio.js?v=11"></script>
-<script src="js/chapters.js?v=11"></script>
-<script src="js/game.js?v=11"></script>
-<script src="js/codex.js?v=11"></script>
-<script src="js/opening.js?v=11"></script>
+<script src="js/engine.js?v=12"></script>
+<script src="js/world.js?v=12"></script>
+<script src="js/actors.js?v=12"></script>
+<script src="js/audio.js?v=12"></script>
+<script src="js/chapters.js?v=12"></script>
+<script src="js/game.js?v=12"></script>
+<script src="js/codex.js?v=12"></script>
+<script src="js/opening.js?v=12"></script>
 <script>
 // models are loaded after the page shows the loading screen
 (function () {
-  const s = document.createElement('script'); s.src = 'assets/models.js?v=11';
+  const s = document.createElement('script'); s.src = 'assets/models.js?v=12';
   s.onload = () => window.GM && GM.boot();
   s.onerror = () => { document.getElementById('lmsg').textContent = 'Could not load assets/models.js'; };
   document.body.appendChild(s);

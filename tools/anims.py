@@ -11,7 +11,8 @@ BONES = ['Hips','Spine','Chest','Neck','Head',
          'L_Shoulder','L_UpperArm','L_ForeArm','L_Hand',
          'R_Shoulder','R_UpperArm','R_ForeArm','R_Hand',
          'L_UpLeg','L_Leg','L_Foot','L_Toe',
-         'R_UpLeg','R_Leg','R_Foot','R_Toe']
+         'R_UpLeg','R_Leg','R_Foot','R_Toe',
+         'Cape1','Cape2','Cape3']  # cape chain: no keyframes, driven by cloth springs in game
 
 def P(**kw):
     return kw
