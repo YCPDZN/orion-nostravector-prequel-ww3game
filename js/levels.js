@@ -266,10 +266,10 @@ window.LEVELS = {
     ambience: 'snow',
     env: SNOW_NIGHT,
     voice: { who: 'bear', lang: 'ru-RU', file: null, vo: 4, lines: {
-      intro: ['Кёнигсберг не падёт.', 'Königsberg will not fall.', 14],
-      death: ['Медведь… засыпает…', 'The Bear... sleeps...', 15],
+      intro: ['Кёнигсберг не падёт.', 'Königsberg will not fall.', 19],
+      death: ['Медведь… засыпает…', 'The Bear... sleeps...', 20],
     } },
-    intro() { say4(6, 'radio', 'All units: the Bear holds the square at the House of Soviets. Break it, and Kaliningrad falls.', 6); },
+    intro() { say4(11, 'radio', 'All units: the Bear holds the square at the House of Soviets. Break it, and Kaliningrad falls.', 6); },
     beacon() { },
     bossIntro() { },
     phase2() { },

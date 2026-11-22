@@ -42,13 +42,18 @@ function black(v, secs) { const b = $('cineBlack'); b.style.transition = secs ? 
 
 /* 'birth': Chapter IV, Part I. The Hunter is down; Orion walks to the hospital door, where Talina is holding their newborn. */
 const BIRTH = [
-  [3.4, 'talina', 'Orion. Come and meet your child.', 3.2, 4],
-  [8.4, 'orion', '...Hello, little one.', 3, 5],
+  [1.2, 'thomas', 'Commander. They\'re asking for you.', 3, 4],
+  [4.8, 'talina', 'Orion. Come and meet your child.', 3.2, 5],
+  [8.6, 'orion', '...Hello, little one.', 2.6, 6],
+  [11.8, 'talina', 'Look. Your eyes. Both of them.', 3, 7],
+  [15.4, 'orion', 'Born in a siege. Just like the rest of us.', 3.2, 8],
+  [19.2, 'talina', 'No. Not like us. This one will see the war end.', 3.6, 9],
+  [23.6, 'orion', 'Then I\'ll end it.', 2.2, 10],
 ];
 let bundle = null;
 function birthStart() {
   const L = GM.level, n = L.npc, P = GM.player, Th = GM.companion;
-  C.lines = BIRTH; C.li = 0; C.end = 16; C.vox = 4; C.npc = n;
+  C.lines = BIRTH; C.li = 0; C.end = 29.5; C.vox = 4; C.npc = n;
   C.spot = n.pos.slice(); C.from = [0, 0, n.pos[2] - 8.5]; C.stand = [-0.95, 0, n.pos[2] - 1.05]; // beside her, so the camera sees them both
   P.pos = C.from.slice(); P.yaw = 0; P.state = 'cine'; P.iframe = true; P.ch.play('Idle', 0);
   Th.pos = [2.4, 0, n.pos[2] - 9.5]; Th.yaw = 0; Th.ch.play('Idle', 0); Th.sync && Th.sync();
@@ -67,10 +72,10 @@ function birthUpdate(dt) {
   P.ch.update(dt); P.syncNode();
   let pos, tgt;
   if (t < 7.5) { pos = [-3.2, 1.7, P.pos[2] - 3.4]; tgt = [0, 1.0, n.pos[2] - 0.5]; } // behind Orion as he walks up
-  else if (t < 10.8) { pos = [2.7, 1.35, n.pos[2] - 1.5]; tgt = [-0.45, 1.0, n.pos[2] - 0.5]; } // the two of them, side on
-  else { const k = Math.min(1, (t - 10.8) / 5); pos = [1.1 - k * 0.2, 1.15, n.pos[2] - 2.4 + k * 0.6]; tgt = [-0.1, 0.8, n.pos[2]]; } // slow push in on Talina and the child
+  else if (t < 17) { pos = [2.7, 1.35, n.pos[2] - 1.5]; tgt = [-0.45, 1.0, n.pos[2] - 0.5]; } // the two of them, side on
+  else { const k = Math.min(1, (t - 17) / 10); pos = [1.1 - k * 0.2, 1.15, n.pos[2] - 2.4 + k * 0.6]; tgt = [-0.1, 0.8, n.pos[2]]; } // slow push in on Talina and the child
   cam.pos = pos; cam.target = tgt; cam.shadowCenter = [tgt[0], 0, tgt[2]]; cam.camPos = cam.pos;
-  if (t >= 13.4 && !F.down) { F.down = true; black(1, 2.2); }
+  if (t >= 27 && !F.down) { F.down = true; black(1, 2.2); }
   if (t >= C.end) C.finish();
 }
 
