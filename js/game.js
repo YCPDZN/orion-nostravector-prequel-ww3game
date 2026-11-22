@@ -291,6 +291,7 @@ function setupUI() {
   $('pLoad').onclick = () => { AU.ui(); openSaves('load', 'pause'); };
   $('rSave').onclick = () => { AU.ui(); openSaves('save', 'rest'); };
   $('svBack').onclick = () => { AU.ui(); show(savesReturn); };
+  $('pNext').onclick = () => { AU.ui(); GM.advance(); }; $('rNext').onclick = () => { AU.ui(); GM.advance(); };
   $('cineSkip').onclick = () => { GM.cine.skip(); };
   $('bNew').onclick = () => { AU.init(); AU.ui(); GM.save = JSON.parse(JSON.stringify(NEW_SAVE)); startChapter(1); };
   $('birth').onclick = (e) => { if (e.target.id === 'birthSkip') GM.birth.skip(); else GM.birth.advance(); };
@@ -351,7 +352,7 @@ function startPlay() {
   const ik = introKey(LV.id);
   if (!GM.save.seen[ik]) { GM.save.seen[ik] = 1; GM.persist(); LV.def.intro(); }
 }
-function openPause() { if (GM.state !== 'play') return; GM.state = 'pause'; const pc = chapterDef(GM.save.chapter), pp = pc.parts && pc.parts[(GM.save.part || 1) - 1]; $('pChapter').textContent = `CHAPTER ${pc.numeral} · ${pp ? 'PART ' + pp.numeral + ' · ' + pp.title.toUpperCase() : pc.title.toUpperCase()}`; $('prompt').classList.add('hidden'); show('pause'); hudVisible(false); if (document.pointerLockElement) document.exitPointerLock(); }
+function openPause() { if (GM.state !== 'play') return; GM.state = 'pause'; refreshAdvance(); const pc = chapterDef(GM.save.chapter), pp = pc.parts && pc.parts[(GM.save.part || 1) - 1]; $('pChapter').textContent = `CHAPTER ${pc.numeral} · ${pp ? 'PART ' + pp.numeral + ' · ' + pp.title.toUpperCase() : pc.title.toUpperCase()}`; $('prompt').classList.add('hidden'); show('pause'); hudVisible(false); if (document.pointerLockElement) document.exitPointerLock(); }
 function closePause() { show(null); GM.state = 'play'; hudVisible(true); lockPointer(); }
 
 /* ---------------- prologue crawl ---------------- */
@@ -435,11 +436,23 @@ function startChapter(n, opts = {}) {
   if (ch.opening) { GM.state = 'birth'; show(null); hudVisible(false); AU.musicDuck(0.1); GM.birth.start(ch.opening, startCrawl); } else startCrawl();
 }
 /* progression: a chapter opens once the one before it has been completed (in this game or any saved one) */
+/* a save counts as having finished its chapter once the final boss of the chapter is down (even if it was saved before the Complete screen) */
+const finishedIn = (S) => !!(S && S.started && S.bossDead && (() => { const c = chapterDef(S.chapter); return !c.parts || (S.part || 1) === c.parts.length; })());
 GM.completed = function () {
-  const d = Object.assign({}, GM.save.done || {});
-  for (const sl of readSlots()) if (sl && sl.save && sl.save.done) Object.assign(d, sl.save.done);
+  const d = Object.assign({}, GM.save.done || {}); if (finishedIn(GM.save)) d[GM.save.chapter] = d[GM.save.chapter] || {};
+  for (const sl of readSlots()) if (sl && sl.save) { if (sl.save.done) Object.assign(d, sl.save.done); if (finishedIn(sl.save)) d[sl.save.chapter] = d[sl.save.chapter] || {}; }
   return d;
 };
+/* from a save where this chapter's boss is already beaten: on to the next chapter */
+const nextChapter = () => { const c = chapterDef(GM.save.chapter); const n = CHAPTERS.find((x) => x.id === c.id + 1); return n && n.available ? n : null; };
+GM.canAdvance = () => finishedIn(GM.save) && !!nextChapter();
+GM.advance = function () {
+  const S = GM.save, n = nextChapter(); if (!n || !finishedIn(S)) return;
+  show(null);
+  if (!(S.done && S.done[S.chapter])) GM.align.open(LV.def.choice, chapterComplete); // never reached the Complete screen: make the choice / record it first
+  else startChapter(n.id);
+};
+const refreshAdvance = () => { const n = nextChapter(), ok = GM.canAdvance(); for (const id of ['pNext', 'rNext']) { const b = $(id); b.style.display = ok ? '' : 'none'; if (n) b.textContent = `CHAPTER ${n.numeral}: ${n.title.toUpperCase()}`; } };
 GM.unlocked = (id) => id <= 1 || !!GM.completed()[id - 1];
 const COVERS = { 1: 'assets/chapters/ch1.jpg', 2: 'assets/chapters/ch2.jpg' };
 function openChapters(ret) {
@@ -721,7 +734,7 @@ function doInteract(it) {
     GM.companion.reset([P.pos[0] - 1.4, 0, P.pos[2] - 0.8]);
     GM.persist();
     $('prompt').classList.add('hidden'); $('tb_interact') && $('tb_interact').classList.add('hidden');
-    GM.state = 'rest'; P.setState('rest', 'Idle', 0.3); $('restName').textContent = it.b.name.toUpperCase(); show('rest'); hudVisible(false); $('hud').classList.remove('hidden');
+    GM.state = 'rest'; refreshAdvance(); P.setState('rest', 'Idle', 0.3); $('restName').textContent = it.b.name.toUpperCase(); show('rest'); hudVisible(false); $('hud').classList.remove('hidden');
     if (document.pointerLockElement) document.exitPointerLock();
   } else if (it.type === 'gate') {
     AU.gate(); P.pos = [W.gate.enter[0], 0, W.gate.enter[1]]; P.yaw = 0; GM.cam.yaw = 0;
@@ -853,5 +866,5 @@ function step(dt, inp) {
   GM.parts.update(sdt);
 }
 GM.ui = { show, hudVisible, lock: lockPointer };
-GM.debug = { startPart2: () => startChapter(2, { part: 2 }), loadLevel: (n) => GM.loadLevel(n), startChapter: (n) => startChapter(n), victory: () => victory(), sim(sec, inpF) { GM.simulating = true; const n = Math.round(sec * 60); for (let i = 0; i < n; i++) step(1 / 60, Object.assign({ mx: 0, my: 0, cx: 0, cy: 0 }, inpF ? inpF(i) : {})); GM.simulating = false; }, startPlay, respawnAll, doInteract, interactables, toggleLock, show, banner, get boss() { return boss; } };
+GM.debug = { saveSlot: (i) => saveToSlot(i), loadSlot: (i) => loadSlot(i), startPart2: () => startChapter(2, { part: 2 }), loadLevel: (n) => GM.loadLevel(n), startChapter: (n) => startChapter(n), victory: () => victory(), sim(sec, inpF) { GM.simulating = true; const n = Math.round(sec * 60); for (let i = 0; i < n; i++) step(1 / 60, Object.assign({ mx: 0, my: 0, cx: 0, cy: 0 }, inpF ? inpF(i) : {})); GM.simulating = false; }, startPlay, respawnAll, doInteract, interactables, toggleLock, show, banner, get boss() { return boss; } };
 })();
