@@ -35,6 +35,27 @@ function buildWeapons() {
 const metalMat = () => ({ mode: 1, triA: W.tex.metal.albedo, triN: W.tex.metal.normal, triScale: 2.5, rough: 0.35, metal: 0.8, color: [1, 1, 1] });
 A.weapons = () => { if (!swordMesh) buildWeapons(); return { swordMesh, swordGlow, rifleMesh, rifleGlow, metalMat }; };
 A.TYPES = () => TYPES;
+/* Rifle handling: rifle placed in model space (stock in the right shoulder when aiming, angled across the
+   chest when carrying), then both arms are solved onto it with IK: right hand on the grip, left on the handguard. */
+A.rifleRig = function (ch, s, out) {
+  const V = OE.V; ch.modelPose(); const bi = ch.boneIndex, P = ch.mP;
+  const sh = P[bi.R_UpperArm], lsh = P[bi.L_UpperArm], chest = P[bi.Chest];
+  const zAim = V.norm(s.dir || [0, 0, 1]);
+  const butt = [sh[0] + 0.1, sh[1] - 0.08, sh[2] + 0.08];
+  const oAim = V.add(butt, V.sc(zAim, 0.34));
+  const zCar = V.norm([0.3, -0.55, 0.78]);
+  const oCar = [chest[0] - 0.06, chest[1] - 0.08, chest[2] + 0.22];
+  const b = s.aim; let z = V.norm([OE.lerp(zCar[0], zAim[0], b), OE.lerp(zCar[1], zAim[1], b), OE.lerp(zCar[2], zAim[2], b)]);
+  let o = [OE.lerp(oCar[0], oAim[0], b), OE.lerp(oCar[1], oAim[1], b), OE.lerp(oCar[2], oAim[2], b)];
+  o = V.add(o, V.sc(z, -0.06 * (s.recoil || 0) + 0.38 * (s.thrust || 0)));
+  let x = V.norm([z[2], 0, -z[0]]); const y = V.cross(z, x);
+  out.set([x[0], x[1], x[2], 0, y[0], y[1], y[2], 0, z[0], z[1], z[2], 0, o[0], o[1], o[2], 1]);
+  const pt = (lx, ly, lz) => [o[0] + x[0]*lx + y[0]*ly + z[0]*lz, o[1] + x[1]*lx + y[1]*ly + z[1]*lz, o[2] + x[2]*lx + y[2]*ly + z[2]*lz];
+  const w = s.w ?? 1;
+  ch.ik(['R_UpperArm', 'R_ForeArm', 'R_Hand'], pt(0, -0.14, -0.02), [sh[0] - 0.5, sh[1] - 0.55, sh[2] - 0.1], w);
+  ch.ik(['L_UpperArm', 'L_ForeArm', 'L_Hand'], pt(0, -0.09, 0.24), [lsh[0] + 0.45, lsh[1] - 0.6, lsh[2] - 0.05], w);
+  return out;
+};
 
 /* ---------------- player: Orion Mascar ---------------- */
 const ATK = {
@@ -219,7 +240,8 @@ A.Companion = class {
     const rg = new OE.Node(rifleGlow, { mode: 2, color: [0, 0, 0], emissive: [3, 0.6, 0.2] }); rg.castShadow = false; rf.add(rg);
     // the rifle is aimed procedurally: grip sits in the right hand, barrel points along the aim direction
     this.aimDir = [0, 0, 1]; this.aimBlend = 0; this.recoil = 0; this._rm = M4.create(); this._hm = M4.create(); this._hp = [0, 0, 0];
-    rf.attach = () => this.rifleMatrix();
+    this.rifleModel = M4.create(); this._rw = M4.create();
+    rf.attach = () => this.alive ? M4.mul(this._rw, this.node.world, this.rifleModel) : this.rifleMatrix();
     rf.pos = [0, 0, 0]; this.node.add(rf); this.rifle = rf;
     this.burst = 0; this.burstT = 0;
     this.muzzle = { pos: [0, 0, 0], color: [1, 0.7, 0.3], intensity: 0, range: 7 }; OE.R.lights.push(this.muzzle);
@@ -333,7 +355,15 @@ A.Companion = class {
     this.muzzle.pos = m.slice(); this.muzzle.intensity = 6; this.recoil = 1;
     GM.audio.gun(dist2(this.pos, GM.player.pos));
   }
-  sync() { this.node.pos = this.pos; Q.yaw(this.node.rot, this.yaw); }
+  sync() {
+    this.node.pos = this.pos; Q.yaw(this.node.rot, this.yaw);
+    if (!this.alive) return;
+    // aim direction from world into Thomas's model space
+    const c = Math.cos(this.yaw), s = Math.sin(this.yaw), d = this.aimDir;
+    const dir = [d[0] * c - d[2] * s, d[1], d[0] * s + d[2] * c];
+    const melee = this.state === 'melee' ? Math.sin(Math.min(1, this.ch.progress) * Math.PI) : 0;
+    A.rifleRig(this.ch, { aim: Math.max(this.aimBlend, melee), dir: this.state === 'melee' ? [0, -0.1, 1] : dir, recoil: this.recoil, thrust: melee }, this.rifleModel);
+  }
   damage(amount, fromPos) {
     if (!this.alive) return false;
     this.hp -= amount; GM.fx.blood([this.pos[0], 1.3, this.pos[2]]);

@@ -596,6 +596,50 @@ OE.Character = class {
   }
 };
 
+/* ---------------- model-space pose & two-bone IK ---------------- */
+const qmul = (a, b) => [a[3]*b[0]+a[0]*b[3]+a[1]*b[2]-a[2]*b[1], a[3]*b[1]-a[0]*b[2]+a[1]*b[3]+a[2]*b[0], a[3]*b[2]+a[0]*b[1]-a[1]*b[0]+a[2]*b[3], a[3]*b[3]-a[0]*b[0]-a[1]*b[1]-a[2]*b[2]];
+const qinv = (q) => [-q[0], -q[1], -q[2], q[3]];
+const qrot = (q, v) => { const r = qmul(qmul(q, [v[0], v[1], v[2], 0]), qinv(q)); return [r[0], r[1], r[2]]; };
+const vsub = (a, b) => [a[0]-b[0], a[1]-b[1], a[2]-b[2]], vadd = (a, b) => [a[0]+b[0], a[1]+b[1], a[2]+b[2]], vsc = (a, s) => [a[0]*s, a[1]*s, a[2]*s];
+const vlen = (a) => Math.hypot(a[0], a[1], a[2]), vnorm = (a) => { const l = vlen(a) || 1; return [a[0]/l, a[1]/l, a[2]/l]; };
+const vdot = (a, b) => a[0]*b[0]+a[1]*b[1]+a[2]*b[2], vcross = (a, b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+function qfromTo(a, b) {
+  a = vnorm(a); b = vnorm(b); const d = vdot(a, b);
+  if (d < -0.9999) { let ax = vcross([1, 0, 0], a); if (vlen(ax) < 1e-3) ax = vcross([0, 1, 0], a); ax = vnorm(ax); return [ax[0], ax[1], ax[2], 0]; }
+  const c = vcross(a, b); const q = [c[0], c[1], c[2], 1 + d]; const l = Math.hypot(...q); return q.map((x) => x / l);
+}
+OE.V = { sub: vsub, add: vadd, sc: vsc, len: vlen, norm: vnorm, dot: vdot, cross: vcross, qrot, qmul };
+OE.Character.prototype.modelPose = function () {
+  const b = this.a.bones; this.mR = this.mR || []; this.mP = this.mP || [];
+  for (let i = 0; i < b.length; i++) {
+    const L = this.local[i], p = b[i].parent;
+    if (p >= 0) { this.mR[i] = qmul(this.mR[p], L.r); this.mP[i] = vadd(this.mP[p], qrot(this.mR[p], L.t)); }
+    else { this.mR[i] = [L.r[0], L.r[1], L.r[2], L.r[3]]; this.mP[i] = [L.t[0], L.t[1], L.t[2]]; }
+  }
+};
+// bend a 3-joint chain (e.g. upper arm, forearm, hand) so the last joint reaches target (model space)
+OE.Character.prototype.ik = function (names, target, pole, w) {
+  if (w <= 0) return;
+  const bi = this.boneIndex, b = this.a.bones; const u = bi[names[0]], f = bi[names[1]], h = bi[names[2]];
+  const A = this.mP[u], Bp = this.mP[f], C = this.mP[h]; const l1 = vlen(vsub(Bp, A)), l2 = vlen(vsub(C, Bp));
+  let dv = vsub(target, A); let d = vlen(dv); const dir = vnorm(dv);
+  d = Math.min(Math.max(d, Math.abs(l1 - l2) + 1e-3), (l1 + l2) * 0.999);
+  const T = vadd(A, vsc(dir, d));
+  const a = (l1 * l1 - l2 * l2 + d * d) / (2 * d), hh = Math.sqrt(Math.max(0, l1 * l1 - a * a));
+  let pn = vsub(pole, A); pn = vnorm(vsub(pn, vsc(dir, vdot(pn, dir))));
+  const E = vadd(vadd(A, vsc(dir, a)), vsc(pn, hh));
+  const Pw = b[u].parent >= 0 ? this.mR[b[u].parent] : [0, 0, 0, 1];
+  const qU = qfromTo(vsub(Bp, A), vsub(E, A));
+  const newU = qmul(qU, this.mR[u]);
+  const locU = qmul(qinv(Pw), newU);
+  const newF0 = qmul(newU, this.local[f].r);
+  const C1 = vadd(E, qrot(newF0, this.local[h].t));
+  const qF = qfromTo(vsub(C1, E), vsub(T, E));
+  const newF = qmul(qF, newF0); const locF = qmul(qinv(newU), newF);
+  const sl = (dst, q) => { const tmp = new Float32Array(q); Q.slerp(dst, dst, tmp, w); };
+  sl(this.local[u].r, locU); sl(this.local[f].r, locF); sl(this.local[h].r, [0, 0, 0, 1]);
+};
+
 /* ---------------- particles ---------------- */
 OE.Particles = class {
   constructor(max) { this.list = []; this.max = max; }

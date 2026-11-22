@@ -37,17 +37,6 @@ function draw(now) {
     const bg = cx.createRadialGradient(x, y, 0, x, y, r); const c = b.warm ? '255,226,170' : '220,235,255';
     bg.addColorStop(0, `rgba(${c},${b.a})`); bg.addColorStop(1, `rgba(${c},0)`); cx.fillStyle = bg; cx.beginPath(); cx.arc(x, y, r, 0, 7); cx.fill();
   }
-  // two soft figures leaning in from the sides (from the 3rd line)
-  const fv = Math.min(1, Math.max(0, stage - 1.4));
-  if (fv > 0) {
-    const lean = Math.sin(t * 0.5) * 0.015;
-    for (const [sx, sc, col] of [[0.16, 1, '72,58,50'], [0.86, 0.9, '58,48,44']]) {
-      const x = W * (sx + (sx < 0.5 ? lean : -lean)), y = H * 0.62, r = m * 0.2 * sc;
-      cx.fillStyle = `rgba(${col},${0.55 * fv})`;
-      cx.beginPath(); cx.ellipse(x, y - r * 1.1, r * 0.55, r * 0.65, 0, 0, 7); cx.fill();      // head
-      cx.beginPath(); cx.ellipse(x, y + r * 0.9, r * 1.3, r * 1.1, 0, 0, 7); cx.fill();        // shoulders
-    }
-  }
   // heartbeat: a gentle pulse of the vignette
   beatT += 1 / 60; const bp = beatT % 1.05; const pulse = Math.exp(-bp * 9) + 0.6 * Math.exp(-Math.max(0, bp - 0.22) * 9) * (bp > 0.22 ? 1 : 0);
   if (bp < 1 / 60 && B.active) window.AU && AU.heartbeat && AU.heartbeat();

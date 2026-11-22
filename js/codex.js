@@ -67,16 +67,8 @@ function build() {
   const t = new OE.Character(GM.assets.thomas, { rim: 0.25 }); root.add(t.node);
   const rf = new OE.Node(Wp.rifleMesh, Wp.metalMat()); rf.mat.color = [0.7, 0.7, 0.72];
   const rg = new OE.Node(Wp.rifleGlow, { mode: 2, color: [0, 0, 0], emissive: [3, 0.6, 0.2] }); rg.castShadow = false; rf.add(rg);
-  const thm = M4.create(), rm = M4.create(), hp = [0, 0, 0];
-  rf.attach = () => {
-    const hw = t.boneWorld('R_Hand', thm); M4.point(hp, hw, [0, -0.075, 0.02]);
-    const f = [Math.sin(C.yaw), 0, Math.cos(C.yaw)]; const b = C.aim || 0;
-    let z = [f[0] * (0.8 + 0.2 * b), -0.6 * (1 - b), f[2] * (0.8 + 0.2 * b)]; let l = Math.hypot(...z); z = z.map((v) => v / l);
-    let x = [z[2], 0, -z[0]]; l = Math.hypot(...x) || 1; x = x.map((v) => v / l);
-    const y = [z[1] * x[2] - z[2] * x[1], z[2] * x[0] - z[0] * x[2], z[0] * x[1] - z[1] * x[0]];
-    const k = (C.recoil || 0) * 0.07; const o2 = [hp[0] - z[0] * (0.06 + k), hp[1] - z[1] * (0.06 + k) + 0.1, hp[2] - z[2] * (0.06 + k)];
-    rm.set([x[0], x[1], x[2], 0, y[0], y[1], y[2], 0, z[0], z[1], z[2], 0, o2[0], o2[1], o2[2], 1]); return rm;
-  };
+  C.rifleModel = M4.create(); const rw = M4.create();
+  rf.attach = () => M4.mul(rw, t.node.world, C.rifleModel);
   t.node.add(rf); C.models.thomas = { ch: t, node: t.node, rifle: rf };
   C.muzzle = { pos: [0, 0, 0], color: [1, 0.7, 0.3], intensity: 0, range: 6 };
   // war machines
@@ -156,6 +148,7 @@ C.update = function (dt, inp) {
         for (const k of kt) if (tt >= k && (C.lastShot === undefined || C.lastShot < k || C.lastShot > tt)) { C.recoil = 1; C.muzzle.intensity = 6; if (m.rifle.world) M4.point(C.muzzle.pos, m.rifle.world, [0, 0.04, 0.8]); GM.audio.gun(4); }
         C.lastShot = tt;
       }
+      if (e.id === 'thomas') A.rifleRig(ch, { aim: C.aim, dir: [0, 0, 1], recoil: C.recoil }, C.rifleModel);
       Q.yaw(m.node.rot, C.yaw); m.node.pos = STAGE.slice();
     } else {
       const en = m.enemy; Q.yaw(m.node.rot, C.yaw);
