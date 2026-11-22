@@ -8,7 +8,7 @@ const $ = (id) => document.getElementById(id);
 const AL = window.GM.align = {};
 const THOMAS_SHARE = 0.9;          // how strongly Orion's choices pull Thomas
 const STEP = 35;                   // alignment change per good/evil choice
-const ORION_SHARE = 0.5;           // when Thomas makes the choice himself, Orion is pulled half as far
+/* when Thomas makes a choice himself (Chapter II's Pilot), only Thomas's alignment moves */
 AL.TIERS = {
   good: { name: 'GOOD', css: '#3d8bff', glow: [0.6, 2.2, 3.4], light: [0.3, 0.6, 1.0], trail: [0.35, 1.0, 2.2] },
   neutral: { name: 'NEUTRAL', css: '#f2c94c', glow: [3.0, 2.3, 0.45], light: [1.0, 0.8, 0.25], trail: [2.0, 1.5, 0.3] },
@@ -107,7 +107,7 @@ function choose(i) {
   const d = o.align === 'good' ? STEP : o.align === 'evil' ? -STEP : 0;
   const a = S.align || (S.align = { o: 0, t: 0 });
   const before = [AL.tier('o'), AL.tier('t')];
-  if (c.chooser === 't') { a.t = OE.clamp(a.t + d, -100, 100); a.o = OE.clamp(a.o + d * ORION_SHARE, -100, 100); }
+  if (c.chooser === 't') a.t = OE.clamp(a.t + d, -100, 100);
   else { a.o = OE.clamp(a.o + d, -100, 100); a.t = OE.clamp(a.t + d * THOMAS_SHARE, -100, 100); }
   if (o.reward) {
     if (o.reward.scrap) S.scrap += o.reward.scrap;
