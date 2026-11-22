@@ -52,6 +52,18 @@ AU.death = () => { tone(4, { f: 110, f2: 55, type: 'sawtooth', gain: 0.12, attac
 AU.victory = () => { [196, 247, 294, 392, 494, 587].forEach((f, i) => tone(5, { f, gain: 0.06, delay: i * 0.25, attack: 1.0, type: 'triangle' })); };
 AU.gate = () => { noise(1.5, { f: 1200, f2: 200, q: 2, gain: 0.3, attack: 0.4 }); tone(1.5, { f: 60, gain: 0.4, attack: 0.3 }); };
 AU.ui = () => tone(0.12, { f: 880, gain: 0.05 });
+/* a newborn's first cries: three rising-falling 'waah' bursts through a vocal formant */
+AU.babyCry = (delay = 0) => {
+  if (!ctx) return;
+  [[0, 0.9], [1.2, 1.1], [2.6, 1.4]].forEach(([d, len]) => {
+    const t = now() + delay + d, o = ctx.createOscillator(), v = ctx.createOscillator(), vg = ctx.createGain(), f1 = ctx.createBiquadFilter(), f2 = ctx.createBiquadFilter(), g = ctx.createGain();
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(380, t); o.frequency.linearRampToValueAtTime(520, t + len * 0.3); o.frequency.linearRampToValueAtTime(430, t + len);
+    v.frequency.value = 7; vg.gain.value = 14; v.connect(vg); vg.connect(o.frequency);
+    f1.type = 'bandpass'; f1.frequency.value = 1150; f1.Q.value = 4; f2.type = 'bandpass'; f2.frequency.value = 2700; f2.Q.value = 6;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.12); g.gain.setValueAtTime(0.16, t + len * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    o.connect(f1); o.connect(f2); f1.connect(g); f2.connect(g); g.connect(sfx); o.start(t); v.start(t); o.stop(t + len + 0.05); v.stop(t + len + 0.05);
+  });
+};
 AU.heartbeat = () => { tone(0.16, { f: 58, f2: 42, gain: 0.32, attack: 0.01 }); tone(0.14, { f: 52, f2: 40, gain: 0.22, attack: 0.01, delay: 0.22 }); };
 AU.thunder = (delay) => { noise(3.5, { f: 160, f2: 40, type: 'lowpass', gain: 0.7, attack: 0.15, out: amb, delay }); };
 

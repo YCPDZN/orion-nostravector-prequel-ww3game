@@ -40,42 +40,60 @@ const IMPACT = 15.9, BLACK_UNTIL = 17.8;
 
 function black(v, secs) { const b = $('cineBlack'); b.style.transition = secs ? `opacity ${secs}s` : 'none'; b.style.opacity = v; }
 
-/* 'birth': Chapter IV, Part I. The Hunter is down; Orion walks to the hospital door, where Talina is holding their newborn. */
+/* 'birth': Chapter IV, Part I. The Hunter is down; Orion goes to Talina at the hospital door. She is in labour, and the child is born:
+   the contraction, a cut to black, a newborn's cry, and Talina holding their child. */
 const BIRTH = [
-  [1.2, 'thomas', 'Commander. They\'re asking for you.', 3, 4],
-  [4.8, 'talina', 'Orion. Come and meet your child.', 3.2, 5],
-  [8.6, 'orion', '...Hello, little one.', 2.6, 6],
-  [11.8, 'talina', 'Look. Your eyes. Both of them.', 3, 7],
-  [15.4, 'orion', 'Born in a siege. Just like the rest of us.', 3.2, 8],
-  [19.2, 'talina', 'No. Not like us. This one will see the war end.', 3.6, 9],
-  [23.6, 'orion', 'Then I\'ll end it.', 2.2, 10],
+  [1.2, 'thomas', 'Commander. She\'s asking for you.', 3, 4],
+  [4.6, 'talina', 'Orion... it\'s coming. It\'s coming now.', 3.4, 5],
+  [8.6, 'orion', 'I\'m here. I\'m not going anywhere.', 3, 6],
+  [11.8, 'talina', 'Hold my hand, idiota. Don\'t let go.', 3.2, 7],
+  [15.3, 'talina', 'Ahh — !', 1.4, 8],
+  [22.0, 'talina', 'Look. Your eyes. Both of them.', 3, 9],
+  [25.6, 'orion', '...Hello, little one.', 2.6, 10],
+  [28.8, 'talina', 'Born in a siege. This one will see the war end.', 3.6, 11],
+  [33.0, 'orion', 'Then I\'ll end it.', 2.2, 12],
 ];
+const BORN = 18.2; // under the black: the child is born
 let bundle = null;
 function birthStart() {
   const L = GM.level, n = L.npc, P = GM.player, Th = GM.companion;
-  C.lines = BIRTH; C.li = 0; C.end = 29.5; C.vox = 4; C.npc = n;
+  C.lines = BIRTH; C.li = 0; C.end = 38.5; C.vox = 4; C.npc = n;
   C.spot = n.pos.slice(); C.from = [0, 0, n.pos[2] - 8.5]; C.stand = [-0.95, 0, n.pos[2] - 1.05]; // beside her, so the camera sees them both
   P.pos = C.from.slice(); P.yaw = 0; P.state = 'cine'; P.iframe = true; P.ch.play('Idle', 0);
   Th.pos = [2.4, 0, n.pos[2] - 9.5]; Th.yaw = 0; Th.ch.play('Idle', 0); Th.sync && Th.sync();
   if (GM.ally && GM.ally.on) GM.ally.node.visible = false;
+  // after the birth she is herself again: the same Talina, holding the child
+  if (!L.after) { L.after = new OE.Character(GM.assets.talina, { rim: 0.06 }); L.root.add(L.after.node); L.after.play('Kneel', 0, 1, true); }
+  L.after.node.visible = false; n.ch.node.visible = true; n.ch.play('Kneel', 0, 1, true);
   if (!bundle) { const g = new OE.Geo(); for (const o of [-0.07, 0.03]) g.sphere([o, 0, 0], 0.12, 10, { col: [0.93, 0.91, 0.86, 1], sy: 0.8 }); g.sphere([0.15, 0.03, 0], 0.07, 8, { col: [0.86, 0.68, 0.58, 1] }); // swaddled, a small face
     bundle = new OE.Node(g.build(), W.tri(W.textures().concrete, 3, 0.95, 0)); bundle.castShadow = false; }
-  L.root.add(bundle); const f = fwd(n.yaw); bundle.pos = [n.pos[0] + f[0] * 0.34, 0.82, n.pos[2] + f[2] * 0.34]; OE.Q.yaw(bundle.rot, n.yaw + Math.PI / 2);
+  if (bundle.parent) bundle.parent.remove(bundle);
   black(1); setTimeout(() => black(0, 1.6), 50);
 }
 function birthUpdate(dt) {
-  const t = C.t, P = GM.player, n = C.npc, cam = GM.cam, F = C.flags;
+  const t = C.t, P = GM.player, n = C.npc, L = GM.level, cam = GM.cam, F = C.flags;
   if (t < 7.5) { const u = Math.min(1, Math.max(0, (t - 2.6) / 4.6)); if (t > 2.6) { P.pos = [OE.lerp(C.from[0], C.stand[0], u), 0, OE.lerp(C.from[2], C.stand[2], u)]; P.ch.play(u < 1 ? 'Walk' : 'Idle', 0.3, 0.8); } }
   else P.ch.play('Idle', 0.4);
   P.yaw = Math.atan2(n.pos[0] - P.pos[0], n.pos[2] - P.pos[2]);
-  n.ch.node.pos = n.pos; OE.Q.yaw(n.ch.node.rot, n.yaw); n.ch.update(dt);
+  // labour: she rocks with each contraction, hardest at the end
+  const pain = t < BORN ? (t > 14.6 ? 1 : 0.35) * Math.max(0, Math.sin(t * (t > 14.6 ? 7 : 2.2))) : 0;
+  const who = t < BORN ? n.ch : L.after;
+  who.node.pos = [n.pos[0], -0.03 * pain, n.pos[2]]; OE.Q.euler(who.node.rot, 6 * pain, n.yaw * 180 / Math.PI, 0); who.update(dt);
+  if (t >= 15.3 && !F.pain) { F.pain = true; GM.shake(0.25); }
+  if (t >= 16.2 && !F.cut) { F.cut = true; black(1, 1.0); }
+  if (t >= BORN && !F.born) { // the child is born
+    F.born = true; n.ch.node.visible = false; L.after.node.visible = true;
+    L.root.add(bundle); const f = fwd(n.yaw); bundle.pos = [n.pos[0] + f[0] * 0.34, 0.82, n.pos[2] + f[2] * 0.34]; OE.Q.yaw(bundle.rot, n.yaw + Math.PI / 2);
+    AU.babyCry(0.4);
+  }
+  if (t >= 20.6 && !F.up) { F.up = true; black(0, 1.8); }
   P.ch.update(dt); P.syncNode();
   let pos, tgt;
-  if (t < 7.5) { pos = [-3.2, 1.7, P.pos[2] - 3.4]; tgt = [0, 1.0, n.pos[2] - 0.5]; } // behind Orion as he walks up
-  else if (t < 17) { pos = [2.7, 1.35, n.pos[2] - 1.5]; tgt = [-0.45, 1.0, n.pos[2] - 0.5]; } // the two of them, side on
-  else { const k = Math.min(1, (t - 17) / 10); pos = [1.1 - k * 0.2, 1.15, n.pos[2] - 2.4 + k * 0.6]; tgt = [-0.1, 0.8, n.pos[2]]; } // slow push in on Talina and the child
+  if (t < 8) { pos = [-3.2, 1.7, P.pos[2] - 3.4]; tgt = [0, 1.0, n.pos[2] - 0.5]; } // behind Orion as he walks up
+  else if (t < 28.8) { pos = [2.7, 1.35, n.pos[2] - 1.5]; tgt = [-0.45, 1.0, n.pos[2] - 0.5]; } // the two of them, side on
+  else { const k = Math.min(1, (t - 28.8) / 8); pos = [1.1 - k * 0.2, 1.15, n.pos[2] - 2.4 + k * 0.6]; tgt = [-0.1, 0.8, n.pos[2]]; } // slow push in on Talina and the child
   cam.pos = pos; cam.target = tgt; cam.shadowCenter = [tgt[0], 0, tgt[2]]; cam.camPos = cam.pos;
-  if (t >= 27 && !F.down) { F.down = true; black(1, 2.2); }
+  if (t >= 36 && !F.down) { F.down = true; black(1, 2.2); }
   if (t >= C.end) C.finish();
 }
 
@@ -189,7 +207,7 @@ C.update = function (dt) {
 C.finish = function () {
   C.on = false;
   $('hud').classList.remove('cine'); $('cine').classList.add('hidden'); black(0); OE.R.hurt = 0;
-  if (C.name === 'birth') { if (bundle && bundle.parent) bundle.parent.remove(bundle); if (GM.ally) GM.ally.node.visible = true; GM.save.child = 'born'; GM.toPart2(); return; }
+  if (C.name === 'birth') { if (bundle && bundle.parent) bundle.parent.remove(bundle); const L = GM.level; if (L.after) L.after.node.visible = false; if (L.npc) L.npc.ch.node.visible = true; /* ready for a replay */ if (GM.ally) GM.ally.node.visible = true; GM.save.child = 'born'; GM.toPart2(); return; }
   if (C.name === 'eye') { GM.save.talina = C.br.fate; GM.boss.node.visible = false; GM.boss.sword.visible = true; GM.toPart2(); }
 };
 })();
