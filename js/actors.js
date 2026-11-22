@@ -545,6 +545,7 @@ A.Enemy = class {
   windTime() { const T = this.T; if (!this.boss) return T.wind; return { sweep: 1.0, slam: 1.25, charge: 0.75, barrage: 1.0 }[this.atk]; }
   strikeTime() { if (!this.boss) return this.T.strike; return { sweep: 0.35, slam: 0.25, charge: 0.95, barrage: 0.3 }[this.atk]; }
   chooseAttack(d) {
+    if (this.boss) { if (GM.wardenChildren) { GM.wardenChildren = false; GM.warden('children', false); } else GM.wardenTaunt(); }
     if (this.boss) { const r = rnd(); this.atk = d < 4.5 ? (r < 0.55 ? 'sweep' : 'slam') : (r < 0.5 ? 'slam' : 'charge'); }
     else this.atk = this.type === 'brute' ? 'slam' : (rnd() < 0.6 ? 'slash' : 'thrust');
     this.state = 'windup'; this.t = 0;
@@ -552,6 +553,7 @@ A.Enemy = class {
   onStrike() {
     GM.audio.enemySwing(this.boss || this.type === 'brute');
     if (this.atk === 'barrage') {
+      GM.warden('barrage', false);
       const tg = this.target || GM.player;
       for (let i = 0; i < (this.phase2 ? 7 : 5); i++) { const a = rnd() * Math.PI * 2, r = i === 0 ? 0 : R(1.5, 5); GM.addMarker([tg.pos[0] + Math.cos(a) * r, 0, tg.pos[2] + Math.sin(a) * r], 1.3 + i * 0.12, 2.3, 60); }
     }

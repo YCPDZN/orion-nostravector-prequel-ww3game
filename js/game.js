@@ -83,6 +83,7 @@ function spawnPoint() {
   return { pos: [b.pos[0] - 1.3, 0, b.pos[2] + 1.4], yaw: 0 };
 }
 function respawnAll(first) {
+  try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) { }
   const sp = spawnPoint();
   GM.player.reset(sp.pos, sp.yaw);
   GM.companion.reset([sp.pos[0] - 1.6, 0, sp.pos[2] - 0.8]);
@@ -419,7 +420,39 @@ function endCrawl() { if (GM.state === 'crawl') nextCrawl(); }
 
 /* ---------------- HUD helpers ---------------- */
 let subQ = [], subT = 0, toastT = 0, bannerT = 0;
-const NAMES = { thomas: 'Thomas', orion: 'Orion', radio: 'British Command' };
+const NAMES = { thomas: 'Thomas', orion: 'Orion', radio: 'British Command', warden: 'Iron Warden' };
+/* The Iron Warden speaks Mandarin (browser text-to-speech, deep and slow) with English subtitles */
+const WARDEN = {
+  intro: ['入侵者。伦敦现在属于中俄同盟。', 'Intruder. London belongs to the Sino-Russian Pact now.'],
+  children: ['你们的指挥官把孩子送来送死。', 'Your commanders send children to die.'],
+  taunts: [['跪下！', 'Kneel!'], ['无处可逃。', 'There is nowhere to run.'], ['为了同盟！', 'For the Pact!'], ['你的剑救不了伦敦。', 'Your sword will not save London.']],
+  barrage: ['轨道打击，锁定目标。', 'Orbital strike. Target locked.'],
+  phase2: ['核心过载……我不会倒下！', 'Core overloading… I will not fall!'],
+  kill: ['又一个英国人倒下了。', 'Another Briton falls.'],
+  death: ['不可能……同盟……是永恒的……', 'Impossible… the Pact… is eternal…'],
+};
+let zhVoice = null, tauntT = 0;
+function pickZhVoice() {
+  try { const vs = speechSynthesis.getVoices(); zhVoice = vs.find((v) => /zh[-_]CN/i.test(v.lang)) || vs.find((v) => /^zh/i.test(v.lang)) || null; } catch (e) { }
+}
+if (window.speechSynthesis) { pickZhVoice(); speechSynthesis.onvoiceschanged = pickZhVoice; }
+function speakZh(text) {
+  if (!window.speechSynthesis) return;
+  try {
+    const u = new SpeechSynthesisUtterance(text); u.lang = 'zh-CN'; if (zhVoice) u.voice = zhVoice;
+    u.pitch = 0.25; u.rate = 0.78; u.volume = Math.min(1, GM.settings.vol / 10 + 0.1);
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  } catch (e) { }
+}
+GM.warden = (key, story = true) => {
+  let line = WARDEN[key]; if (!line) return;
+  if (key === 'taunts') line = line[Math.floor(Math.random() * line.length)];
+  if (!story && (subQ.length || subT > 0.3)) return; // taunts never interrupt dialogue
+  if (story && ['intro', 'phase2', 'death', 'kill'].includes(key)) { subQ.length = 0; subT = 0; try { if (voiceEl) voiceEl.pause(); } catch (e) { } } // boss moments cut in
+  const [zh, en] = line; const dur = Math.max(3.2, en.length * 0.06 + 1.4, zh.length * 0.34 + 1.2);
+  GM.say('warden', en, dur, { zh });
+};
+GM.wardenTaunt = () => { if (time - tauntT < 11 || Math.random() > 0.35) return; tauntT = time; GM.warden('taunts', false); };
 GM.say = (who, text, dur = 4, voice = 0) => { subQ.push({ who, text, dur, voice }); };
 let voiceEl = null;
 function playVoice(n) {
@@ -444,7 +477,7 @@ function updateHud(dt) {
   if (GM.inBoss && boss) { $('bossbar').querySelector('i').style.transform = `scaleX(${Math.max(0, boss.hp / boss.maxHp)})`; $('bossbar').querySelector('b').style.transform = `scaleX(${Math.max(0, boss.hp / boss.maxHp)})`; }
   // subtitles
   subT -= dt; const sub = $('sub');
-  if (subT <= 0) { if (subQ.length) { const s = subQ.shift(); sub.innerHTML = `<b>${NAMES[s.who] || s.who}:</b> ${s.text}`; sub.style.opacity = 1; subT = s.dur; if (s.voice) playVoice(s.voice); } else sub.style.opacity = 0; }
+  if (subT <= 0) { if (subQ.length) { const s = subQ.shift(); sub.innerHTML = `<b>${NAMES[s.who] || s.who}:</b> ${s.text}` + (s.voice && s.voice.zh ? `<div class="zh">${s.voice.zh}</div>` : ''); sub.style.opacity = 1; subT = s.dur; if (s.voice && s.voice.zh) speakZh(s.voice.zh); else if (s.voice) playVoice(s.voice); } else sub.style.opacity = 0; }
   toastT -= dt; if (toastT <= 0) $('toast').style.opacity = 0;
   bannerT -= dt; if (bannerT <= 0) $('banner').style.opacity = 0;
   // lock-on marker & enemy health bars
@@ -543,7 +576,7 @@ GM.onEnemyKilled = (e) => {
   if (GM.lock === e) GM.lock = null;
   if (e.boss) victory();
 };
-GM.onBossPhase2 = () => { GM.say('thomas', 'Its core\'s going critical — it\'s gone berserk! Keep moving, Orion!', 5.1, 13); AU.slam(); GM.shake(0.6); OE.R.flash = 0.8; };
+GM.onBossPhase2 = () => { GM.warden('phase2'); GM.say('thomas', 'Its core\'s going critical — it\'s gone berserk! Keep moving, Orion!', 5.1, 13); AU.slam(); GM.shake(0.6); OE.R.flash = 0.8; };
 GM.onPlayerDeath = () => {
   GM.state = 'dead'; AU.death(); hudVisible(false); GM.save.stats.deaths++; $('hud').classList.remove('hidden');
   if (document.pointerLockElement) document.exitPointerLock();
@@ -551,6 +584,7 @@ GM.onPlayerDeath = () => {
   if (GM.save.scrap > 0) GM.save.echo = { pos: [P.pos[0], 0, P.pos[2]], amount: GM.save.scrap }; else GM.save.echo = null;
   GM.save.scrap = 0; GM.persist();
   GM.deathT = 0; GM.deathBanner = false;
+  if (GM.inBoss) { subQ.length = 0; subT = 0; GM.warden('kill'); }
 };
 function updateDeath(dt) {
   GM.deathT += dt;
@@ -562,6 +596,7 @@ function victory() {
   W.sealCol.off = true; W.gateCol.off = true; W.gate.node.visible = false;
   setTimeout(() => banner('WARDEN DESTROYED', 'NEW LONDON BREATHES', 'gold', 6), 1800);
   setTimeout(() => { $('bossbar').classList.add('hidden'); GM.inBoss = false; }, 2500);
+  subQ.length = 0; subT = 0; GM.warden('death');
   GM.say('thomas', '...It\'s down. We actually did it.', 3.4, 14);
   GM.say('orion', 'Ten years of war won\'t end tonight, Tom. But tonight, London breathes.', 6.1, 15);
   GM.say('thomas', 'Then let\'s light every beacon we\'ve got. Let the whole city see it.', 4.9, 16);
@@ -594,6 +629,7 @@ function doInteract(it) {
     W.sealCol.off = false; W.gate.sealed = true; GM.inBoss = true;
     boss.reset(); boss.active = true; boss.state = 'roar'; boss.t = 0;
     $('bossname').textContent = boss.T.name; $('bossbar').classList.remove('hidden'); AU.bossMusic(true);
+    GM.warden('intro'); GM.wardenChildren = true; tauntT = time;
     if (!GM.save.seen.boss) { GM.save.seen.boss = 1; GM.say('orion', 'Iron Warden. Ten years of war, and you\'re all that stands between London and the dawn. Not for long.', 7.8, 11); GM.say('thomas', 'Watch the slam — it sends out a shockwave. Roll through it, just like training!', 5.8, 12); }
   }
 }

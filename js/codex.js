@@ -27,10 +27,11 @@ const ENTRIES = [
     quote: 'You didn\'t think I\'d let you finish this alone, did you?',
     show: ['Idle', 'Aim', 'Shoot', 'Shoot', 'Idle'] },
   { id: 'boss', sec: 'ADVERSARIES', name: 'The Iron Warden', role: 'Last Sentinel of the Sino-Russian Pact', enemy: 'boss', h: 4.7, unlock: 'boss',
-    facts: [['Class', 'Siege sentinel'], ['Height', '4.6 m'], ['Armament', 'Breaching cleaver, orbital uplink'], ['Origin', 'Sino-Russian Pact']],
+    facts: [['Class', 'Siege sentinel'], ['Height', '4.6 m'], ['Armament', 'Breaching cleaver, orbital uplink'], ['Origin', 'Sino-Russian Pact'], ['Voice', 'Mandarin Chinese']],
     lore: [
       'The war machine that took London in a single night. The Pact left it standing guard in the ruined cathedral at the heart of New London — a monument to their victory, and a warning to anyone who would try to take the city back.',
     ],
+    quote: '你的剑救不了伦敦。 — Your sword will not save London.',
     combat: 'Sweeps its cleaver in wide arcs, slams the ground hard enough to send out a shockwave — roll through it — and charges across the plaza. At half strength its core goes critical: it grows faster and calls down an orbital barrage. Watch for the red markers.' },
   { id: 'trooper', sec: 'ADVERSARIES', name: 'Pact Revenant', role: 'Russian-built blade infantry', enemy: 'trooper', h: 2.1, unlock: 'alert_trooper',
     facts: [['Class', 'Assault automaton'], ['Height', '2.0 m'], ['Armament', 'Forearm blade'], ['Origin', 'Russian foundries']],
