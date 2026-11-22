@@ -720,9 +720,11 @@ OE.render = function (cam, particles) {
   gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   // sky
   gl.disable(gl.DEPTH_TEST); gl.depthMask(false);
+  if (!R.skyOff) {
   gl.useProgram(R.skyP.p); gl.uniformMatrix4fv(R.skyP.u.uInvVP, false, R.invVP); gl.uniform3fv(R.skyP.u.uSunDir, R.sunDir);
   gl.uniform1f(R.skyP.u.uTime, R.time); gl.uniform3fv(R.skyP.u.uFogCol, R.fogCol); gl.uniform1f(R.skyP.u.uFlash, R.flash);
   gl.bindVertexArray(R.fsq); gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
   gl.enable(gl.DEPTH_TEST); gl.depthMask(true);
   const L = R.lit, u = L.u; gl.useProgram(L.p);
   gl.uniformMatrix4fv(u.uVP, false, R.vp); gl.uniformMatrix4fv(u.uLightVP, false, R.lightVP);

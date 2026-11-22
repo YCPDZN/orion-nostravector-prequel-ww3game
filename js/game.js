@@ -52,7 +52,8 @@ GM.boot = async function () {
     OE.init($('c'), QUALITY[qName()]);
     OE.scene = new OE.Node();
     msg('Building New London', 0.15); await tick();
-    W.build(); GM.align.build();
+    W.build(); GM.align.build(); GM.worldRoot = OE.scene;
+    GM.worldEnv = { sunCol: OE.R.sunCol.slice(), sky: OE.R.sky.slice(), ground: OE.R.ground.slice(), fogCol: OE.R.fogCol.slice(), fogDen: OE.R.fogDen };
     msg('Loading Orion Mascar', 0.45); await tick();
     const dec = (s) => { const b = atob(s); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u.buffer; };
     const orion = await OE.loadGLB(dec(ORION_MODELS.orion));
@@ -720,12 +721,13 @@ function step(dt, inp) {
   const st = GM.state;
   if (inp.pause) { if (st === 'play') openPause(); else if (st === 'pause') closePause(); }
   let sdt = dt; if (hs > 0) { hs -= dt; sdt = dt * 0.06; }
-  if (st === 'title' || st === 'crawl' || st === 'loading') {
-    titleAng += dt * 0.05; const P = GM.player;
-    GM.cam.pos = [P.pos[0] + Math.sin(titleAng) * 6.5, 2.0 + Math.sin(titleAng * 0.7) * 0.4, P.pos[2] + 6 + Math.cos(titleAng) * 3]; GM.cam.target = [P.pos[0] - 0.5, 1.3, P.pos[2] + 1];
-    GM.cam.shadowCenter = P.pos; P.ch.update(dt); GM.companion.ch.update(dt); P.syncNode(); GM.companion.sync();
+  if (st === 'title' || st === 'crawl' || st === 'loading' || st === 'birth') {
+    GM._inMenu = true; GM.menu.update(dt);
     for (const e of GM.enemies) e.update(0);
   } else if (st === 'play' || st === 'dead') {
+    if (GM._inMenu) { // back from the menu stage to New London
+      GM._inMenu = false; GM.menu.leave(); OE.scene = GM.worldRoot; Object.assign(OE.R, JSON.parse(JSON.stringify(GM.worldEnv)));
+    }
     if (st === 'play') { GM.save.stats.time += dt; if (GM.chapterEndT > 0) { GM.chapterEndT -= dt; if (GM.chapterEndT <= 0) GM.align.open('core', chapterComplete); } }
     if (inp.lock) toggleLock();
     const P = GM.player;

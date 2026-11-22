@@ -32,6 +32,12 @@ On iPhone/Android you can use *Add to Home Screen* to get a full-screen app icon
 | Sprint | Shift (hold) | Push stick fully | L3 |
 | Pause | Esc | ❚❚ button | Start |
 
+## Main menu
+The title screen is a black stage where Orion and Thomas stand posed according to the alignment of your most recent save (Neutral on a new game), lit by a rim light in that colour:
+- **Neutral** (default): Orion stands with arms crossed, wary; Thomas is cautious, rifle held low, glancing around.
+- **Good**: Orion stands with arms crossed, head up; Thomas gives a thumbs up.
+- **Evil**: Orion grips his red sabre in both hands; Thomas has his arms crossed, turned away, side-eyeing him.
+
 ## Chapters
 The game is split into chapters, each a self-contained mission. Pick one from **CHAPTERS** on the title screen.
 - **Chapter I — The Siege of New London** *(New London, November 2090)*: fight through the ruined city, light the signal beacons and destroy the Iron Warden.
@@ -44,7 +50,7 @@ Chapter I begins with a first-person memory: Orion recalls his birth in London i
 
 ## Alignment
 Orion's choices decide who he becomes, and Thomas follows his lead. Both start **Neutral (yellow)** and can end up **Good (blue)** or **Evil (red)**.
-- **One dialogue choice per chapter.** Thomas raises the dilemma, Orion picks his reply (good, neutral or evil), and Thomas answers.
+- **One dialogue choice per chapter.** Thomas raises the dilemma, Orion picks his reply (good, neutral or evil), and Thomas answers. Chapter I's replies are fully voiced (voice/ch1_*.mp3).
 - Every choice moves Orion's alignment, and moves Thomas's by 90% as much, so one choice is enough to change both. Evil choices pay in scrap and stims; good ones cost you.
 - You can see alignment in the HUD chips under the health bars, the colour of Orion's sabre and Thomas's rifle stripe, the Codex, the chapter list, and the Chapter Complete screen (with an ending line for Orion's path). It is kept in your save slots.
 
@@ -85,6 +91,7 @@ js/audio.js           procedural sound effects, ambience and music
 js/chapters.js        chapter list: titles, openings, prologues, summaries
 js/opening.js         the dreamlike first-person opening scene
 js/alignment.js       alignment system and the moral choices
+js/menu.js            the main-menu stage and alignment poses
 js/codex.js           the Codex: character and adversary entries with 3D turntables
 voice/01-17.mp3       voiced dialogue lines (played with the subtitles)
 voice/warden01-11.mp3 the Iron Warden's Mandarin lines

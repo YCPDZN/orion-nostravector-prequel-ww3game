@@ -57,11 +57,16 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;color:#e9e2d4;fon
 .row .btn{display:inline-block;width:auto;margin:0 0 0 8px;padding:2px 12px;font-size:16px}
 .row .v{display:inline-block}
 .small{font-size:13px;color:#b9ad97;letter-spacing:.05em;line-height:1.5}
-#title{background:radial-gradient(ellipse at 50% 60%,rgba(0,0,0,.05),rgba(0,0,0,.8))}
-#title h1{margin:0;font-weight:300;font-size:clamp(44px,10vw,120px);letter-spacing:.32em;padding-left:.32em;color:#efe4cc;text-shadow:0 0 40px rgba(255,170,90,.35)}
-#title .tag{letter-spacing:.55em;padding-left:.55em;color:var(--gold);font-size:clamp(12px,1.8vw,18px);margin:4px 0 6vh}
-#title .menu{width:min(80vw,320px)}
-#title .foot{position:absolute;bottom:max(14px,env(safe-area-inset-bottom));font-size:12px;letter-spacing:.2em;color:#8d826f}
+#title{align-items:flex-start;justify-content:center;padding-left:max(6vw,calc(env(safe-area-inset-left) + 24px));
+  background:linear-gradient(90deg,rgba(0,0,0,.94) 0%,rgba(0,0,0,.7) 30%,rgba(0,0,0,0) 52%)}
+#title h1{margin:0;font-weight:300;font-size:clamp(40px,7vw,104px);letter-spacing:.26em;color:#efe4cc;text-shadow:0 0 40px rgba(255,170,90,.25);line-height:1}
+#title .tag{letter-spacing:.48em;color:var(--gold);font-size:clamp(11px,1.5vw,16px);margin:8px 0 10px}
+#title .malign{display:flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.32em;margin:0 0 4.5vh}
+#title .malign i{width:9px;height:9px;border-radius:50%;display:inline-block}
+#title .menu{width:min(42vw,300px)}
+#title .menu .btn{text-align:left;padding-left:18px}
+#title .foot{position:absolute;bottom:max(14px,env(safe-area-inset-bottom));left:max(6vw,calc(env(safe-area-inset-left) + 24px));font-size:12px;letter-spacing:.2em;color:#8d826f}
+@media (max-height:500px){#title h1{font-size:clamp(32px,11vh,64px)}#title .menu .btn{margin:5px 0;padding:7px 14px;font-size:15px}#title .malign{margin-bottom:2.5vh}}
 #crawl{background:#000;cursor:pointer}
 #crawl .txt{position:relative;width:min(86vw,780px);height:60vh;text-align:center;color:#d8ccb3}
 #crawl .txt p{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);margin:0;opacity:0;transition:opacity 1.2s;font-size:clamp(17px,min(3vw,5.2vh),30px);line-height:1.55}
@@ -182,6 +187,7 @@ body.touchmode #bossbar{width:min(52vw,600px);left:44%}
 <div id="title" class="screen hidden">
   <h1>ORION</h1>
   <div class="tag">THE THIRD WORLD WAR</div>
+  <div class="malign" id="menuAlign"></div>
   <div class="menu">
     <button class="btn" id="bContinue">CONTINUE</button>
     <button class="btn" id="bNew">NEW GAME</button>
@@ -305,15 +311,16 @@ body.touchmode #bossbar{width:min(52vw,600px);left:44%}
 
 <div id="rotate" class="screen hidden"><div>For the best experience,<br>turn your device to landscape.<br><br><button class="btn" id="rotOk" style="width:auto;display:inline-block">PLAY ANYWAY</button></div></div>
 
-<script src="js/engine.js?v=21"></script>
-<script src="js/world.js?v=21"></script>
-<script src="js/actors.js?v=21"></script>
-<script src="js/audio.js?v=21"></script>
-<script src="js/chapters.js?v=21"></script>
-<script src="js/game.js?v=21"></script>
-<script src="js/codex.js?v=21"></script>
-<script src="js/alignment.js?v=21"></script>
-<script src="js/opening.js?v=21"></script>
+<script src="js/engine.js?v=22"></script>
+<script src="js/world.js?v=22"></script>
+<script src="js/actors.js?v=22"></script>
+<script src="js/audio.js?v=22"></script>
+<script src="js/chapters.js?v=22"></script>
+<script src="js/game.js?v=22"></script>
+<script src="js/codex.js?v=22"></script>
+<script src="js/alignment.js?v=22"></script>
+<script src="js/menu.js?v=22"></script>
+<script src="js/opening.js?v=22"></script>
 <script>
 // models are loaded after the page shows the loading screen
 (function () {

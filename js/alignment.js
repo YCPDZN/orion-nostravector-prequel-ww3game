@@ -24,9 +24,9 @@ const CHOICES = [
     scene: 'The Iron Warden lies in pieces across the plaza. Its core still burns in the wreckage.',
     thomas: 'Commander... the core\'s still live. You can feel it humming. That\'s enough power to light half of London — or to build another one of those things. What do we do with it?',
     options: [
-      { align: 'good', say: 'We destroy it. No one ever builds another Warden — not them, and not us.', reply: 'Good. Let it stay dead.', result: 'Orion drives his sabre into the core. The light dies, and the plaza goes quiet.' },
-      { align: 'neutral', say: 'Seal it up and hand it to Command. It\'s their call, not ours.', reply: 'Command will want to study it. Let\'s hope that\'s all they do.', result: 'Thomas seals the core in a containment case for Command\'s engineers.', reward: { scrap: 500 } },
-      { align: 'evil', say: 'We keep it. With power like that, nobody gives us orders again.', reply: 'Orion... what are you becoming?', result: 'Orion lifts the core. Its red light spills across his armour.', reward: { scrap: 1000 } },
+      { align: 'good', say: 'We destroy it. No one ever builds another Warden — not them, and not us.', reply: 'Good. Let it stay dead.', voice: ['voice/ch1_good1.mp3', 6.27, 'voice/ch1_good2.mp3', 2.59], result: 'Orion drives his sabre into the core. The light dies, and the plaza goes quiet.' },
+      { align: 'neutral', say: 'Seal it up and hand it to Command. It\'s their call, not ours.', reply: 'Command will want to study it. Let\'s hope that\'s all they do.', voice: ['voice/ch1_neutral1.mp3', 4.36, 'voice/ch1_neutral2.mp3', 4.05], result: 'Thomas seals the core in a containment case for Command\'s engineers.', reward: { scrap: 500 } },
+      { align: 'evil', say: 'We keep it. With power like that, nobody gives us orders again.', reply: 'Orion... what are you becoming?', voice: ['voice/ch1_evil1.mp3', 5.96, 'voice/ch1_evil2.mp3', 3.0], result: 'Orion lifts the core. Its red light spills across his armour.', reward: { scrap: 1000 } },
     ] },
   { id: 'pilot', chapter: 2, title: 'The Pilot',
     scene: 'A Pact drone operator drags himself out of a burning wreck on the beach and raises his empty hands.',
@@ -112,7 +112,9 @@ function choose(i) {
     (o.reward ? `<div class="rw">${o.reward.scrap ? '+' + o.reward.scrap + ' scrap ' : ''}${o.reward.stims ? '+' + o.reward.stims + ' stim' + (o.reward.stims > 1 ? 's' : '') : ''}</div>` : '') +
     `<div class="al">${chip('ORION', 'o')} ${chip('THOMAS', 't')}</div>`;
   $('chLeave').style.display = ''; $('chLeave').textContent = 'CONTINUE';
-  subQ_clear(); GM.say('orion', o.say, Math.max(3, o.say.length * 0.055)); GM.say('thomas', o.reply, Math.max(3, o.reply.length * 0.065));
+  subQ_clear();
+  if (o.voice) { GM.say('orion', o.say, o.voice[1] + 0.6, o.voice[0]); GM.say('thomas', o.reply, o.voice[3] + 0.8, o.voice[2]); } // recorded lines
+  else { GM.say('orion', o.say, Math.max(3, o.say.length * 0.055)); GM.say('thomas', o.reply, Math.max(3, o.reply.length * 0.065)); }
   const after = [AL.tier('o'), AL.tier('t')];
   if (after[0] !== before[0]) GM.pendingAlignBanner = 'o';
   else if (after[1] !== before[1]) GM.pendingAlignBanner = 't';
