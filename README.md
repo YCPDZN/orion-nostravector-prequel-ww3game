@@ -56,7 +56,7 @@ Chapter II's lines are numbered 1–80 (Part I: 1–44, Part II: 45–80). A rec
 
 Chapters unlock in order: each one opens once the chapter before it has been completed (in the current game or any save slot). The Chapter Complete screen has a button straight into the next chapter, and the chapter select shows a cover image for each chapter (`assets/chapters/`).
 
-Alignment carries from one chapter to the next: finishing Chapter I takes Orion's and Thomas's alignment into Dover (use the **NEXT CHAPTER** button on the Chapter Complete screen). Replaying a chapter rewinds alignment to how it stood when that chapter began.
+Alignment carries from one chapter to the next: finishing Chapter I takes Orion's and Thomas's alignment into Dover (use the **NEXT CHAPTER** button on the Chapter Complete screen). Replaying a chapter keeps your current alignment and the choices you've already made (so a replay never shifts alignment twice); from the title screen, Chapter Select builds on your most recent save.
 
 ## Alignment
 Orion's choices decide who he becomes, and Thomas follows his lead. Both start **Neutral (yellow)** and can end up **Good (blue)** or **Evil (red)**.

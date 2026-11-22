@@ -417,13 +417,18 @@ function openSaves(mode, ret) {
 /* ---------------- chapters ---------------- */
 let chapterReturn = 'title';
 const fmtTime = (t) => { t = Math.floor(t); const h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, s2 = t % 60; return (h ? h + 'h ' : '') + m + 'm ' + String(s2).padStart(2, '0') + 's'; };
+/* the progress a new chapter run builds on: the game in play, or (straight from the title screen) your most recent save */
+function baseSave() {
+  if (GM.save && GM.save.started) return GM.save;
+  const sl = readSlots().filter((x) => x && x.save).sort((a, b) => b.when - a.when)[0];
+  return sl ? sl.save : GM.save;
+}
+GM.baseSave = baseSave;
 function startChapter(n, opts = {}) {
-  // replaying keeps Orion's rank and stats, but the mission itself starts over
-  const S0 = GM.save;
-  // alignment carries from chapter to chapter; replaying a chapter rewinds it to how it stood when that chapter began
-  const alignAt = clone(S0.alignAt || {}); const align = clone(alignAt[n] || S0.align || { o: 0, t: 0 }); alignAt[n] = clone(align);
-  for (const k in alignAt) if (+k > n) delete alignAt[k]; // later chapters will follow from this run instead
-  const choices = {}; for (let i = 1; i < n; i++) { const c = GM.align.forChapter(i); if (c && S0.choices && S0.choices[c.id]) choices[c.id] = S0.choices[c.id]; }
+  // replaying keeps Orion's rank, stats, alignment and past choices; the mission itself starts over
+  const S0 = baseSave();
+  const align = clone(S0.align || { o: 0, t: 0 }), alignAt = clone(S0.alignAt || {});
+  const choices = clone(S0.choices || {}); // choices already made stay made, so a replay doesn't shift alignment twice
   const seen = clone(S0.seen || {});
   for (const id of Object.keys(LEVELS)) if (String(id)[0] === String(n)) { delete seen[introKey(isNaN(id) ? id : +id)]; delete seen['talk_' + LEVELS[id].boss.seen]; }
   const keep = { vig: S0.vig, end: S0.end, str: S0.str, rank: S0.rank, maxStims: S0.maxStims, done: S0.done || {}, align, alignAt, choices, seen, eye: !!S0.eye, reached: S0.reached || {}, talina: S0.talina };
@@ -456,7 +461,7 @@ const refreshAdvance = () => { const n = nextChapter(), ok = GM.canAdvance(); fo
 GM.unlocked = (id) => id <= 1 || !!GM.completed()[id - 1];
 const COVERS = { 1: 'assets/chapters/ch1.jpg', 2: 'assets/chapters/ch2.jpg' };
 function openChapters(ret) {
-  chapterReturn = ret; const S = GM.save;
+  chapterReturn = ret; const S = baseSave();
   $('chList').innerHTML = CHAPTERS.map((c) => {
     const done = S.done && S.done[c.id]; const inProg = S.started && S.chapter === c.id && !S.bossDead;
     const here = S.started && S.chapter === c.id; const open = c.available && (GM.unlocked(c.id) || here);
@@ -475,6 +480,9 @@ function openChapters(ret) {
   }).join('');
   $('chList').querySelectorAll('[data-ch]').forEach((b) => b.onclick = () => {
     AU.init(); AU.ui(); const id = +b.dataset.id;
+    if (b.dataset.ch === 'cont' && !(GM.save && GM.save.started)) { // from the title: continue = load your most recent save
+      const sl = readSlots(); let bi = -1; sl.forEach((x, i) => { if (x && x.save && (bi < 0 || x.when > sl[bi].when)) bi = i; }); if (bi >= 0) loadSlot(bi); return;
+    }
     if (b.dataset.ch === 'cont') { if (GM.state === 'complete') { show(null); GM.state = 'play'; hudVisible(true); lockPointer(); } else startPlay(); }
     else if (b.dataset.ch === 'part2') startChapter(id, { part: 2 });
     else startChapter(id);
