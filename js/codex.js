@@ -33,6 +33,14 @@ const ENTRIES = [
     ],
     quote: 'The Red Sun and the Bear have united under one banner.',
     combat: 'Sweeps its cleaver in wide arcs, slams the ground hard enough to send out a shockwave — roll through it — and charges across the plaza. At half strength its core goes critical: it grows faster and calls down an orbital barrage. Watch for the red markers.' },
+  { id: 'tidebreaker', sec: 'ADVERSARIES', name: 'The Tidebreaker', role: 'Spearhead of the Pact Landing Fleet', enemy: 'tidebreaker', h: 5.2, unlock: 'boss2',
+    facts: [['Class', 'Amphibious assault frame'], ['Height', '5.1 m'], ['Armament', 'Anchor-hammer, forearm blade, fleet uplink'], ['Origin', 'Russian naval yards'], ['Voice', 'Russian']],
+    lore: [
+      'Built to walk out of the surf and hold a beach until the fleet behind it can land. The Pact sent it ashore beneath the white cliffs of Dover, and for as long as it stands, no American ship can reach England.',
+      'Its anchor-hammer was made for tearing open sea walls. Its pilot rides sealed inside the reactor housing on its back.',
+    ],
+    quote: 'The sea will take you.',
+    combat: 'Swings its anchor in heavy arcs and slams the shingle to send out a shockwave — roll through it. Charges when you keep your distance. At half strength it calls the fleet\'s guns down on its own position: watch for the red markers and keep moving.' },
   { id: 'trooper', sec: 'ADVERSARIES', name: 'Pact Revenant', role: 'Russian-built blade infantry', enemy: 'trooper', h: 2.1, unlock: 'alert_trooper',
     facts: [['Class', 'Assault automaton'], ['Height', '2.0 m'], ['Armament', 'Forearm blade'], ['Origin', 'Russian foundries']],
     lore: ['The Pact\'s foot soldiers: tireless, fearless, built by the tens of thousands to hold what the heavier machines conquer.'],
@@ -73,7 +81,7 @@ function build() {
   t.node.add(rf); C.models.thomas = { ch: t, node: t.node, rifle: rf };
   C.muzzle = { pos: [0, 0, 0], color: [1, 0.7, 0.3], intensity: 0, range: 6 };
   // war machines
-  for (const type of ['boss', 'trooper', 'drone', 'brute']) {
+  for (const type of ['boss', 'tidebreaker', 'trooper', 'drone', 'brute']) {
     const e = new A.Enemy(type, STAGE.slice(), 0); e.reset(); e.root.pos = STAGE.slice(); if (e.hover) e.root.pos = [STAGE[0], 1.5, STAGE[2]];
     e.light.intensity = 0; C.models[type] = { enemy: e, node: e.root };
   }

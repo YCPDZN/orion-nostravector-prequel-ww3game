@@ -41,12 +41,14 @@ The title screen is a black stage where Orion and Thomas stand posed according t
 ## Chapters
 The game is split into chapters, each a self-contained mission. Pick one from **CHAPTERS** on the title screen.
 - **Chapter I — The Siege of New London** *(New London, November 2090)*: fight through the ruined city, light the signal beacons and destroy the Iron Warden.
-- **Chapter II — Ashes of Dover** *(Dover, December 2090)*: coming soon.
+- **Chapter II — Ashes of Dover** *(Dover, December 2090)*: fight north along the shingle beneath the white cliffs, past beached Pact landing craft, Czech hedgehogs and WW2 pillboxes, to break the Pact beachhead and destroy the **Tidebreaker**, an amphibious assault frame that speaks Russian (browser text-to-speech, English subtitles). Its pilot survives, and Orion must decide what to do with him (The Pilot).
 - **Chapter III — Iron Tide** *(Normandy, February 2091)*: coming soon.
 - **Chapter IV — Winter of the Bear** *(Kaliningrad, March 2091)*: coming soon.
 - **Chapter V — Under One Banner** *(Harbin, summer 2091)*: coming soon.
 
-Chapter I begins with a first-person memory: Orion recalls his birth in London in 2069 AD, shown as a soft, out-of-focus dream with a heartbeat, narrated by Orion (voice/intro1-6.mp3). Each chapter then opens with its own title card and prologue and ends with a *Chapter Complete* screen showing your time, kills, deaths and rank. Replaying a chapter keeps Orion's rank and upgrades. Chapters are defined in `js/chapters.js`.
+Chapter I begins with a first-person memory: Orion recalls his birth in London in 2069 AD, shown as a soft, out-of-focus dream with a heartbeat, narrated by Orion (voice/intro1-6.mp3). Each chapter then opens with its own title card and prologue and ends with a *Chapter Complete* screen showing your time, kills, deaths and rank. Replaying a chapter keeps Orion's rank and upgrades. Chapters are defined in `js/chapters.js`; each chapter's enemies, boss, dialogue and weather are in `js/levels.js`.
+
+Alignment carries from one chapter to the next: finishing Chapter I takes Orion's and Thomas's alignment into Dover (use the **NEXT CHAPTER** button on the Chapter Complete screen). Replaying a chapter rewinds alignment to how it stood when that chapter began.
 
 ## Alignment
 Orion's choices decide who he becomes, and Thomas follows his lead. Both start **Neutral (yellow)** and can end up **Good (blue)** or **Evil (red)**.
@@ -86,6 +88,8 @@ index.html            the game
 rig-viewer.html       preview every animation on both rigged characters
 js/engine.js          WebGL2 renderer (skinning, PBR, shadows, bloom, particles)
 js/world.js           New London level: street, overpass, fog gate, cathedral arena
+js/world_dover.js     Dover level: white cliffs, shingle beach, the Channel, landing ships, landing zone
+js/levels.js          per-chapter enemies, boss, voice lines, sky and weather
 js/actors.js          Orion, Thomas, enemies, boss, weapons
 js/game.js            input (keyboard, touch, gamepad), camera, HUD, saves, story
 js/audio.js           procedural sound effects, ambience and music

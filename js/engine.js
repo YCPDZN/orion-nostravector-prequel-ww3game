@@ -194,31 +194,32 @@ layout(location=0) in vec2 aP; out vec2 vUV; void main(){ vUV=aP*0.5+0.5; gl_Pos
 const SKY_FS = `#version 300 es
 precision highp float; in vec2 vUV; out vec4 frag;
 uniform mat4 uInvVP; uniform vec3 uSunDir; uniform float uTime; uniform vec3 uFogCol; uniform float uFlash;
+uniform vec3 uTop, uHor, uGlow, uClLo, uClHi; uniform float uStars, uMoon;
 float h(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
 float n(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y); }
 float fbm(vec2 p){ float s=0.0,a=0.5; for(int i=0;i<5;i++){ s+=a*n(p); p*=2.03; a*=0.5;} return s; }
 void main(){
   vec4 p = uInvVP*vec4(vUV*2.0-1.0, 1.0, 1.0); vec3 d = normalize(p.xyz/p.w);
   float y = d.y;
-  vec3 top = vec3(0.012,0.014,0.03); vec3 hor = vec3(0.32,0.11,0.05);
+  vec3 top = uTop; vec3 hor = uHor;
   vec3 c = mix(hor, top, smoothstep(-0.05,0.45,y));
   c = mix(c, uFogCol, smoothstep(0.08,-0.1,y));
   // fire glow along horizon in a few directions
   float az = atan(d.x,d.z);
   float glow = (0.5+0.5*sin(az*3.0+1.3))*(0.5+0.5*sin(az*7.0)) ;
-  c += vec3(0.55,0.18,0.04)*glow*exp(-max(y,0.0)*9.0)*0.8;
+  c += uGlow*glow*exp(-max(y,0.0)*9.0)*0.8;
   // clouds / smoke
   vec2 cp = d.xz/(max(y,0.04)+0.12)*1.3 + vec2(uTime*0.01,uTime*0.004);
   float cl = fbm(cp); cl = smoothstep(0.35,0.85,cl);
-  vec3 ccol = mix(vec3(0.05,0.03,0.03), vec3(0.35,0.13,0.06), exp(-max(y,0.0)*4.0));
+  vec3 ccol = mix(uClLo, uClHi, exp(-max(y,0.0)*4.0));
   c = mix(c, ccol, cl*smoothstep(-0.02,0.15,y)*0.85);
   // moon
   vec3 s = normalize(uSunDir); float md = dot(d,s);
-  c += vec3(0.75,0.8,0.95)*smoothstep(0.9993,0.9997,md)*(1.0-cl*0.8)*3.0;
+  c += vec3(0.75,0.8,0.95)*smoothstep(0.9993,0.9997,md)*(1.0-cl*0.8)*3.0*uMoon;
   c += vec3(0.25,0.3,0.45)*pow(max(md,0.0),60.0)*0.6*(1.0-cl*0.6);
   // stars
   vec2 sp = d.xz/(y+1.0)*300.0; float st = step(0.9975,h(floor(sp)))*smoothstep(0.1,0.5,y)*(1.0-cl);
-  c += vec3(st)*0.6;
+  c += vec3(st)*0.6*uStars;
   c += vec3(1.0,0.85,0.7)*uFlash*0.25*smoothstep(0.4,-0.1,y);
   frag = vec4(c,1.0);
 }`;
@@ -296,7 +297,8 @@ OE.init = function (canvas, quality) {
     part: compile(gl, PART_VS, PART_FS),
     vp: M4.create(), view: M4.create(), proj: M4.create(), invVP: M4.create(), lightVP: M4.create(), ident: M4.create(),
     sunDir: [-0.35, 0.62, -0.45], sunCol: [0.55, 0.62, 0.85], sky: [0.07, 0.075, 0.11], ground: [0.09, 0.05, 0.035],
-    fogCol: [0.12, 0.06, 0.04], fogDen: 0.028, exposure: 1.25, time: 0, hurt: 0, desat: 0, flash: 0,
+    fogCol: [0.12, 0.06, 0.04], fogDen: 0.028,
+    skyPal: { top: [0.012, 0.014, 0.03], hor: [0.32, 0.11, 0.05], glow: [0.55, 0.18, 0.04], clLo: [0.05, 0.03, 0.03], clHi: [0.35, 0.13, 0.06], stars: 1, moon: 1 }, exposure: 1.25, time: 0, hurt: 0, desat: 0, flash: 0,
     lights: [], post: {},
   };
   // full screen quad
@@ -723,6 +725,7 @@ OE.render = function (cam, particles) {
   if (!R.skyOff) {
   gl.useProgram(R.skyP.p); gl.uniformMatrix4fv(R.skyP.u.uInvVP, false, R.invVP); gl.uniform3fv(R.skyP.u.uSunDir, R.sunDir);
   gl.uniform1f(R.skyP.u.uTime, R.time); gl.uniform3fv(R.skyP.u.uFogCol, R.fogCol); gl.uniform1f(R.skyP.u.uFlash, R.flash);
+  { const S = R.skyPal, u = R.skyP.u; gl.uniform3fv(u.uTop, S.top); gl.uniform3fv(u.uHor, S.hor); gl.uniform3fv(u.uGlow, S.glow); gl.uniform3fv(u.uClLo, S.clLo); gl.uniform3fv(u.uClHi, S.clHi); gl.uniform1f(u.uStars, S.stars); gl.uniform1f(u.uMoon, S.moon); }
   gl.bindVertexArray(R.fsq); gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
   gl.enable(gl.DEPTH_TEST); gl.depthMask(true);
@@ -819,7 +822,7 @@ OE.proceduralTex = function (kind, size = 512) {
     const sx = tx*tx*(3-2*tx), sy = ty*ty*(3-2*ty); const A = o.a;
     const i0 = ((iy % g) * g), i1 = (((iy + 1) % g) * g), x0 = ix % g, x1 = (ix + 1) % g;
     return (A[i0+x0]*(1-sx)+A[i0+x1]*sx)*(1-sy)+(A[i1+x0]*(1-sx)+A[i1+x1]*sx)*sy; };
-  const P = { concrete: [0.42, 0.40, 0.38], ground: [0.26, 0.22, 0.19], metal: [0.30, 0.28, 0.26], brick: [0.36, 0.22, 0.17] }[kind];
+  const P = { concrete: [0.42, 0.40, 0.38], ground: [0.26, 0.22, 0.19], metal: [0.30, 0.28, 0.26], brick: [0.36, 0.22, 0.17], chalk: [0.66, 0.65, 0.61], shingle: [0.33, 0.31, 0.28] }[kind];
   for (let y = 0; y < size; y++) for (let xx = 0; xx < size; xx++) {
     const u = xx / size, v = y / size; let n = 0, amp = 0.5;
     for (const o of octs) { n += vn(o, u, v) * amp; amp *= 0.55; }
@@ -850,6 +853,19 @@ OE.proceduralTex = function (kind, size = 512) {
       if (mortar) { col = [0.3, 0.29, 0.27].map(c => c * (0.8 + n * 0.4)); h = 0.2 + n * 0.1; }
       else { col = col.map(c => c * tint * (0.75 + n * 0.5)); h = 0.6 + n * 0.3; }
       const soot = Math.max(0, vn(octs[1], u, v) - 0.5) * 1.6; col = col.map(c => c * (1 - soot * 0.7));
+    }
+    else if (kind === 'chalk') { // layered white chalk with dark flint bands
+      const band = Math.sin((v + vn(octs[1], u, v) * 0.05) * Math.PI * 12);
+      const flint = band > 0.9 && vn(octs[4], u, v) > 0.6 ? 1 : 0; // nodules of flint along the bedding planes
+      const streak = Math.max(0, vn(octs[2], u, v) - 0.5) * 0.9, crack = Math.abs(vn(octs[3], u, v) - 0.5) < 0.012 ? 1 : 0;
+      col = col.map(c => c * (0.84 + n * 0.22) * (1 - streak * 0.3) * (1 - band * 0.03) * (crack ? 0.7 : 1)); h = n * 0.7 + band * 0.05 - crack * 0.2;
+      if (flint) { col = col.map(c => c * 0.45); h -= 0.15; }
+    } else if (kind === 'shingle') { // rounded beach pebbles
+      const cell = 22; const cx = u * cell, cy = v * cell; let best = 9, id = 0;
+      for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) { const gx = Math.floor(cx) + ox, gy = Math.floor(cy) + oy; const k = ((gx % cell + cell) % cell) * 131 + ((gy % cell + cell) % cell) * 71;
+        const jx = ((k * 9301 + 49297) % 233280) / 233280, jy = ((k * 4111 + 1013) % 23328) / 23328; const d = Math.hypot(cx - gx - jx, cy - gy - jy); if (d < best) { best = d; id = k; } }
+      const t = 0.72 + ((id * 7919) % 1000) / 1000 * 0.56; h = Math.max(0, 0.75 - best) * 0.9 + n * 0.1;
+      col = col.map((c, i) => c * t * (0.85 + n * 0.3) * (i === 2 ? 1.04 : 1)); if (best > 0.66) col = col.map(c => c * 0.7);
     }
     H[y * size + xx] = h;
     const o = (y * size + xx) * 4;

@@ -27,9 +27,19 @@ window.CHAPTERS = [
   'At his side marched his apprentice, Thomas Hawthorne, born in 2074. Their dropship never reached the line.',
   'Now only the two of them remain. Between them and the dawn stands the Iron Warden.'],
   },
-  // Chapters II–V: story outlines and dialogue choices are written; levels to come
-  { id: 2, numeral: 'II', title: 'Ashes of Dover', place: 'Dover', date: 'December 2090', available: false,
-    summary: 'With the Warden gone, British Command sends Orion and Thomas to the white cliffs to break the Pact beachhead, so American reinforcements can finally land.' },
+  {
+    id: 2, numeral: 'II', title: 'Ashes of Dover', place: 'Dover', date: 'December 2090',
+    available: true,
+    summary: 'With the Warden gone, British Command sends Orion and Thomas to the white cliffs to break the Pact beachhead, so American reinforcements can finally land.',
+    objective: 'Destroy the Tidebreaker',
+    prologue: ['December, 2090.',
+  'New London is free. For the first time in ten years, the Pact is falling back — but not far.',
+  'Beneath the white cliffs of Dover, the Sino-Russian landing fleet still holds a beachhead. While it stands, no American ship can reach England.',
+  'British Command sends the only two soldiers who have ever brought down one of the Pact\'s great machines.',
+  'Commander Orion Mascar, twenty-one. His apprentice, Thomas Hawthorne, sixteen.',
+  'On the shingle below the cliffs, the Tidebreaker is waiting.'],
+  },
+  // Chapters III–V: story outlines and dialogue choices are written; levels to come
   { id: 3, numeral: 'III', title: 'Iron Tide', place: 'Normandy', date: 'February 2091', available: false,
     summary: 'The Allies cross the Channel the other way. Orion and Thomas fight alongside American armour through the bocage, where the Pact\'s war machines dig in.' },
   { id: 4, numeral: 'IV', title: 'Winter of the Bear', place: 'Kaliningrad', date: 'March 2091', available: false,

@@ -32,9 +32,9 @@ const CHOICES = [
       { align: 'neutral', say: 'Seal it up and hand it to Command. It\'s their call, not ours.', reply: 'Command will want to study it. Let\'s hope that\'s all they do.', voice: ['voice/ch1_neutral1.mp3', 4.36, 'voice/ch1_neutral2.mp3', 4.05], result: 'Thomas seals the core in a containment case for Command\'s engineers.', reward: { scrap: 500 } },
       { align: 'evil', say: 'We keep it. With power like that, nobody gives us orders again.', reply: 'Orion... what are you becoming?', voice: ['voice/ch1_evil1.mp3', 5.96, 'voice/ch1_evil2.mp3', 3.0], result: 'Orion lifts the core. Its red light spills across his armour.', reward: { scrap: 1000 } },
     ] },
-  { id: 'pilot', chapter: 2, title: 'The Pilot',
-    scene: 'A Pact drone operator drags himself out of a burning wreck on the beach and raises his empty hands.',
-    thomas: 'He\'s just a kid, Commander. Younger than me, maybe. He\'s got his hands up. What do we do with him?',
+  { id: 'pilot', chapter: 2, title: 'The Pilot', auto: true,
+    scene: 'The Tidebreaker\'s cockpit splits open. Its pilot drags himself out of the burning wreck onto the shingle and raises his empty hands.',
+    thomas: 'He\'s just a kid, Commander. My age, maybe. He\'s got his hands up. What do we do with him?',
     options: [
       { align: 'good', say: 'Let him go. Tell him to run, and never come back.', reply: '...Thank you, Commander. He\'s just like me.', result: 'He stares, then runs into the smoke. Thomas watches him until he is gone.' },
       { align: 'neutral', say: 'Zip-tie him. Command can decide what he\'s worth.', reply: 'Right. He\'ll keep until the pickup team gets here.', result: 'Thomas binds his wrists and radios his position for pickup.', reward: { scrap: 100 } },

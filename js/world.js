@@ -1,16 +1,36 @@
 /* World: ruined New London, 2090 — level geometry, colliders, fires, beacons, fog gate */
 (function () {
 'use strict';
-const W = window.W = { colliders: [], fires: [], beacons: [], spawns: [], gate: null, arena: { c: [0, 0, 150], r: 21 }, glowNodes: [] };
+const W = window.W = { builders: {}, levels: {} };
+/* each level keeps its own copy of these; W.use() swaps them in */
+const STATE = ['colliders', 'fires', 'beacons', 'gate', 'gateCol', 'sealCol', 'arena', 'bounds', 'carSpots', 'sea', 'ambience'];
+function fresh() {
+  Object.assign(W, { colliders: [], fires: [], beacons: [], gate: null, gateCol: null, sealCol: null, arena: { c: [0, 0, 150], r: 21 },
+    bounds: [-30, 30, -8.5, 180], carSpots: [], sea: null, ambience: 'ash' });
+}
+fresh();
+W.textures = function () {
+  if (!W.tex) W.tex = {};
+  for (const k of ['concrete', 'ground', 'metal', 'brick']) if (!W.tex[k]) W.tex[k] = OE.proceduralTex(k, k === 'metal' ? 256 : 512);
+  return W.tex;
+};
+W.tri = (t, scale, rough, metal) => ({ mode: 1, triA: t.albedo, triN: t.normal, triScale: scale, rough, metal, color: [1, 1, 1] });
+/* build a level into its own scene root (caller sets OE.scene) and return its state */
+W.make = function (id) {
+  fresh(); W.builders[id]();
+  for (const f of W.fires) { // fire lights
+    f.light = { pos: [f.pos[0], f.pos[1] + 0.8, f.pos[2]], color: [1.0, 0.45, 0.15], intensity: 3.2 * f.size, range: 7 + f.size * 5, base: 3.2 * f.size, ph: rnd() * 10 };
+    OE.R.lights.push(f.light);
+  }
+  const st = {}; for (const k of STATE) st[k] = W[k]; return st;
+};
+W.use = function (st) { for (const k of STATE) W[k] = st[k]; };
+W.makeBeacon = (pos, name) => makeBeacon(pos, name);
 const rnd = OE.rng(2090);
 const R = (a, b) => a + (b - a) * rnd();
 
-W.build = function () {
-  const T = {
-    concrete: OE.proceduralTex('concrete', 512), ground: OE.proceduralTex('ground', 512),
-    metal: OE.proceduralTex('metal', 256), brick: OE.proceduralTex('brick', 512),
-  };
-  W.tex = T;
+W.builders[1] = function () { // ruined New London
+  const T = W.textures();
   const mats = {
     concrete: { mode: 1, triA: T.concrete.albedo, triN: T.concrete.normal, triScale: 0.22, rough: 0.92, metal: 0, color: [1, 1, 1] },
     brick: { mode: 1, triA: T.brick.albedo, triN: T.brick.normal, triScale: 0.28, rough: 0.9, metal: 0, color: [1, 1, 1] },
@@ -214,18 +234,14 @@ W.build = function () {
   W.beacons = [makeBeacon([3.2, 0, 5.5], 'Crash Site'), makeBeacon([-3, 0, 101], 'Overpass Ruins')];
   // ---------- fog gate ----------
   const fg = new OE.Geo(); fg.box([0, 3.6, 122], [7.4, 7.2, 0.15], { col: [1, 1, 1, 1] });
-  W.gate = { node: new OE.Node(fg.build(), { mode: 2, color: [0, 0, 0], emissive: [0.9, 0.85, 0.7], alpha: 0.35, doubleSided: true }), z: 122, open: false, sealed: false };
+  W.gate = { node: new OE.Node(fg.build(), { mode: 2, color: [0, 0, 0], emissive: [0.9, 0.85, 0.7], alpha: 0.35, doubleSided: true }), z: 122, open: false, sealed: false,
+    zone: [-4, 4, 118.5, 122], enter: [0, 127.6], thomas: [1.6, 126.9], fx: [-3.5, 3.5, 6.5] };
   W.gate.node.castShadow = false; OE.scene.add(W.gate.node);
   W.gateCol = { x0: -4, x1: 4, z0: 121.6, z1: 122.4, h: 8, gate: true };
   W.colliders.push(W.gateCol);
   W.sealCol = { x0: -4, x1: 4, z0: 125.6, z1: 126.4, h: 8, gate: true, off: true };
   W.colliders.push(W.sealCol);
 
-  // ---------- fire lights ----------
-  for (const f of W.fires) {
-    f.light = { pos: [f.pos[0], f.pos[1] + 0.8, f.pos[2]], color: [1.0, 0.45, 0.15], intensity: 3.2 * f.size, range: 7 + f.size * 5, base: 3.2 * f.size, ph: rnd() * 10 };
-    OE.R.lights.push(f.light);
-  }
 };
 
 function makeBeacon(pos, name) {
@@ -259,7 +275,7 @@ W.collide = function (p, r) {
     }
   }
   // world bounds
-  p[0] = OE.clamp(p[0], -30, 30); p[2] = OE.clamp(p[2], -8.5, 180);
+  const B = W.bounds; p[0] = OE.clamp(p[0], B[0], B[1]); p[2] = OE.clamp(p[2], B[2], B[3]);
 };
 /* segment vs boxes (for camera / line of sight). returns fraction 0..1 */
 W.ray = function (a, b, ignoreLow = 0) {
@@ -281,6 +297,7 @@ W.ray = function (a, b, ignoreLow = 0) {
 };
 
 W.update = function (dt, t, P) {
+  if (W.sea) W.sea.update(dt, t);
   for (const f of W.fires) {
     const fl = f.light; fl.intensity = fl.base * (0.75 + 0.25 * Math.sin(t * 13 + fl.ph) * Math.sin(t * 7.3 + fl.ph * 2) + 0.1 * Math.sin(t * 31 + fl.ph));
     // particles only for fires near the camera (performance)

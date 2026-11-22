@@ -41,9 +41,32 @@ let hs = 0, flashT = 8, lastT = 0, time = 0, boss = null;
 GM.hitstop = (t) => { hs = Math.max(hs, t); };
 GM.shake = (a) => { GM.cam.shake = Math.min(1, GM.cam.shake + a); };
 
-const SPAWNS = [['trooper', [2, 0, 24]], ['trooper', [-3, 0, 38.6]], ['drone', [0, 0, 46]], ['trooper', [4, 0, 53]], ['trooper', [-2, 0, 58]],
-  ['brute', [-3, 0, 64]], ['drone', [3, 0, 78]], ['trooper', [-1, 0, 87]], ['trooper', [4, 0, 91]], ['drone', [-2, 0, 93]],
-  ['brute', [1, 0, 111]], ['trooper', [-4, 0, 115.5]], ['trooper', [4, 0, 117]]];
+/* ---------------- levels: one per chapter, built the first time it is needed ---------------- */
+let LV = null; GM.levels = {};
+const clone = (o) => JSON.parse(JSON.stringify(o));
+const ENV_KEYS = ['sunDir', 'sunCol', 'sky', 'ground', 'fogCol', 'fogDen', 'exposure', 'skyPal'];
+GM.loadLevel = function (id) {
+  if (!LEVELS[id]) id = 1;
+  let L = GM.levels[id];
+  if (!L) {
+    const before = new Set(OE.R.lights), prevScene = OE.scene, root = new OE.Node(); OE.scene = root;
+    const st = W.make(id), def = LEVELS[id];
+    const enemies = def.spawns.map(([t, p]) => new A.Enemy(t, p, Math.PI));
+    const b = new A.Enemy(def.boss.type, def.boss.pos, Math.PI); enemies.push(b);
+    const env = clone(GM.baseEnv); if (def.env) Object.assign(env, clone(def.env));
+    L = GM.levels[id] = { id, def, root, st, enemies, boss: b, env, lights: OE.R.lights.filter((l) => !before.has(l)) };
+    OE.scene = prevScene;
+  }
+  if (LV === L) return L;
+  if (LV) OE.R.lights = OE.R.lights.filter((l) => !LV.lights.includes(l));
+  for (const l of L.lights) if (!OE.R.lights.includes(l)) OE.R.lights.push(l);
+  W.use(L.st); GM.enemies = L.enemies; boss = GM.boss = L.boss;
+  for (const a of [GM.player, GM.companion]) if (a) { if (a.node.parent) a.node.parent.remove(a.node); L.root.add(a.node); }
+  GM.worldRoot = L.root; GM.worldEnv = L.env; LV = GM.level = L;
+  if (!GM._inMenu) { OE.scene = L.root; Object.assign(OE.R, clone(L.env)); }
+  return L;
+};
+const introKey = (n) => n === 1 ? 'intro' : 'intro' + n;
 
 /* ---------------- boot ---------------- */
 GM.boot = async function () {
@@ -52,9 +75,8 @@ GM.boot = async function () {
     msg('Preparing renderer', 0.05); await tick();
     OE.init($('c'), QUALITY[qName()]);
     OE.scene = new OE.Node();
-    msg('Building New London', 0.15); await tick();
-    W.build(); GM.align.build(); GM.worldRoot = OE.scene;
-    GM.worldEnv = { sunCol: OE.R.sunCol.slice(), sky: OE.R.sky.slice(), ground: OE.R.ground.slice(), fogCol: OE.R.fogCol.slice(), fogDen: OE.R.fogDen };
+    GM.baseEnv = {}; for (const k of ENV_KEYS) GM.baseEnv[k] = clone(OE.R[k]);
+    GM.align.build(); W.textures();
     msg('Loading Orion Mascar', 0.45); await tick();
     const dec = (s) => { const b = atob(s); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u.buffer; };
     const orion = await OE.loadGLB(dec(ORION_MODELS.orion));
@@ -64,8 +86,8 @@ GM.boot = async function () {
     GM.parts = new OE.Particles(QUALITY[qName()].particles);
     GM.assets = { orion, thomas };
     GM.player = new A.Player(orion); GM.companion = new A.Companion(thomas);
-    for (const [t, p] of SPAWNS) GM.enemies.push(new A.Enemy(t, p, Math.PI));
-    boss = new A.Enemy('boss', [0, 0, 157], Math.PI); GM.enemies.push(boss); GM.boss = boss;
+    msg('Building New London', 0.95); await tick();
+    GM.loadLevel(1);
     respawnAll(true);
     setupInput(); setupUI();
     msg('', 1);
@@ -294,12 +316,8 @@ function startPlay() {
   show(null); GM.state = 'play'; hudVisible(true);
   if (isTouch) { try { const de = document.documentElement; if (de.requestFullscreen && !document.fullscreenElement) de.requestFullscreen({ navigationUI: 'hide' }).then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => { })).catch(() => { }); } catch (e) { } }
   else { lockPointer(); }
-  if (!GM.save.seen.intro) {
-    GM.save.seen.intro = 1; GM.persist();
-    GM.say('thomas', 'Commander! Orion — you\'re awake. The dropship\'s gone. The whole squad... it\'s just us now.', 7.4, 1);
-    GM.say('orion', 'Then we finish the job, Tom. British Command sent us to break this siege, and the Iron Warden still holds the cathedral.', 7.9, 2);
-    GM.say('thomas', 'There\'s a signal beacon right here. Light it and Command will know we\'re still breathing.', 5.2, 3);
-  }
+  const ik = introKey(GM.save.chapter || 1);
+  if (!GM.save.seen[ik]) { GM.save.seen[ik] = 1; GM.persist(); LV.def.intro(); }
 }
 function openPause() { if (GM.state !== 'play') return; GM.state = 'pause'; const pc = chapterDef(GM.save.chapter); $('pChapter').textContent = `CHAPTER ${pc.numeral} · ${pc.title.toUpperCase()}`; $('prompt').classList.add('hidden'); show('pause'); hudVisible(false); if (document.pointerLockElement) document.exitPointerLock(); }
 function closePause() { show(null); GM.state = 'play'; hudVisible(true); lockPointer(); }
@@ -327,7 +345,7 @@ function saveToSlot(i) {
 function loadSlot(i) {
   const d = readSlots()[i]; if (!d) return;
   GM.save = Object.assign(JSON.parse(JSON.stringify(NEW_SAVE)), JSON.parse(JSON.stringify(d.save)));
-  GM.chapterEndT = 0; respawnAll();
+  GM.chapterEndT = 0; GM.loadLevel(GM.save.chapter || 1); respawnAll();
   if (d.world) {
     const P = GM.player, w = d.world; P.pos = w.p.pos.slice(); P.yaw = w.p.yaw; P.hp = Math.min(P.maxHp, w.p.hp); P.stims = w.p.stims;
     GM.companion.pos = w.t.pos.slice(); GM.cam.yaw = P.yaw;
@@ -368,9 +386,16 @@ let chapterReturn = 'title';
 const fmtTime = (t) => { t = Math.floor(t); const h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, s2 = t % 60; return (h ? h + 'h ' : '') + m + 'm ' + String(s2).padStart(2, '0') + 's'; };
 function startChapter(n) {
   // replaying keeps Orion's rank and stats, but the mission itself starts over
-  const keep = { vig: GM.save.vig, end: GM.save.end, str: GM.save.str, rank: GM.save.rank, maxStims: GM.save.maxStims, done: GM.save.done || {} };
-  GM.save = Object.assign(JSON.parse(JSON.stringify(NEW_SAVE)), keep, { started: true, chapter: n });
-  GM.chapterEndT = 0; respawnAll();
+  const S0 = GM.save;
+  // alignment carries from chapter to chapter; replaying a chapter rewinds it to how it stood when that chapter began
+  const alignAt = clone(S0.alignAt || {}); const align = clone(alignAt[n] || S0.align || { o: 0, t: 0 }); alignAt[n] = clone(align);
+  for (const k in alignAt) if (+k > n) delete alignAt[k]; // later chapters will follow from this run instead
+  const choices = {}; for (let i = 1; i < n; i++) { const c = GM.align.forChapter(i); if (c && S0.choices && S0.choices[c.id]) choices[c.id] = S0.choices[c.id]; }
+  const seen = clone(S0.seen || {}); const bk = LEVELS[n] ? LEVELS[n].boss.seen : 'boss'; delete seen[introKey(n)]; delete seen['talk_' + bk];
+  const keep = { vig: S0.vig, end: S0.end, str: S0.str, rank: S0.rank, maxStims: S0.maxStims, done: S0.done || {}, align, alignAt, choices, seen, stats: clone(S0.stats || NEW_SAVE.stats) };
+  GM.save = Object.assign(clone(NEW_SAVE), keep, { started: true, chapter: n });
+  GM.save.stats = { time: 0, deaths: 0, kills: 0 };
+  GM.chapterEndT = 0; GM.loadLevel(n); respawnAll();
   const ch = chapterDef(n);
   if (ch.opening) { GM.state = 'birth'; show(null); hudVisible(false); AU.musicDuck(0.1); GM.birth.start(ch.opening, startCrawl); } else startCrawl();
 }
@@ -403,10 +428,13 @@ function chapterComplete() {
   $('cmpStats').innerHTML = [['Time', fmtTime(S.stats.time)], ['War machines destroyed', S.stats.kills], ['Times killed in action', S.stats.deaths], ['Rank', S.rank],
     ['Orion', GM.align.chip('', 'o')], ['Thomas', GM.align.chip('', 't')]]
     .map(([k, v]) => `<div class="row"><span>${k}</span><span class="v">${v}</span></div>`).join('') +
-    `<div class="small" style="margin-top:10px;font-style:italic;text-align:center">${{ good: 'London will remember the commander who fought for its people.', neutral: 'A soldier who did his duty — no more, no less.', evil: 'London is free. But the man who freed it is not the man who arrived.' }[GM.align.tier('o')]}</div>`;
+    `<div class="small" style="margin-top:10px;font-style:italic;text-align:center">${LV.def.endings[GM.align.tier('o')]}</div>`;
   S.done[c.id].align = GM.align.tier('o');
+  S.alignAt = S.alignAt || {}; S.alignAt[c.id + 1] = clone(S.align); // the next chapter starts from how this one ended
   const next = CHAPTERS.find((x) => x.id === c.id + 1);
   $('cmpNext').textContent = next ? (next.available ? `Next: Chapter ${next.numeral} — ${next.title}` : `Chapter ${next.numeral}: ${next.summary}`) : '';
+  const nb = $('cmpNextCh'); nb.style.display = next && next.available ? '' : 'none'; if (next) nb.textContent = `CHAPTER ${next.numeral}: ${next.title.toUpperCase()}`;
+  nb.onclick = () => { AU.ui(); startChapter(next.id); };
   $('banner').style.opacity = 0; show('complete'); AU.beacon();
 }
 function startCrawl() {
@@ -427,49 +455,36 @@ function endCrawl() { if (GM.state === 'crawl') nextCrawl(); }
 
 /* ---------------- HUD helpers ---------------- */
 let subQ = [], subT = 0, toastT = 0, bannerT = 0;
-const NAMES = { thomas: 'Thomas', orion: 'Orion', radio: 'British Command', warden: 'Iron Warden' };
-/* The Iron Warden speaks Mandarin (browser text-to-speech, deep and slow) with English subtitles */
-const WARDEN = {
-  intro: ['入侵者。伦敦现在属于中俄同盟。', 'Intruder. London belongs to the Sino-Russian Pact now.', 1, 4.75],
-  children: ['你们的指挥官把孩子送来送死。', 'Your commanders send children to die.', 2, 3.0],
-  // five separate taunts, one at a time; the Red Sun and the Bear always comes first in a fight
-  taunts: [
-    ['红日与巨熊，已在同一面旗帜下联合。', 'The Red Sun and the Bear have united under one banner.', 3, 3.71],
-    ['跪下！', 'Kneel!', 11, 1.57],
-    ['无处可逃。', 'There is nowhere to run.', 8, 2.19],
-    ['你的剑救不了伦敦。', 'Your sword will not save London.', 6, 2.27],
-    ['为了同盟！', 'For the Pact!', 9, 1.8],
-  ],
-  barrage: ['轨道打击，锁定目标。', 'Orbital strike. Target locked.', 4, 2.27],
-  phase2: ['核心过载……我不会倒下！', 'Core overloading… I will not fall!', 5, 2.93],
-  kill: ['又一个英国人倒下了。', 'Another Briton falls.', 10, 2.27],
-  death: ['不可能……同盟……是永恒的……', 'Impossible… the Pact… is eternal…', 7, 3.71],
-};
-let zhVoice = null, tauntT = 0, tauntBag = [];
+const NAMES = { thomas: 'Thomas', orion: 'Orion', radio: 'British Command', warden: 'Iron Warden', tide: 'Tidebreaker' };
+/* Each level's boss speaks its own language (Mandarin for the Iron Warden, Russian for the Tidebreaker) with English subtitles.
+   Lines with a recording play the mp3; the rest use the browser's text-to-speech. */
+const BV = () => LV.def.voice;
+let ttsVoices = {}, tauntT = 0, tauntBag = [];
 function nextTaunt() { // shuffle bag: every taunt is heard once before any repeats
-  if (!tauntBag.length) { tauntBag = WARDEN.taunts.slice(1).sort(() => Math.random() - 0.5); tauntBag.unshift(WARDEN.taunts[0]); if (GM._tauntsStarted) tauntBag = WARDEN.taunts.slice().sort(() => Math.random() - 0.5); GM._tauntsStarted = true; }
+  const TT = BV().lines.taunts;
+  if (!tauntBag.length) { tauntBag = TT.slice(1).sort(() => Math.random() - 0.5); tauntBag.unshift(TT[0]); if (GM._tauntsStarted) tauntBag = TT.slice().sort(() => Math.random() - 0.5); GM._tauntsStarted = true; }
   return tauntBag.shift();
 }
-function pickZhVoice() {
-  try { const vs = speechSynthesis.getVoices(); zhVoice = vs.find((v) => /zh[-_]CN/i.test(v.lang)) || vs.find((v) => /^zh/i.test(v.lang)) || null; } catch (e) { }
+function pickVoices() {
+  try { const vs = speechSynthesis.getVoices(); for (const lang of ['zh-CN', 'ru-RU']) { const b = lang.slice(0, 2); ttsVoices[lang] = vs.find((v) => v.lang.replace('_', '-').toLowerCase() === lang.toLowerCase()) || vs.find((v) => v.lang.toLowerCase().startsWith(b)) || null; } } catch (e) { }
 }
-if (window.speechSynthesis) { pickZhVoice(); speechSynthesis.onvoiceschanged = pickZhVoice; }
-function speakZh(text) {
+if (window.speechSynthesis) { pickVoices(); speechSynthesis.onvoiceschanged = pickVoices; }
+function speakZh(text, lang = 'zh-CN') {
   if (!window.speechSynthesis) return;
   try {
-    const u = new SpeechSynthesisUtterance(text); u.lang = 'zh-CN'; if (zhVoice) u.voice = zhVoice;
+    const u = new SpeechSynthesisUtterance(text); u.lang = lang; if (ttsVoices[lang]) u.voice = ttsVoices[lang];
     u.pitch = 0.25; u.rate = 0.78; u.volume = Math.min(1, GM.settings.vol / 10 + 0.1);
     speechSynthesis.cancel(); speechSynthesis.speak(u);
   } catch (e) { }
 }
 GM.warden = (key, story = true) => {
-  let line = WARDEN[key]; if (!line) return;
+  const V = BV(); let line = V.lines[key]; if (!line) return;
   if (!story && (subQ.length || subT > 0.3)) return; // taunts never interrupt dialogue
   if (key === 'taunts') line = nextTaunt();
   if (story && ['intro', 'phase2', 'death', 'kill'].includes(key)) { subQ.length = 0; subT = 0; try { if (voiceEl) voiceEl.pause(); } catch (e) { } } // boss moments cut in
   const [zh, en, file, secs] = line;
-  const dur = file ? Math.max(2.6, secs + 1.0) : Math.max(3.2, en.length * 0.06 + 1.4, zh.length * 0.34 + 1.2);
-  GM.say('warden', en, dur, { zh, file: file ? 'voice/warden' + String(file).padStart(2, '0') + '.mp3' : null });
+  const dur = file && V.file ? Math.max(2.6, secs + 1.0) : Math.max(3.2, en.length * 0.06 + 1.4, zh.length * (V.lang === 'zh-CN' ? 0.34 : 0.075) + 1.2);
+  GM.say(V.who, en, dur, { zh, lang: V.lang, file: file && V.file ? V.file(file) : null });
 };
 GM.wardenTaunt = () => { if (time - tauntT < 11 || Math.random() > 0.35) return; tauntT = time; GM.warden('taunts', false); };
 GM.say = (who, text, dur = 4, voice = 0) => { subQ.push({ who, text, dur, voice }); };
@@ -497,7 +512,7 @@ function updateHud(dt) {
   if (GM.inBoss && boss) { $('bossbar').querySelector('i').style.transform = `scaleX(${Math.max(0, boss.hp / boss.maxHp)})`; $('bossbar').querySelector('b').style.transform = `scaleX(${Math.max(0, boss.hp / boss.maxHp)})`; }
   // subtitles
   subT -= dt; const sub = $('sub');
-  if (subT <= 0) { if (subQ.length) { const s = subQ.shift(); sub.innerHTML = `<b>${NAMES[s.who] || s.who}:</b> ${s.text}`; /* English subtitles only */ sub.style.opacity = 1; subT = s.dur; if (s.voice && s.voice.file) playVoice(s.voice.file); else if (s.voice && s.voice.zh) speakZh(s.voice.zh); else if (s.voice) playVoice(s.voice); } else sub.style.opacity = 0; }
+  if (subT <= 0) { if (subQ.length) { const s = subQ.shift(); sub.innerHTML = `<b>${NAMES[s.who] || s.who}:</b> ${s.text}`; /* English subtitles only */ sub.style.opacity = 1; subT = s.dur; if (s.voice && s.voice.file) playVoice(s.voice.file); else if (s.voice && s.voice.zh) speakZh(s.voice.zh, s.voice.lang); else if (s.voice) playVoice(s.voice); } else sub.style.opacity = 0; }
   toastT -= dt; if (toastT <= 0) $('toast').style.opacity = 0;
   bannerT -= dt; if (bannerT <= 0) $('banner').style.opacity = 0;
   // lock-on marker & enemy health bars
@@ -596,7 +611,7 @@ GM.onEnemyKilled = (e) => {
   if (GM.lock === e) GM.lock = null;
   if (e.boss) victory();
 };
-GM.onBossPhase2 = () => { GM.warden('phase2'); GM.say('thomas', 'Its core\'s going critical — it\'s gone berserk! Keep moving, Orion!', 5.1, 13); AU.slam(); GM.shake(0.6); OE.R.flash = 0.8; };
+GM.onBossPhase2 = () => { GM.warden('phase2'); LV.def.phase2(); AU.slam(); GM.shake(0.6); OE.R.flash = 0.8; };
 GM.onPlayerDeath = () => {
   GM.state = 'dead'; AU.death(); hudVisible(false); GM.save.stats.deaths++; $('hud').classList.remove('hidden');
   if (document.pointerLockElement) document.exitPointerLock();
@@ -614,19 +629,17 @@ function updateDeath(dt) {
 function victory() {
   GM.save.bossDead = true; GM.persist(); AU.bossMusic(false); AU.victory();
   W.sealCol.off = true; W.gateCol.off = true; W.gate.node.visible = false;
-  setTimeout(() => banner('WARDEN DESTROYED', 'NEW LONDON BREATHES', 'gold', 6), 1800);
   setTimeout(() => { $('bossbar').classList.add('hidden'); GM.inBoss = false; }, 2500);
   subQ.length = 0; subT = 0; GM.warden('death');
-  GM.say('thomas', '...It\'s down. We actually did it.', 3.4, 14);
-  GM.say('orion', 'Ten years of war won\'t end tonight, Tom. But tonight, London breathes.', 6.1, 15);
-  GM.say('thomas', 'Then let\'s light every beacon we\'ve got. Let the whole city see it.', 4.9, 16);
-  GM.chapterEndT = 25;
-  GM.say('radio', 'British Command to Commander Mascar. We see your signal. Hold position — the Americans are crossing the Atlantic. Dawn is coming.', 8.8, 17);
+  const v = LV.def.victory();
+  setTimeout(() => banner(v.banner[0], v.banner[1], 'gold', 6), 1800);
+  GM.chapterEndT = v.endIn;
 }
 function interactables() {
   const P = GM.player; let best = null;
   W.beacons.forEach((b, i) => { const d = Math.hypot(P.pos[0] - b.pos[0], P.pos[2] - b.pos[2]); if (d < 2.4) best = { type: 'beacon', b, i, label: b.lit ? 'Rest at beacon' : 'Light the beacon' }; });
-  if (!GM.save.bossDead && !GM.inBoss && Math.abs(P.pos[0]) < 4 && P.pos[2] > 118.5 && P.pos[2] < 122) best = { type: 'gate', label: 'Pass through the fog' };
+  const gz = W.gate.zone;
+  if (!GM.save.bossDead && !GM.inBoss && P.pos[0] > gz[0] && P.pos[0] < gz[1] && P.pos[2] > gz[2] && P.pos[2] < gz[3]) best = { type: 'gate', label: 'Pass through the fog' };
   if (!best) best = GM.align.nearby(P.pos);
   return best;
 }
@@ -637,7 +650,7 @@ function doInteract(it) {
     const first = !it.b.lit;
     GM.save.lit[it.i] = true; GM.save.beacon = it.i; setBeaconLit(it.b, true);
     AU.beacon(); P.hp = P.maxHp; P.stims = GM.save.maxStims; P.stam = P.maxStam;
-    if (first) { banner('BEACON LIT', it.b.name.toUpperCase(), 'gold', 3.5); if (it.i === 0) GM.say('thomas', 'Beacon\'s live! British Command will know we\'re still in the fight. If things go south, we regroup here.', 6.9, 7); else GM.say('thomas', 'Second beacon\'s up. The cathedral\'s just past those barricades, Commander.', 4.9, 8); }
+    if (first) { banner('BEACON LIT', it.b.name.toUpperCase(), 'gold', 3.5); LV.def.beacon(it.i); }
     // rest: everything respawns
     for (const e of GM.enemies) if (!e.boss) e.reset();
     GM.companion.reset([P.pos[0] - 1.4, 0, P.pos[2] - 0.8]);
@@ -646,13 +659,14 @@ function doInteract(it) {
     GM.state = 'rest'; P.setState('rest', 'Idle', 0.3); $('restName').textContent = it.b.name.toUpperCase(); show('rest'); hudVisible(false); $('hud').classList.remove('hidden');
     if (document.pointerLockElement) document.exitPointerLock();
   } else if (it.type === 'gate') {
-    AU.gate(); P.pos = [0, 0, 127.6]; P.yaw = 0; GM.cam.yaw = 0;
-    GM.companion.pos = [1.6, 0, 126.9];
+    AU.gate(); P.pos = [W.gate.enter[0], 0, W.gate.enter[1]]; P.yaw = 0; GM.cam.yaw = 0;
+    GM.companion.pos = [W.gate.thomas[0], 0, W.gate.thomas[1]];
     W.sealCol.off = false; W.gate.sealed = true; GM.inBoss = true;
     boss.reset(); boss.active = true; boss.state = 'roar'; boss.t = 0;
     $('bossname').textContent = boss.T.name; $('bossbar').classList.remove('hidden'); AU.bossMusic(true);
     GM.warden('intro'); GM.wardenChildren = true; tauntT = time; tauntBag = []; GM._tauntsStarted = false;
-    if (!GM.save.seen.boss) { GM.save.seen.boss = 1; GM.say('orion', 'Iron Warden. Ten years of war, and you\'re all that stands between London and the dawn. Not for long.', 7.8, 11); GM.say('thomas', 'Watch the slam — it sends out a shockwave. Roll through it, just like training!', 5.8, 12); }
+    const bk = LV.def.boss.seen; GM.save.seen[bk] = 1; // unlocks the codex entry
+    if (!GM.save.seen['talk_' + bk]) { GM.save.seen['talk_' + bk] = 1; LV.def.bossIntro(); }
   }
 }
 function openLevel() {
@@ -729,7 +743,7 @@ function step(dt, inp) {
     if (GM._inMenu) { // back from the menu stage to New London
       GM._inMenu = false; GM.menu.leave(); OE.scene = GM.worldRoot; Object.assign(OE.R, JSON.parse(JSON.stringify(GM.worldEnv)));
     }
-    if (st === 'play') { GM.save.stats.time += dt; if (GM.chapterEndT > 0) { GM.chapterEndT -= dt; if (GM.chapterEndT <= 0) GM.align.open('core', chapterComplete); } }
+    if (st === 'play') { GM.save.stats.time += dt; if (GM.chapterEndT > 0) { GM.chapterEndT -= dt; if (GM.chapterEndT <= 0) GM.align.open(LV.def.choice, chapterComplete); } }
     if (inp.lock) toggleLock();
     const P = GM.player;
     if (P.state === 'rest') P.setState('move', null);
@@ -759,14 +773,16 @@ function step(dt, inp) {
   }
   // beacons pulse
   for (const b of W.beacons) if (b.lit) { b.light.intensity = 3.2 + Math.sin(time * 2.2) * 0.5; if (rnd() < 0.3) GM.parts.emit({ pos: [b.pos[0] + R(-0.15, 0.15), 1.8, b.pos[2] + R(-0.15, 0.15)], vel: [R(-0.2, 0.2), R(0.8, 1.6), R(-0.2, 0.2)], size: 0.04, life: 1.4, col: [0.8, 1.8, 3.5, 1], soft: 0.2 }); }
-  if (W.gate.node.visible) { W.gate.node.mat.alpha = 0.28 + Math.sin(time * 1.7) * 0.06; if (rnd() < 0.5) GM.parts.emit({ pos: [R(-3.5, 3.5), R(0.2, 6.5), 122 + R(-0.1, 0.1)], vel: [0, R(0.1, 0.4), 0], size: R(0.1, 0.25), life: 1.5, col: [1.2, 1.1, 0.9, 0.35], soft: 0 }); }
+  if (W.gate.node.visible) { const gf = W.gate.fx; W.gate.node.mat.alpha = 0.28 + Math.sin(time * 1.7) * 0.06; if (rnd() < 0.5) GM.parts.emit({ pos: [R(gf[0], gf[1]), R(0.2, gf[2]), W.gate.z + R(-0.1, 0.1)], vel: [0, R(0.1, 0.4), 0], size: R(0.1, 0.25), life: 1.5, col: [1.2, 1.1, 0.9, 0.35], soft: 0 }); }
   // ash & embers around camera
   const cp = GM.cam.pos;
-  for (let i = 0; i < 2; i++) GM.parts.emit({ pos: [cp[0] + R(-14, 14), R(4, 9), cp[2] + R(-14, 14)], vel: [R(0.2, 0.6), R(-0.5, -0.9), R(-0.2, 0.2)], size: R(0.012, 0.03), life: 8, col: [0.5, 0.48, 0.45, 0.8], add: false, soft: 0.3, spin: 1 });
-  if (rnd() < 0.3) GM.parts.emit({ pos: [cp[0] + R(-10, 10), R(0, 2), cp[2] + R(-10, 10)], vel: [R(-0.3, 0.6), R(0.5, 1.5), R(-0.3, 0.3)], size: 0.02, life: 3, col: [4, 1.4, 0.3, 1], soft: 0.3 });
+  if (W.ambience === 'rain') { // Channel rain, driven in off the sea
+    if (GM.state !== 'title' && GM.state !== 'crawl' && GM.state !== 'birth') for (let i = 0; i < 9; i++) GM.parts.emit({ pos: [cp[0] + R(-12, 12), R(5, 9), cp[2] + R(-12, 12)], vel: [-2.2, -15, 0.4], stretch: 0.06, size: R(0.01, 0.018), life: 0.7, col: [0.7, 0.74, 0.8, 0.55], add: false, soft: 0.1, fade: 0, floor: 0.02 });
+  } else for (let i = 0; i < 2; i++) GM.parts.emit({ pos: [cp[0] + R(-14, 14), R(4, 9), cp[2] + R(-14, 14)], vel: [R(0.2, 0.6), R(-0.5, -0.9), R(-0.2, 0.2)], size: R(0.012, 0.03), life: 8, col: [0.5, 0.48, 0.45, 0.8], add: false, soft: 0.3, spin: 1 });
+  if (W.ambience !== 'rain' && rnd() < 0.3) GM.parts.emit({ pos: [cp[0] + R(-10, 10), R(0, 2), cp[2] + R(-10, 10)], vel: [R(-0.3, 0.6), R(0.5, 1.5), R(-0.3, 0.3)], size: 0.02, life: 3, col: [4, 1.4, 0.3, 1], soft: 0.3 });
   W.update(sdt, time, { parts: GM.parts, camPos: GM.cam.pos });
   GM.parts.update(sdt);
 }
 GM.ui = { show, hudVisible, lock: lockPointer };
-GM.debug = { sim(sec, inpF) { GM.simulating = true; const n = Math.round(sec * 60); for (let i = 0; i < n; i++) step(1 / 60, Object.assign({ mx: 0, my: 0, cx: 0, cy: 0 }, inpF ? inpF(i) : {})); GM.simulating = false; }, startPlay, respawnAll, doInteract, interactables, toggleLock, show, banner, get boss() { return boss; } };
+GM.debug = { loadLevel: (n) => GM.loadLevel(n), startChapter: (n) => startChapter(n), victory: () => victory(), sim(sec, inpF) { GM.simulating = true; const n = Math.round(sec * 60); for (let i = 0; i < n; i++) step(1 / 60, Object.assign({ mx: 0, my: 0, cx: 0, cy: 0 }, inpF ? inpF(i) : {})); GM.simulating = false; }, startPlay, respawnAll, doInteract, interactables, toggleLock, show, banner, get boss() { return boss; } };
 })();

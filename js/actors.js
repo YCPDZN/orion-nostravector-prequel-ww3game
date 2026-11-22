@@ -401,6 +401,12 @@ function partMeshes() {
   PARTS.thigh = mk(g => { g.box([0, -0.2, 0], [0.16, 0.4, 0.17], { col: dark }); g.box([0, -0.18, 0.04], [0.18, 0.3, 0.14], { col: plate }); });
   PARTS.shin = mk(g => { g.box([0, -0.22, 0], [0.14, 0.44, 0.15], { col: plate }); g.box([0, -0.02, 0.06], [0.12, 0.12, 0.1], { col: dark }); });
   PARTS.foot = mk(g => { g.box([0, -0.05, 0.06], [0.16, 0.1, 0.3], { col: dark }); });
+  PARTS.anchor = mk(g => { // the Tidebreaker's anchor-hammer
+    g.cyl([0, -1.9, 0.05], 0.07, 1.75, 8, { col: dark });
+    g.box([0, -2.05, 0.05], [0.5, 0.42, 0.42], { col: [0.42, 0.44, 0.47, 1] });
+    for (const s of [-1, 1]) g.box([0, -2.15, 0.05 + s * 0.42], [0.12, 0.2, 0.5], { rx: s * 35, col: [0.4, 0.42, 0.45, 1] });
+    g.box([0, -0.22, 0.05], [0.1, 0.1, 0.5], { col: dark }); });
+  PARTS.anchorGlow = mk(g => { g.box([0, -2.05, 0.268], [0.3, 0.08, 0.012], { col: [1, 1, 1, 1] }); g.box([0, -2.05, -0.168], [0.3, 0.08, 0.012], { col: [1, 1, 1, 1] }); });
   PARTS.cleaver = mk(g => { g.box([0, -0.4, 0.0], [0.05, 0.5, 0.06], { col: dark }); g.box([0, -1.25, 0.12], [0.06, 1.3, 0.38], { col: [0.5, 0.48, 0.47, 1] }); g.box([0, -0.62, 0.0], [0.08, 0.06, 0.3], { col: dark }); });
   PARTS.cleaverGlow = mk(g => { g.box([0, -1.25, 0.315], [0.02, 1.25, 0.012], { col: [1, 1, 1, 1] }); });
   PARTS.droneBody = mk(g => { g.sphere([0, 0, 0], 0.34, 10, { col: plate }); g.cyl([0, -0.05, 0], 0.5, 0.1, 16, { col: dark }); for (const s of [-1, 1]) g.box([s * 0.48, -0.02, 0.1], [0.1, 0.12, 0.5], { col: dark }); });
@@ -410,14 +416,16 @@ const TYPES = {
   trooper: { s: 1.0, hp: 120, dmg: 36, speed: 2.4, run: 3.8, range: 2.0, wind: 0.55, strike: 0.18, rec: 0.75, poise: 45, scrap: 60, radius: 0.5, aggro: 13, name: 'Pact Revenant' },
   brute: { s: 1.38, hp: 340, dmg: 66, speed: 1.9, run: 2.8, range: 2.9, wind: 0.95, strike: 0.22, rec: 1.1, poise: 110, scrap: 220, radius: 0.75, aggro: 14, name: 'Pact Juggernaut' },
   drone: { s: 1.0, hp: 55, dmg: 28, speed: 3.5, run: 4.5, range: 9, wind: 0.7, strike: 0.1, rec: 1.6, poise: 30, scrap: 45, radius: 0.55, aggro: 17, name: 'Seeker Drone', hover: true },
-  boss: { s: 2.3, hp: 1700, dmg: 85, speed: 2.4, run: 3.4, range: 5.0, wind: 0.9, strike: 0.3, rec: 1.0, poise: 9999, scrap: 3000, radius: 1.5, aggro: 40, name: 'IRON WARDEN, Last Sentinel of the Sino-Russian Pact', boss: true },
+  tidebreaker: { s: 2.55, hp: 2100, dmg: 90, speed: 2.2, run: 3.3, range: 5.3, wind: 0.95, strike: 0.3, rec: 1.0, poise: 9999, scrap: 3600, radius: 1.6, aggro: 40,
+    name: 'TIDEBREAKER, Spearhead of the Pact Landing Fleet', boss: true, color: [0.5, 0.56, 0.62], color2: [0.6, 0.5, 0.5], weapon: 'anchor' },
+  boss: { s: 2.3, color: [0.75, 0.62, 0.55], color2: [0.85, 0.5, 0.42], weapon: 'cleaver', hp: 1700, dmg: 85, speed: 2.4, run: 3.4, range: 5.0, wind: 0.9, strike: 0.3, rec: 1.0, poise: 9999, scrap: 3000, radius: 1.5, aggro: 40, name: 'IRON WARDEN, Last Sentinel of the Sino-Russian Pact', boss: true },
 };
 
 A.Enemy = class {
   constructor(type, pos, yaw = Math.PI) {
     partMeshes(); const T = this.T = TYPES[type]; this.type = type; this.home = pos.slice(); this.homeYaw = yaw;
     this.radius = T.radius; this.boss = !!T.boss; this.hover = !!T.hover;
-    this.mat = metalMat(); this.mat.triScale = 1.2 / T.s; this.mat.color = type === 'boss' ? [0.75, 0.62, 0.55] : type === 'brute' ? [0.62, 0.6, 0.55] : [0.72, 0.74, 0.8];
+    this.mat = metalMat(); this.mat.triScale = 1.2 / T.s; this.mat.color = T.color ? T.color.slice() : type === 'brute' ? [0.62, 0.6, 0.55] : [0.72, 0.74, 0.8];
     this.glowMat = { mode: 2, color: [0, 0, 0], emissive: [3.5, 0.25, 0.1] };
     this.root = new OE.Node(); OE.scene.add(this.root);
     this.root.scl = [T.s, T.s, T.s];
@@ -439,7 +447,12 @@ A.Enemy = class {
       const hip = this.part(PARTS.thigh, n.hips, [sg * 0.13, -0.06, 0]); const kn = this.part(PARTS.shin, hip, [0, -0.42, 0]); this.part(PARTS.foot, kn, [0, -0.46, 0]);
       n['leg' + side] = hip; n['kn' + side] = kn;
     }
-    if (type === 'boss') {
+    if (this.T.weapon === 'anchor') {
+      const c = this.part(PARTS.anchor, n.elR, [0, -0.3, 0.05]); this.part(PARTS.anchorGlow, c, [0, 0, 0], this.glowMat); n.weapon = c;
+      OE.Q.euler(c.rot, -90, 0, 0);
+      this.part(PARTS.blade, n.elL, [0, 0, 0]); this.part(PARTS.bladeGlow, n.elL, [0, 0, 0], this.glowMat);
+      this.part(PARTS.shoulder, n.torso, [0, 0.62, -0.28]); // reactor housing on its back
+    } else if (this.T.weapon === 'cleaver') {
       const c = this.part(PARTS.cleaver, n.elR, [0, -0.36, 0.05]); this.part(PARTS.cleaverGlow, c, [0, 0, 0], this.glowMat); n.weapon = c;
       OE.Q.euler(c.rot, -90, 0, 0);
     } else {
@@ -537,7 +550,7 @@ A.Enemy = class {
     } else if (S === 'roar') {
       const u = this.t / 1.8; this.pose({ tp: -25, np: -30, sLx: -60, sLz: 70, sRx: -60, sRz: -70, eL: -60, eR: -60, y: -0.05 });
       glow(2 + Math.sin(this.t * 30)); if (this.t % 0.08 < dt) GM.fx.sparks([this.pos[0], 2.5 * this.T.s * 0.6, this.pos[2]], [0, 1, 0], 6, [3, 0.6, 0.2]);
-      if (u >= 1) { this.state = 'chase'; this.cd = 0.2; this.mat.color = [0.85, 0.5, 0.42]; }
+      if (u >= 1) { this.state = 'chase'; this.cd = 0.2; this.mat.color = (T.color2 || [0.85, 0.5, 0.42]).slice(); }
     }
     this.separate();
     W.collide(this.pos, this.radius);
