@@ -17,92 +17,81 @@ AL.tierOf = (v) => v >= 30 ? 'good' : v <= -30 ? 'evil' : 'neutral';
 AL.tier = (who) => AL.tierOf(AL.value(who));
 AL.info = (who) => AL.TIERS[AL.tier(who)];
 
-/* ---------------- the choices ---------------- */
+/* ---------------- one dialogue choice per chapter ----------------
+   Thomas raises the dilemma; Orion picks his reply; Thomas answers. Only the current chapter's choice is live. */
 const CHOICES = [
-  { id: 'rubble', pos: [-7.2, 0, 21.5], title: 'Survivors in the Rubble',
-    text: 'Three civilians are trapped beneath a collapsed shopfront — an old man, a mother and her daughter. Digging them out will take time, and the noise may draw the machines.',
+  { id: 'core', chapter: 1, title: 'The Warden\'s Core', auto: true,
+    scene: 'The Iron Warden lies in pieces across the plaza. Its core still burns in the wreckage.',
+    thomas: 'Commander... the core\'s still live. You can feel it humming. That\'s enough power to light half of London — or to build another one of those things. What do we do with it?',
     options: [
-      { align: 'good', label: 'Dig them out.', result: 'The girl clings to Thomas until her mother pulls her away. The mother presses a field stim into Orion\'s hand.', thomas: 'That\'s why we fight, Commander. Not for Command — for them.', reward: { stims: 1 } },
-      { align: 'neutral', label: 'Mark their position for the rescue teams.', result: 'Orion sprays a beacon mark on the rubble. Someone will come. Maybe.', thomas: 'Right. Command will send someone... if there\'s anyone left to send.' },
-      { align: 'evil', label: 'Take their supplies and move on.', result: 'Their ration packs and scrap go into Orion\'s pack. Nobody says a word.', thomas: '...Orion. They\'re our people.', reward: { scrap: 150 } },
+      { align: 'good', say: 'We destroy it. No one ever builds another Warden — not them, and not us.', reply: 'Good. Let it stay dead.', result: 'Orion drives his sabre into the core. The light dies, and the plaza goes quiet.' },
+      { align: 'neutral', say: 'Seal it up and hand it to Command. It\'s their call, not ours.', reply: 'Command will want to study it. Let\'s hope that\'s all they do.', result: 'Thomas seals the core in a containment case for Command\'s engineers.', reward: { scrap: 500 } },
+      { align: 'evil', say: 'We keep it. With power like that, nobody gives us orders again.', reply: 'Orion... what are you becoming?', result: 'Orion lifts the core. Its red light spills across his armour.', reward: { scrap: 1000 } },
     ] },
-  { id: 'pilot', pos: [6.6, 0, 75.2], title: 'The Pilot',
-    text: 'A Pact drone operator drags himself out of the burning tank. He is barely older than Thomas. He raises his empty hands and says something you don\'t understand.',
+  { id: 'pilot', chapter: 2, title: 'The Pilot',
+    scene: 'A Pact drone operator drags himself out of a burning wreck on the beach and raises his empty hands.',
+    thomas: 'He\'s just a kid, Commander. Younger than me, maybe. He\'s got his hands up. What do we do with him?',
     options: [
-      { align: 'good', label: 'Let him go.', result: 'He stares, then runs into the smoke. Thomas watches him until he is gone.', thomas: 'He\'s just a kid. Like me. ...Thank you, Commander.' },
-      { align: 'neutral', label: 'Take him prisoner for British Command.', result: 'Thomas zip-ties his wrists and radios his position for pickup. Command pays a bounty for prisoners.', thomas: 'Zip-ties on. He\'ll keep until the pickup team gets here.', reward: { scrap: 100 } },
-      { align: 'evil', label: 'Strip his gear and leave him to the machines.', result: 'Orion takes his kit and walks away. Behind them, the drones are already circling.', thomas: 'We\'re supposed to be better than them.', reward: { scrap: 220 } },
+      { align: 'good', say: 'Let him go. Tell him to run, and never come back.', reply: '...Thank you, Commander. He\'s just like me.', result: 'He stares, then runs into the smoke. Thomas watches him until he is gone.' },
+      { align: 'neutral', say: 'Zip-tie him. Command can decide what he\'s worth.', reply: 'Right. He\'ll keep until the pickup team gets here.', result: 'Thomas binds his wrists and radios his position for pickup.', reward: { scrap: 100 } },
+      { align: 'evil', say: 'Take his gear and leave him for the drones.', reply: 'We\'re supposed to be better than them.', result: 'Orion takes his kit and walks away. Behind them, the drones are already circling.', reward: { scrap: 220 } },
     ] },
-  { id: 'hospital', pos: [-6.2, 0, 104.6], title: 'The Field Hospital',
-    text: 'An abandoned field hospital. Most of the stims are gone, but a few remain — and there are wounded soldiers on the cots, still breathing.',
+  { id: 'hospital', chapter: 3, title: 'The Field Hospital',
+    scene: 'An abandoned field hospital. Wounded soldiers on every cot, and a handful of stims left on the shelf.',
+    thomas: 'There\'s wounded on every cot, Orion. And there\'s stims — not many. We\'re running low ourselves. Your call.',
     options: [
-      { align: 'good', label: 'Leave the stims for the wounded.', result: 'Thomas kneels by each cot and makes sure every soldier has one within reach.', thomas: 'They\'ll make it now. Some of them, anyway.' },
-      { align: 'neutral', label: 'Take one. Leave the rest.', result: 'One stim for the road. The rest stay where they are.', thomas: 'Fair. We\'ll need it for the Warden.', reward: { stims: 1 } },
-      { align: 'evil', label: 'Take them all.', result: 'Every stim goes into Orion\'s pack. One of the wounded watches him do it.', thomas: 'They needed those more than we do, Orion.', reward: { stims: 3 } },
+      { align: 'good', say: 'Leave them. They need them more than we do.', reply: 'They\'ll make it now. Some of them, anyway.', result: 'Thomas kneels by each cot and leaves a stim within reach.' },
+      { align: 'neutral', say: 'Take one. Leave the rest.', reply: 'Fair. One for the road.', result: 'One stim goes into Orion\'s pack. The rest stay where they are.', reward: { stims: 1 } },
+      { align: 'evil', say: 'Take them all. We\'re the ones still fighting.', reply: 'They needed those more than we do, Orion.', result: 'Every stim goes into Orion\'s pack. One of the wounded watches him do it.', reward: { stims: 3 } },
     ] },
-  { id: 'core', title: 'The Warden\'s Core', auto: true,
-    text: 'The Iron Warden\'s core still burns in the wreckage — enough power to light a city, or to build another Warden.',
+  { id: 'rubble', chapter: 4, title: 'Survivors in the Rubble',
+    scene: 'A collapsed apartment block. Somewhere under the concrete, someone is knocking.',
+    thomas: 'There\'s people under there, Commander — a mother and her little girl. If we dig, the machines will hear us.',
     options: [
-      { align: 'good', label: 'Destroy it. No one should ever build another.', result: 'Orion drives his sabre into the core. The light dies, and the plaza goes quiet.', thomas: 'Good. Let it stay dead.' },
-      { align: 'neutral', label: 'Recover it for British Command.', result: 'Thomas seals the core in a containment case for Command\'s engineers.', thomas: 'Command will want to study it. Let\'s hope that\'s all they do.', reward: { scrap: 500 } },
-      { align: 'evil', label: 'Keep its power for yourself.', result: 'Orion lifts the core. Its red light spills across his armour.', thomas: 'Orion... what are you becoming?', reward: { scrap: 1000 } },
+      { align: 'good', say: 'Then let them hear us. Start digging.', reply: 'That\'s why we fight. Not for Command — for them.', result: 'The girl clings to Thomas until her mother pulls her away.' },
+      { align: 'neutral', say: 'Mark it for the rescue teams. We can\'t stop.', reply: 'Command will send someone... if there\'s anyone left to send.', result: 'Orion sprays a beacon mark on the rubble and moves on.' },
+      { align: 'evil', say: 'Take whatever supplies they had and keep moving.', reply: '...Orion. They\'re people.', result: 'Their supplies go into Orion\'s pack. The knocking stops.', reward: { scrap: 150 } },
+    ] },
+  { id: 'surrender', chapter: 5, title: 'The Surrender',
+    scene: 'The Pact\'s marshal kneels before Orion, offering the surrender of his whole army in exchange for his life.',
+    thomas: 'That\'s the marshal, Orion. The whole Pact army, if we guarantee his life. It ends the war... or we end him. It\'s your call. It always was.',
+    options: [
+      { align: 'good', say: 'Accept. If it ends the war, he lives.', reply: 'Then it\'s over. It\'s actually over.', result: 'The marshal gives the order. Across the front, the war machines go still.' },
+      { align: 'neutral', say: 'Hand him to Command. Let a tribunal decide.', reply: 'By the book, then. Like you taught me.', result: 'The marshal is taken into British custody. The fighting winds down, front by front.' },
+      { align: 'evil', say: 'No deals. The Pact ends with him.', reply: 'This isn\'t who you were, Orion.', result: 'Orion raises his sabre. Thomas turns away.' },
     ] },
 ];
 AL.CHOICES = CHOICES;
+AL.forChapter = (n) => CHOICES.find((c) => c.chapter === n);
 const done = (id) => !!(GM.save.choices && GM.save.choices[id]);
 
-/* ---------------- props marking each choice in the world ---------------- */
-AL.build = function () {
-  const M = W.mats; const props = { concrete: new OE.Geo(), ground: new OE.Geo(), metal: new OE.Geo() }; const cloth = new OE.Geo(); const cross = new OE.Geo();
-  const person = (g, x, z, ry, sit, col) => { // simple seated / kneeling figure
-    const q = OE.Q.create(); OE.Q.euler(q, 0, ry, 0); const m = OE.M4.create(); OE.M4.fromRTS(m, q, [x, 0, z], [1, 1, 1]);
-    const P = (a, b, c) => OE.M4.point([0, 0, 0], m, [a, b, c]);
-    g.box(P(0, sit ? 0.45 : 0.75, 0), [0.38, sit ? 0.55 : 0.7, 0.24], { ry, col });
-    g.sphere(P(0, sit ? 0.88 : 1.28, 0), 0.12, 6, { col: [0.55, 0.42, 0.34, 1] });
-    g.box(P(0, 0.12, sit ? 0.22 : 0.1), [0.34, 0.22, sit ? 0.5 : 0.3], { ry, col: [0.18, 0.18, 0.2, 1] });
-    if (!sit) for (const s of [-1, 1]) g.box(P(s * 0.25, 1.45, 0), [0.08, 0.42, 0.08], { ry, col }); // hands raised
-  };
-  // 1 rubble with trapped civilians
-  const r = CHOICES[0].pos;
-  for (let i = 0; i < 9; i++) props.concrete.box([r[0] + (i % 3 - 1) * 0.7, 0.3 + Math.floor(i / 3) * 0.28, r[2] + (i % 2) * 0.5 - 0.4], [0.9, 0.35, 0.7], { rx: i * 13 % 25, ry: i * 41, col: [0.72, 0.7, 0.67, 1] });
-  person(cloth, r[0] + 1.0, r[2] + 1.0, 200, true, [0.42, 0.3, 0.25, 1]); person(cloth, r[0] + 1.5, r[2] + 0.4, 240, true, [0.25, 0.32, 0.4, 1]);
-  // 2 surrendering pilot
-  const p = CHOICES[1].pos; person(cloth, p[0], p[2], 220, false, [0.35, 0.37, 0.3, 1]);
-  // 3 field hospital: cots, crates, a canvas wall with a red cross
-  const h = CHOICES[2].pos;
-  for (let i = 0; i < 3; i++) { props.metal.box([h[0] - 0.6 + i * 1.0, 0.35, h[2] + 0.9], [0.7, 0.08, 1.9], { col: [0.4, 0.42, 0.38, 1] }); cloth.box([h[0] - 0.6 + i * 1.0, 0.45, h[2] + 0.9], [0.5, 0.18, 1.5], { col: [0.45, 0.42, 0.35, 1] }); }
-  props.metal.box([h[0] + 1.2, 0.3, h[2] - 0.6], [0.6, 0.6, 0.6], { col: [0.35, 0.4, 0.3, 1] });
-  cloth.box([h[0] - 0.2, 1.3, h[2] + 2.1], [3.2, 2.6, 0.08], { col: [0.62, 0.6, 0.52, 1] });
-  cross.box([h[0] - 0.2, 1.7, h[2] + 2.05], [0.7, 0.18, 0.02], { col: [1, 1, 1, 1] }); cross.box([h[0] - 0.2, 1.7, h[2] + 2.05], [0.18, 0.7, 0.02], { col: [1, 1, 1, 1] });
-  for (const k in props) OE.scene.add(new OE.Node(props[k].build(), M[k]));
-  OE.scene.add(new OE.Node(cloth.build(), { mode: 2, color: [1, 1, 1], rough: 0.9 }));
-  const cn = new OE.Node(cross.build(), { mode: 2, color: [0, 0, 0], emissive: [1.4, 0.1, 0.08] }); cn.castShadow = false; OE.scene.add(cn);
-  W.colliders.push({ x0: r[0] - 1.2, x1: r[0] + 1.0, z0: r[2] - 0.8, z1: r[2] + 0.6, h: 1 });
-  W.colliders.push({ x0: h[0] - 1.2, x1: h[0] + 1.5, z0: h[2] - 1.0, z1: h[2] + 2.2, h: 1 });
-};
+AL.build = function () { }; // Chapter I's choice happens after the boss; later chapters will place theirs in their own levels
 
 /* ---------------- interaction ---------------- */
 AL.nearby = function (pos) {
   for (const c of CHOICES) {
-    if (c.auto || done(c.id)) continue;
-    if (Math.hypot(pos[0] - c.pos[0], pos[2] - c.pos[2]) < 2.6) return { type: 'choice', id: c.id, label: 'Investigate — ' + c.title };
+    if (c.auto || !c.pos || c.chapter !== GM.save.chapter || done(c.id)) continue;
+    if (Math.hypot(pos[0] - c.pos[0], pos[2] - c.pos[2]) < 2.6) return { type: 'choice', id: c.id, label: 'Talk to Thomas — ' + c.title };
   }
   return null;
 };
 AL.markers = function (time) { // gentle white glow over undecided choice points
   for (const c of CHOICES) {
-    if (c.auto || done(c.id) || Math.random() > 0.35) continue;
+    if (c.auto || !c.pos || c.chapter !== GM.save.chapter || done(c.id) || Math.random() > 0.35) continue;
     GM.parts.emit({ pos: [c.pos[0] + (Math.random() - 0.5) * 0.5, 0.6 + Math.random() * 0.8, c.pos[2] + (Math.random() - 0.5) * 0.5], vel: [0, 0.5, 0], size: 0.035, life: 1.3, col: [2.2, 2.1, 1.8, 1], soft: 0.3 });
   }
 };
 let current = null, onClose = null, prevState = 'play';
+const subQ_clear = () => { if (GM.clearSubs) GM.clearSubs(); };
 AL.open = function (id, after) {
   const c = CHOICES.find((x) => x.id === id); if (!c || done(id)) { if (after) after(); return; }
   current = c; onClose = after || null; prevState = GM.state; GM.state = 'choice';
   if (document.pointerLockElement) document.exitPointerLock();
-  $('chTitle').textContent = c.title; $('chText').textContent = c.text; $('chResult').textContent = ''; $('chResult').style.display = 'none';
-  $('chOpts').innerHTML = c.options.map((o, i) => `<button class="btn chopt" data-i="${i}" style="border-color:${AL.TIERS[o.align].css}"><span class="dot" style="background:${AL.TIERS[o.align].css}"></span>${o.label}</button>`).join('');
+  $('chTitle').textContent = c.title; $('chText').innerHTML = `<i>${c.scene}</i><div class="tline"><b>Thomas:</b> “${c.thomas}”</div>`;
+  $('chResult').textContent = ''; $('chResult').style.display = 'none';
+  $('chOpts').innerHTML = `<div class="orionsay">ORION</div>` + c.options.map((o, i) => `<button class="btn chopt" data-i="${i}" style="border-color:${AL.TIERS[o.align].css}"><span class="dot" style="background:${AL.TIERS[o.align].css}"></span>“${o.say}”</button>`).join('');
   $('chOpts').querySelectorAll('.chopt').forEach((b) => b.onclick = () => choose(+b.dataset.i));
+  GM.say('thomas', c.thomas, Math.max(4, c.thomas.length * 0.06));
   $('chLeave').style.display = c.auto ? 'none' : ''; $('chLeave').textContent = 'STEP AWAY';
   $('choice').classList.remove('hidden');
 };
@@ -118,11 +107,12 @@ function choose(i) {
     if (o.reward.stims) GM.player.stims += o.reward.stims;
   }
   GM.audio.ui();
-  $('chOpts').innerHTML = ''; $('chResult').style.display = ''; $('chResult').innerHTML = o.result +
+  $('chOpts').innerHTML = ''; $('chResult').style.display = '';
+  $('chResult').innerHTML = `<div class="tline"><b class="o">Orion:</b> “${o.say}”</div><div class="tline"><b>Thomas:</b> “${o.reply}”</div><div class="res">${o.result}</div>` +
     (o.reward ? `<div class="rw">${o.reward.scrap ? '+' + o.reward.scrap + ' scrap ' : ''}${o.reward.stims ? '+' + o.reward.stims + ' stim' + (o.reward.stims > 1 ? 's' : '') : ''}</div>` : '') +
     `<div class="al">${chip('ORION', 'o')} ${chip('THOMAS', 't')}</div>`;
   $('chLeave').style.display = ''; $('chLeave').textContent = 'CONTINUE';
-  GM.say('thomas', o.thomas, Math.max(3.5, o.thomas.length * 0.065));
+  subQ_clear(); GM.say('orion', o.say, Math.max(3, o.say.length * 0.055)); GM.say('thomas', o.reply, Math.max(3, o.reply.length * 0.065));
   const after = [AL.tier('o'), AL.tier('t')];
   if (after[0] !== before[0]) GM.pendingAlignBanner = 'o';
   else if (after[1] !== before[1]) GM.pendingAlignBanner = 't';

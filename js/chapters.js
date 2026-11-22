@@ -27,8 +27,13 @@ window.CHAPTERS = [
   'At his side marched his apprentice, Thomas Hawthorne, born in 2074. Their dropship never reached the line.',
   'Now only the two of them remain. Between them and the dawn stands the Iron Warden.'],
   },
-  {
-    id: 2, numeral: 'II', title: 'Classified', available: false,
-    summary: 'British Command has not yet issued your next orders.',
-  },
+  // Chapters II–V: story outlines and dialogue choices are written; levels to come
+  { id: 2, numeral: 'II', title: 'Ashes of Dover', place: 'Dover', date: 'December 2090', available: false,
+    summary: 'With the Warden gone, British Command sends Orion and Thomas to the white cliffs to break the Pact beachhead, so American reinforcements can finally land.' },
+  { id: 3, numeral: 'III', title: 'Iron Tide', place: 'Normandy', date: 'February 2091', available: false,
+    summary: 'The Allies cross the Channel the other way. Orion and Thomas fight alongside American armour through the bocage, where the Pact\'s war machines dig in.' },
+  { id: 4, numeral: 'IV', title: 'Winter of the Bear', place: 'Kaliningrad', date: 'March 2091', available: false,
+    summary: 'The front pushes east into the frozen Russian enclave. In a city of snow and ruins, the Pact makes its stand — and the people caught between the armies pay for it.' },
+  { id: 5, numeral: 'V', title: 'Under One Banner', place: 'Harbin', date: 'Summer 2091', available: false,
+    summary: 'Where the Red Sun and the Bear first united, the Sino-Russian Pact holds its last fortress. Ten years of war come down to one decision.' },
 ];

@@ -383,7 +383,8 @@ function openChapters(ret) {
       btns += `<button class="btn" data-ch="start" data-id="${c.id}">${done || (S.started && S.chapter === c.id) ? 'REPLAY CHAPTER' : 'START CHAPTER'}</button>`;
     }
     return `<div class="chap ${c.available ? '' : 'locked'}"><div class="num">CHAPTER ${c.numeral}</div><div class="ttl">${c.title}</div>
-      ${c.place ? `<div class="meta">${c.place} · ${c.date}</div>` : ''}<div class="sum">${c.summary}</div><div class="st ${done ? 'done' : ''}">${status}</div><div class="bt">${btns}</div></div>`;
+      ${c.place ? `<div class="meta">${c.place} · ${c.date}</div>` : ''}<div class="sum">${c.summary}</div>
+      ${(() => { const ch = GM.align.forChapter(c.id); if (!ch) return ''; const made = S.choices && S.choices[ch.id]; return `<div class="meta">Dialogue choice: <b style="color:#efe4cc">${ch.title}</b>${made ? ` — <span style="color:${GM.align.TIERS[made].css}">${GM.align.TIERS[made].name}</span>` : ''}</div>`; })()}<div class="st ${done ? 'done' : ''}">${status}</div><div class="bt">${btns}</div></div>`;
   }).join('');
   $('chList').querySelectorAll('[data-ch]').forEach((b) => b.onclick = () => {
     AU.init(); AU.ui(); const id = +b.dataset.id;
@@ -470,6 +471,7 @@ GM.warden = (key, story = true) => {
 };
 GM.wardenTaunt = () => { if (time - tauntT < 11 || Math.random() > 0.35) return; tauntT = time; GM.warden('taunts', false); };
 GM.say = (who, text, dur = 4, voice = 0) => { subQ.push({ who, text, dur, voice }); };
+GM.clearSubs = () => { subQ.length = 0; subT = 0; };
 let voiceEl = null;
 function playVoice(n) {
   try {

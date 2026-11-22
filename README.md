@@ -35,15 +35,26 @@ On iPhone/Android you can use *Add to Home Screen* to get a full-screen app icon
 ## Chapters
 The game is split into chapters, each a self-contained mission. Pick one from **CHAPTERS** on the title screen.
 - **Chapter I — The Siege of New London** *(New London, November 2090)*: fight through the ruined city, light the signal beacons and destroy the Iron Warden.
-- **Chapter II — Classified**: coming soon.
+- **Chapter II — Ashes of Dover** *(Dover, December 2090)*: coming soon.
+- **Chapter III — Iron Tide** *(Normandy, February 2091)*: coming soon.
+- **Chapter IV — Winter of the Bear** *(Kaliningrad, March 2091)*: coming soon.
+- **Chapter V — Under One Banner** *(Harbin, summer 2091)*: coming soon.
 
 Chapter I begins with a first-person memory: Orion recalls his birth in London in 2069 AD, shown as a soft, out-of-focus dream with a heartbeat, narrated by Orion (voice/intro1-6.mp3). Each chapter then opens with its own title card and prologue and ends with a *Chapter Complete* screen showing your time, kills, deaths and rank. Replaying a chapter keeps Orion's rank and upgrades. Chapters are defined in `js/chapters.js`.
 
 ## Alignment
 Orion's choices decide who he becomes, and Thomas follows his lead. Both start **Neutral (yellow)** and can end up **Good (blue)** or **Evil (red)**.
-- Chapter I has four moral choices, each with a good, neutral and evil option: *Survivors in the Rubble*, *The Pilot*, *The Field Hospital* and *The Warden's Core*. Walk up to the glowing spot and press **Investigate** (E / ACT).
-- Every choice moves Orion's alignment, and moves Thomas's by 90% as much. Evil choices pay in scrap and stims; good ones cost you.
-- You can see alignment in the HUD chips under the health bars, the colour of Orion's sabre and Thomas's rifle stripe, Thomas's reactions, the Codex, and the Chapter Complete screen (with an ending line for Orion's path). It is kept in your save slots.
+- **One dialogue choice per chapter.** Thomas raises the dilemma, Orion picks his reply (good, neutral or evil), and Thomas answers.
+- Every choice moves Orion's alignment, and moves Thomas's by 90% as much, so one choice is enough to change both. Evil choices pay in scrap and stims; good ones cost you.
+- You can see alignment in the HUD chips under the health bars, the colour of Orion's sabre and Thomas's rifle stripe, the Codex, the chapter list, and the Chapter Complete screen (with an ending line for Orion's path). It is kept in your save slots.
+
+| Chapter | Dialogue choice |
+|---|---|
+| I — The Siege of New London | The Warden's Core (after the boss falls) |
+| II — Ashes of Dover | The Pilot |
+| III — Iron Tide | The Field Hospital |
+| IV — Winter of the Bear | Survivors in the Rubble |
+| V — Under One Banner | The Surrender |
 
 ## Souls-like systems
 - **Stamina** for every swing, roll and block. Run dry and your guard breaks.
