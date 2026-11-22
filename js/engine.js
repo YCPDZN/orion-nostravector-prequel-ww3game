@@ -146,6 +146,12 @@ void main(){
     albedo = uColor*vCol.rgb;
   }
   vec3 V = normalize(uCam - vWPos);
+  // safety: a shading normal pointing away from the viewer (thin cloth, merged geometry) is pulled back
+  // towards the real face normal, so it can't catch rim/specular light and sparkle
+  if (uMode == 0) {
+    vec3 Ng = normalize(cross(dFdx(vWPos), dFdy(vWPos))); if (dot(Ng, V) < 0.0) Ng = -Ng;
+    float nv = dot(N, V); if (nv < 0.15) N = normalize(mix(N, Ng, clamp((0.15 - nv) * 4.0, 0.0, 1.0)));
+  }
   vec3 F0 = mix(vec3(0.04), albedo, metal);
   vec3 col = vec3(0.0);
   // sun / moon

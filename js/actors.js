@@ -66,7 +66,7 @@ const ATK = {
 A.Player = class {
   constructor(asset) {
     if (!swordMesh) buildWeapons();
-    this.ch = new OE.Character(asset, { rim: 0.22 }); this.node = this.ch.node; OE.scene.add(this.node);
+    this.ch = new OE.Character(asset, { rim: 0.06 }); this.node = this.ch.node; OE.scene.add(this.node);
     this.pos = [0, 0, 0]; this.yaw = 0; this.vel = [0, 0, 0];
     this.state = 'move'; this.t = 0; this.hp = 1; this.stam = 1; this.stamDelay = 0; this.iframe = false;
     this.stims = 4; this.hitSet = new Set(); this.combo = 0; this.queued = null; this.radius = 0.42; this.alive = true; this.poise = 0;
@@ -234,7 +234,7 @@ A.Player = class {
 /* ---------------- companion: Thomas Hawthorne ---------------- */
 A.Companion = class {
   constructor(asset) {
-    this.ch = new OE.Character(asset, { rim: 0.22 }); this.node = this.ch.node; OE.scene.add(this.node);
+    this.ch = new OE.Character(asset, { rim: 0.06 }); this.node = this.ch.node; OE.scene.add(this.node);
     this.pos = [1.5, 0, -1.5]; this.yaw = 0; this.state = 'follow'; this.t = 0; this.cool = 1; this.maxHp = 260; this.hp = 260; this.alive = true; this.radius = 0.42;
     const rf = new OE.Node(rifleMesh, metalMat()); rf.mat.color = [0.7, 0.7, 0.72];
     const rg = new OE.Node(rifleGlow, { mode: 2, color: [0, 0, 0], emissive: [3, 0.6, 0.2] }); rg.castShadow = false; rf.add(rg);

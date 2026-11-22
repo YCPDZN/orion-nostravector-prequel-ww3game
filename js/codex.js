@@ -59,12 +59,12 @@ function build() {
   root.add(new OE.Node(gg.build(), W.mats.ground));
   const Wp = A.weapons();
   // Orion with sabre
-  const o = new OE.Character(GM.assets.orion, { rim: 0.25 }); root.add(o.node);
+  const o = new OE.Character(GM.assets.orion, { rim: 0.06 }); root.add(o.node);
   const sw = new OE.Node(Wp.swordMesh, Wp.metalMat()); const sg = new OE.Node(Wp.swordGlow, { mode: 2, color: [0, 0, 0], emissive: [1.2, 3.6, 5] }); sw.add(sg); sg.castShadow = false;
   const hm = M4.create(); sw.attach = () => o.boneWorld('R_Hand', hm); sw.pos = [0, -0.085, 0.02]; o.node.add(sw);
   C.models.orion = { ch: o, node: o.node };
   // Thomas with rifle (aimed procedurally, like in game)
-  const t = new OE.Character(GM.assets.thomas, { rim: 0.25 }); root.add(t.node);
+  const t = new OE.Character(GM.assets.thomas, { rim: 0.06 }); root.add(t.node);
   const rf = new OE.Node(Wp.rifleMesh, Wp.metalMat()); rf.mat.color = [0.7, 0.7, 0.72];
   const rg = new OE.Node(Wp.rifleGlow, { mode: 2, color: [0, 0, 0], emissive: [3, 0.6, 0.2] }); rg.castShadow = false; rf.add(rg);
   C.rifleModel = M4.create(); const rw = M4.create();
