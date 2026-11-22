@@ -349,7 +349,19 @@ window.LEVELS = {
       const b = part5().boss;
       if (b === 'orion') return { who: 'orion', lang: null, file: null, vo: 5, lines: { intro: [null, 'You were always the better of us, Tom. That\'s why it has to be you.', 19],
         death: GM.save.child === 'born' ? [null, '...Look after them, Tom. Croxian... look after him.', 20] : [null, '...Finish it.', 21] } };
-      if (b === 'thomas') return { who: 'thomas', lang: null, file: null, vo: 5, lines: { intro: [null, 'You taught me everything, Commander. Even this.', 22], death: [null, '...I just wanted it to be over.', 23] } };
+      if (b === 'thomas') return { who: 'thomas', lang: null, file: null, vo: 5, lines: { intro: [null, 'You taught me everything, Commander. Even this.', 22],
+        // Thomas, drowned in it: ten sadistic lines through the fight
+        taunts: [[null, 'You taught me to aim for the heart. I\'m going to miss. On purpose. For a long time.', 26],
+          [null, 'Does it hurt, Commander? Good. Tell me where. I\'ll do it again.', 27],
+          [null, 'Every lesson you ever gave me, I\'m giving back. One bullet at a time.', 28],
+          [null, 'I used to watch your back. Now I get to watch you bleed.', 29],
+          [null, 'Beg. Just once. I\'ve waited my whole life to hear you beg.', 30],
+          [null, 'Command made me a soldier. You made me a weapon. Hold still and see what I\'ve become.', 31],
+          [null, 'Scream for me, Orion. Nobody\'s coming. I made sure of that.', 32],
+          [null, 'Everyone you ever lost died for nothing. You\'re about to join them.', 33]],
+        phase2: [null, 'Ha... you finally hit back. Good. Now I don\'t have to hold back.', 34],
+        kill: [null, 'Lie still, Commander. Class dismissed.', 35],
+        death: [null, '...I just wanted it to be over.', 23] } };
       return { who: 'josiah', lang: null, file: null, vo: 5, lines: { intro: [null, 'I gave you every order you ever followed, Mascar. Here is the last one: kneel.', 24], death: [null, 'You\'ll find... the war doesn\'t end with me.', 25] } };
     },
     intro() { const b = part5().boss;
