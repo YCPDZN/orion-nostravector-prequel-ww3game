@@ -459,7 +459,7 @@ GM.advance = function () {
 };
 const refreshAdvance = () => { const n = nextChapter(), ok = GM.canAdvance(); for (const id of ['pNext', 'rNext']) { const b = $(id); b.style.display = ok ? '' : 'none'; if (n) b.textContent = `CHAPTER ${n.numeral}: ${n.title.toUpperCase()}`; } };
 GM.unlocked = (id) => id <= 1 || !!GM.completed()[id - 1];
-const COVERS = { 1: 'assets/chapters/ch1.jpg', 2: 'assets/chapters/ch2.jpg' };
+const COVERS = { 1: 'assets/chapters/ch1.jpg', 2: 'assets/chapters/ch2.jpg', 3: 'assets/chapters/ch3.jpg' };
 function openChapters(ret) {
   chapterReturn = ret; const S = baseSave();
   $('chList').innerHTML = CHAPTERS.map((c) => {
@@ -517,7 +517,7 @@ function startCrawl(part) {
   const ch = chapterDef(GM.save.chapter); const pt = ch.parts ? ch.parts[(part || GM.save.part || 1) - 1] : null;
   GM.crawlPart = pt;
   const head = pt ? `<p class="first"><small>CHAPTER ${ch.numeral} · PART ${pt.numeral}</small>${pt.title}</p>` : `<p class="first"><small>CHAPTER ${ch.numeral}</small>${ch.title}</p>`;
-  const lines = (pt && pt.prologue) || ch.prologue;
+  let lines = (pt && pt.prologue) || ch.prologue; if (typeof lines === 'function') lines = lines(GM.save);
   const vo = (pt && pt.vo) || [];
   box.innerHTML = (pt && pt.numeral === 'I' ? `<p class="first"><small>CHAPTER ${ch.numeral}</small>${ch.title}</p>` : '') + head + lines.map((t, i) => `<p${vo[i] ? ` data-vo="${vo[i]}"` : ''}>${t}</p>`).join('');
   crawlIdx = -1; $('crawl').onclick = endCrawl; AU.musicDuck(0.4); nextCrawl();
@@ -538,7 +538,7 @@ function endCrawl() { if (GM.state === 'crawl') nextCrawl(); }
 
 /* ---------------- HUD helpers ---------------- */
 let subQ = [], subT = 0, toastT = 0, bannerT = 0;
-const NAMES = { thomas: 'Thomas', orion: 'Orion', radio: 'British Command', warden: 'Iron Warden', tide: 'Tidebreaker', talina: 'Talina', pilot: 'Pact Pilot' };
+const NAMES = { thomas: 'Thomas', orion: 'Orion', radio: 'British Command', warden: 'Iron Warden', tide: 'Tidebreaker', talina: 'Talina', ines: 'Inés', pilot: 'Pact Pilot' };
 /* Each level's boss speaks its own language (Mandarin for the Iron Warden, Russian for the Tidebreaker) with English subtitles.
    Lines with a recording play the mp3; the rest use the browser's text-to-speech. */
 const BV = () => LV.def.voice;
@@ -825,7 +825,7 @@ function step(dt, inp) {
   if (GM.state === 'codex') { GM.codex.update(dt, inp); return; }
   const R_ = OE.R;
   // world ambience
-  flashT -= dt; if (flashT <= 0) { flashT = R(6, 15); R_.flash = R(0.4, 1.0); AU.thunder(R(0.6, 2.0)); }
+  flashT -= dt; if (flashT <= 0) { flashT = R(6, 15); if (W.ambience !== 'summer') { R_.flash = R(0.4, 1.0); AU.thunder(R(0.6, 2.0)); } } // no storms on a summer morning
   R_.flash = Math.max(0, R_.flash - dt * 2.5); R_.hurt = Math.max(0, R_.hurt - dt * 1.5);
   const st = GM.state;
   if (inp.pause) { if (st === 'play') openPause(); else if (st === 'pause') closePause(); }
@@ -876,8 +876,10 @@ function step(dt, inp) {
   const cp = GM.cam.pos;
   if (W.ambience === 'rain') { // Channel rain, driven in off the sea
     if (GM.state !== 'title' && GM.state !== 'crawl' && GM.state !== 'birth') for (let i = 0; i < 9; i++) GM.parts.emit({ pos: [cp[0] + R(-12, 12), R(5, 9), cp[2] + R(-12, 12)], vel: [-2.2, -15, 0.4], stretch: 0.06, size: R(0.01, 0.018), life: 0.7, col: [0.7, 0.74, 0.8, 0.55], add: false, soft: 0.1, fade: 0, floor: 0.02 });
+  } else if (W.ambience === 'summer') { // pollen and dandelion seed drifting in the sun
+    if (rnd() < 0.6) GM.parts.emit({ pos: [cp[0] + R(-12, 12), R(0.5, 4), cp[2] + R(-12, 12)], vel: [R(0.1, 0.4), R(0.02, 0.2), R(-0.15, 0.15)], size: R(0.012, 0.022), life: 7, col: [1.6, 1.5, 1.2, 0.55], soft: 0.4, spin: 1 });
   } else for (let i = 0; i < 2; i++) GM.parts.emit({ pos: [cp[0] + R(-14, 14), R(4, 9), cp[2] + R(-14, 14)], vel: [R(0.2, 0.6), R(-0.5, -0.9), R(-0.2, 0.2)], size: R(0.012, 0.03), life: 8, col: [0.5, 0.48, 0.45, 0.8], add: false, soft: 0.3, spin: 1 });
-  if (W.ambience !== 'rain' && rnd() < 0.3) GM.parts.emit({ pos: [cp[0] + R(-10, 10), R(0, 2), cp[2] + R(-10, 10)], vel: [R(-0.3, 0.6), R(0.5, 1.5), R(-0.3, 0.3)], size: 0.02, life: 3, col: [4, 1.4, 0.3, 1], soft: 0.3 });
+  if (W.ambience === 'ash' && rnd() < 0.3) GM.parts.emit({ pos: [cp[0] + R(-10, 10), R(0, 2), cp[2] + R(-10, 10)], vel: [R(-0.3, 0.6), R(0.5, 1.5), R(-0.3, 0.3)], size: 0.02, life: 3, col: [4, 1.4, 0.3, 1], soft: 0.3 });
   W.update(sdt, time, { parts: GM.parts, camPos: GM.cam.pos });
   GM.parts.update(sdt);
 }

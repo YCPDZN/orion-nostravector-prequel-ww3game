@@ -46,13 +46,16 @@ function setOrion(eye) {
   old.node.remove(sword); O.node.add(sword); root.remove(old.node); root.add(O.node); O.play('Idle', 0);
 }
 /* alignment shown on the menu: the most recent save (or neutral when there is none) */
-MN.tier = function () {
+MN.align = function () { // the game in play, else the most recent save
+  if (GM.save && GM.save.started && GM.save.align) return GM.save.align;
   try {
     const slots = JSON.parse(localStorage.getItem('orion_ww3_slots') || '[]').filter(Boolean).sort((a, b) => b.when - a.when);
-    if (slots.length && slots[0].save && slots[0].save.align) return GM.align.tierOf(slots[0].save.align.o);
+    if (slots.length && slots[0].save && slots[0].save.align) return slots[0].save.align;
   } catch (e) { }
-  return 'neutral';
+  return { o: 0, t: 0 };
 };
+MN.tier = () => GM.align.tierOf(MN.align().o);
+MN.tierT = () => GM.align.tierOf(MN.align().t); // Thomas has his own alignment since Dover
 
 const look = (ch, bone, x, y, z) => { const q = ch.override[bone] || (ch.override[bone] = Q.create()); Q.euler(q, x, y, z); };
 function armsCrossed(ch, w, high) {
@@ -79,10 +82,10 @@ MN.update = function (dt) {
   if (!root) build();
   setOrion(MN.eye());
   t += dt; OE.scene = root;
-  const R = OE.R, tier = MN.tier(), info = GM.align.TIERS[tier];
+  const R = OE.R, tier = MN.tier(), info = GM.align.TIERS[tier], tierT = MN.tierT(), infoT = GM.align.TIERS[tierT];
   // black stage
   R.skyOff = true; R.fogCol = [0, 0, 0]; R.fogDen = 0.035; R.sunCol = [0.12, 0.12, 0.14]; R.sky = [0.02, 0.02, 0.025]; R.ground = [0.01, 0.01, 0.01];
-  const rc = info.light; for (const k of ['rimO', 'rimT', 'floor']) lights[k].color = rc;
+  for (const k of ['rimO', 'floor']) lights[k].color = info.light; lights.rimT.color = infoT.light;
   if (!R.lights.includes(lights.key)) for (const k in lights) R.lights.push(lights[k]);
   // place characters
   O.node.pos = [STAGE[0] - 0.05, 0, STAGE[2]]; T.node.pos = [STAGE[0] + 1.05, 0, STAGE[2] - 0.05];
@@ -100,18 +103,18 @@ MN.update = function (dt) {
     else { Q.yaw(O.node.rot, 0.28); look(O, 'Head', 9, -16 + breathe * 2, 0); look(O, 'Chest', 2, -6, 0); } // wary: chin down, eyes away
     O.update(0); armsCrossed(O, 1);
   }
-  // ---- Thomas
+  // ---- Thomas: his own alignment (good: thumbs up, neutral: cautious, evil: arms crossed, treacherous)
   T.update(dt);
-  if (tier === 'good') {
+  if (tierT === 'good') {
     Q.yaw(T.node.rot, -0.22); look(T, 'Head', -4, 10, 4); rifle.visible = false;
     T.update(0); thumbsUp(T);
-  } else if (tier === 'evil') {
+  } else if (tierT === 'evil') {
     Q.yaw(T.node.rot, -0.75); look(T, 'Head', 8, 42, -9); look(T, 'Chest', 0, 10, 0); rifle.visible = false; // turned away, side-eye towards Orion
     T.update(0); armsCrossed(T, 1, -0.02);
   } else {
     Q.yaw(T.node.rot, -0.3); look(T, 'Head', 4, 22 + Math.sin(t * 0.7) * 8, 0); look(T, 'Spine', 6, 0, 0); rifle.visible = true; // cautious: rifle low, glancing around
     T.update(0); A.rifleRig(T, { aim: 0.2, dir: [0.1, -0.15, 1], recoil: 0 }, rifleModel);
-    rifleGlow.mat.emissive = info.glow;
+    rifleGlow.mat.emissive = infoT.glow;
   }
   // camera: characters on the right two-thirds, the menu on the left
   const cam = GM.cam; cam.fov = 0.62; const asp = R.w / R.h;
@@ -125,6 +128,7 @@ MN.update = function (dt) {
   const place = (id, p) => { const el = document.getElementById(id); if (!el) return; const s = proj(p); const w = el.offsetWidth || 150;
     el.style.left = Math.max(8, Math.min(innerWidth - w - 8, s[0] - w / 2)) + 'px'; el.style.top = (s[1] - el.offsetHeight - 14) + 'px'; };
   place('tagO', [O.node.pos[0], 1.98, O.node.pos[2]]); place('tagT', [T.node.pos[0], 1.94, T.node.pos[2]]);
+  for (const [id, w, tr, inf] of [['tagO', 'o', tier, info], ['tagT', 't', tierT, infoT]]) { const sm = document.querySelector('#' + id + ' small'); if (sm && sm.dataset.k !== tr) { sm.dataset.k = tr; sm.textContent = GM.align.label(w, tr); sm.style.color = inf.css; } }
   const cap = document.getElementById('menuAlign');
   if (cap) { const key = tier; if (cap.dataset.k !== key) { cap.dataset.k = key; cap.innerHTML = `<i style="background:${info.css};box-shadow:0 0 10px ${info.css}"></i>${GM.align.label('o', tier)}`; cap.style.color = info.css; } }
 };

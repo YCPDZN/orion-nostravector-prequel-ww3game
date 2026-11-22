@@ -6,6 +6,22 @@ const say = (...a) => GM.say(...a);
 /* numbered Chapter II lines: plays voice/doverNN.mp3 when that recording exists, and keeps the subtitle up for as long as it plays */
 const sayN = (n, who, text, dur) => GM.say(who, text, GM.voDur(n, dur), GM.vo(n));
 
+const TALINA3 = { who: 'talina', lang: null, file: null, lines: {
+  intro: [null, 'Orion. I see you kept my gift.'],
+  taunts: [[null, 'One eye, Orion. You will not see the next one coming.'], [null, '¡Otra vez, niño!'], [null, 'Did you think I would stay away?'],
+    [null, 'The Red Sun and the Bear sent me back for you.'], [null, 'You told me something at Dover. Did you mean it?']],
+  phase2: [null, 'Ya basta. Now I fight for real.'],
+  kill: [null, 'Adiós, Orion. This time, for good.'],
+  death: [null, 'Again... you beat me again...'],
+} };
+const INES = { who: 'ines', lang: null, file: null, lines: {
+  intro: [null, 'So you are the one. You have the face she wrote about in her letters.'],
+  taunts: [[null, 'She taught me everything. Every cut.'], [null, 'Look at me. Do you see her?'], [null, '¡Por Talina!'],
+    [null, 'You took everything I had left.'], [null, 'The Red Sun and the Bear gave me this blade. You will give me your life.']],
+  phase2: [null, '¡Por mi hermana! For my sister!'],
+  kill: [null, 'It is done, Talina. It is done.'],
+  death: [null, 'Talina... lo siento...'],
+} };
 window.LEVELS = {
   /* ---------------- Chapter I: New London ---------------- */
   1: {
@@ -153,6 +169,52 @@ window.LEVELS = {
       return { banner: ['TIDEBREAKER DESTROYED', 'THE BEACH IS OURS'], endIn: 16 };
     },
     endings: { good: 'Thomas let him go. Somewhere, a boy from that wreck is alive because of him.', neutral: 'Thomas followed his orders to the letter. The beach is clear, and the fleet can land.', evil: 'The beach is clear. But Thomas Hawthorne came back from Dover colder than he went.' },
+  },
+
+  /* ---------------- Chapter III: Normandy, June 2091 — Orion (eyepatch) with Thomas ----------------
+     The boss is Talina Alvarez if she walked away from Dover; if Orion executed her, it is her twin sister Inés. */
+  3: {
+    loading: 'Crossing to Normandy',
+    spawns: [['trooper', [2, 0, 20]], ['drone', [-3, 0, 30]], ['trooper', [3, 0, 38]], ['trooper', [-2, 0, 50]], ['brute', [4, 0, 60]],
+      ['drone', [-6, 0, 64]], ['trooper', [7, 0, 74]], ['trooper', [-2, 0, 78]], ['drone', [2, 0, 92]], ['trooper', [-3, 0, 100]],
+      ['brute', [0, 0, 110]], ['trooper', [-4, 0, 116]], ['trooper', [4, 0, 117]]],
+    boss: { duelist: 'talina', pos: [0, 0, 158], seen: 'boss3',
+      T: { get name() { return GM.save.talina === 'executed' ? 'INÉS ALVAREZ, Talina\'s Twin' : 'TALINA ALVAREZ, Traitor of British Command'; },
+        hp: 1900, dmg: 50, scrap: 3800, s: 1, glow: [2.2, 0.35, 2.8], light: [0.8, 0.2, 1.0] } },
+    choice: 'hospital', // replaced by the chapter's own choice once it is written
+    ambience: 'summer',
+    env: { // a clear June morning over the bocage
+      sunDir: [0.45, 0.62, 0.42], sunCol: [1.45, 1.32, 1.1], sky: [0.34, 0.4, 0.52], ground: [0.16, 0.15, 0.1], fogCol: [0.55, 0.64, 0.78], fogDen: 0.0055, exposure: 1.0,
+      skyPal: { top: [0.12, 0.26, 0.56], hor: [0.7, 0.72, 0.72], glow: [0.04, 0.03, 0.01], clLo: [0.6, 0.62, 0.66], clHi: [0.98, 0.96, 0.92], stars: 0, moon: 0 } },
+    // Talina (or her sister) speaks English with some Spanish; subtitles only until recorded
+    get voice() { return GM.save.talina === 'executed' ? INES : TALINA3; },
+    intro() {
+      say('radio', 'Command to Mascar. The Americans are pinned at the hedgerows. There\'s a Pact machine in every field between here and the village. Clear the lanes and take the church square.', 8.5);
+      say('thomas', 'Good to have you back, Commander. How\'s the eye?', 3.5);
+      say('orion', 'Gone, Tom. The rest of me works fine. Light the beacon.', 4);
+    },
+    beacon(i) {
+      if (i === 0) say('thomas', 'Beacon\'s lit. The Yanks can see us now.', 3.5);
+      else say('thomas', 'Orchard\'s clear. The church is just past those houses, Commander.', 4.5);
+    },
+    bossIntro() {
+      if (GM.save.talina === 'executed') {
+        GM.save.seen.boss3i = 1;
+        say('orion', 'Who are you?', 2.5);
+        say('ines', 'Inés Alvarez. You left my sister on her knees in the mud at Dover. I came to return the favour.', 6.5);
+      } else {
+        say('orion', 'You should have stayed gone, Talina.', 3.5);
+        say('talina', 'And miss this? Draw, Comandante. Let us finish the lesson.', 4.5);
+      }
+    },
+    phase2() { say('thomas', 'She\'s getting faster, Commander — stay on her!', 3.5); },
+    victory() {
+      const ines = GM.save.talina === 'executed';
+      say('thomas', 'She\'s down! Commander, she\'s down!', 3);
+      say('radio', 'Command to Mascar. The square is ours. The Americans are moving up — Normandy is open.', 6);
+      return { banner: [ines ? 'INÉS ALVAREZ DEFEATED' : 'TALINA ALVAREZ DEFEATED', 'THE BOCAGE IS OURS'], endIn: 10 };
+    },
+    endings: { good: 'Normandy is free, and Orion Mascar kept something of himself in the hedgerows.', neutral: 'Normandy is free. Orion did what the war asked of him.', evil: 'Normandy is free. The villagers watched Orion Mascar leave and did not wave.' },
   },
 };
 })();

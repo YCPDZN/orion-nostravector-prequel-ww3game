@@ -46,9 +46,9 @@ The game is split into chapters, each a self-contained mission. Pick one from **
   - **Part II — The Apprentice** *(Dover Beach)*: you play **Thomas alone**; Orion does not appear. Fight north along the shingle beneath the white cliffs, past beached Pact landing craft, Czech hedgehogs and WW2 pillboxes, and destroy the **Tidebreaker**, an amphibious assault frame that speaks Russian (browser text-to-speech, English subtitles). Its pilot survives, and **Thomas** decides what to do with him (The Pilot): this moves only Thomas's alignment; Orion's is unaffected.
   - Playing as Thomas: **attack** fires an auto-aimed 3-round burst at your lock-on or whoever is nearest your aim, **heavy** is a rifle-butt strike, and **block** aims down the sights (slower, steadier, harder-hitting shots). Roll and stims work as for Orion.
   - Once you have reached Part II, **CHAPTERS** offers a button to start it directly.
-- **Chapter III — Iron Tide** *(Normandy, February 2091)*: coming soon.
-- **Chapter IV — Winter of the Bear** *(Kaliningrad, March 2091)*: coming soon.
-- **Chapter V — Under One Banner** *(Harbin, summer 2091)*: coming soon.
+- **Chapter III — Iron Tide** *(Normandy, June 2091)*: eyepatch Orion and Thomas fight with American armour through the bocage (sunken hedgerow lanes, fields, an apple orchard, a Norman village) to the church square, where Talina Alvarez waits for a rematch. If Orion executed Talina at Dover, her twin sister **Inés Alvarez** is there instead, hunting him.
+- **Chapter IV — Winter of the Bear** *(Kaliningrad, winter 2094)*: coming soon.
+- **Chapter V — Under One Banner** *(Harbin, 2095)*: coming soon.
 
 Chapter I begins with a first-person memory: Orion recalls his birth in London in 2069 AD, shown as a soft, out-of-focus dream with a heartbeat, narrated by Orion (voice/intro1-6.mp3). Each chapter then opens with its own title card and prologue and ends with a *Chapter Complete* screen showing your time, kills, deaths and rank. Replaying a chapter keeps Orion's rank and upgrades. Chapters are defined in `js/chapters.js`; each chapter's enemies, boss, dialogue and weather are in `js/levels.js`.
 

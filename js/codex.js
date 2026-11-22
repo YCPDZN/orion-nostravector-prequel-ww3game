@@ -37,6 +37,15 @@ const ENTRIES = [
     quote: 'Then let me leave you something to remember me by.',
     combat: 'A duelist, not a machine. She circles out of reach, parries quick strikes and answers with a riposte, and rolls clear of anything she sees coming. Heavy attacks break through her guard. At half strength she drops the act: she gets faster and finishes her combos with an unblockable lunge.',
     show: ['Idle', 'Attack1', 'Attack2', 'Heavy', 'Block', 'Idle'] },
+  { id: 'ines', sec: 'ADVERSARIES', name: 'Inés Alvarez', role: 'Talina\'s Twin', model: 'talina', h: 1.72, unlock: 'boss3i',
+    facts: [['Born', 'Seville, Spain'], ['Sister', 'Talina Alvarez (twin)'], ['Allegiance', 'Sino-Russian Pact'], ['Weapon', 'Thermal sabre (her sister\'s style)']],
+    lore: [
+      'Talina\'s twin. Where Talina went to London and British Command, Inés stayed in Seville, until the war took everything there too.',
+      'When word reached her of how her sister died at Dover, she asked the Pact for one thing: Normandy, and the man with one eye.',
+    ],
+    quote: 'Look at me. Do you see her?',
+    combat: 'She fights exactly as her sister did: circling, parrying quick strikes into a riposte, rolling clear of anything telegraphed. Heavy attacks break her guard. At half strength she abandons caution entirely.',
+    show: ['Idle', 'Attack1', 'Attack2', 'Heavy', 'Block', 'Idle'] },
   { id: 'boss', sec: 'ADVERSARIES', name: 'The Iron Warden', role: 'Last Sentinel of the Sino-Russian Pact', enemy: 'boss', h: 4.7, unlock: 'boss',
     facts: [['Class', 'Siege sentinel'], ['Height', '4.6 m'], ['Armament', 'Breaching cleaver, orbital uplink'], ['Origin', 'Sino-Russian Pact'], ['Voice', 'Mandarin Chinese']],
     lore: [

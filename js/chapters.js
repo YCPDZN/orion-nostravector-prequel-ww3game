@@ -47,10 +47,17 @@ window.CHAPTERS = [
     prologue: [],
   },
   // Chapters III–V: story outlines and dialogue choices are written; levels to come
-  { id: 3, numeral: 'III', title: 'Iron Tide', place: 'Normandy', date: 'February 2091', available: false,
-    summary: 'The Allies cross the Channel the other way. Orion and Thomas fight alongside American armour through the bocage, where the Pact\'s war machines dig in.' },
-  { id: 4, numeral: 'IV', title: 'Winter of the Bear', place: 'Kaliningrad', date: 'March 2091', available: false,
+  { id: 3, numeral: 'III', title: 'Iron Tide', place: 'Normandy', date: 'June 2091', available: true,
+    summary: 'The Allies cross the Channel the other way. Orion, one eye fewer, and Thomas fight alongside American armour through the bocage, where the Pact\'s war machines dig in, and someone from Dover is waiting.',
+    objective: 'Take the church square',
+    prologue: (S) => ['June, 2091.',
+      'Six months after Dover, the Allies cross the Channel the other way. American armour rolls ashore on the beaches of Normandy, where another army landed a century and a half before.',
+      'Commander Orion Mascar is back in the field, one eye fewer. Thomas Hawthorne, seventeen now, has not left his side.',
+      S && S.talina === 'executed'
+        ? 'Inland, in the hedgerows of the bocage, the Pact has dug in its war machines. And someone is hunting the man who killed Talina Alvarez.'
+        : 'Inland, in the hedgerows of the bocage, the Pact has dug in its war machines. And British Command has word of a sabre in the dark: Talina Alvarez is in Normandy.'] },
+  { id: 4, numeral: 'IV', title: 'Winter of the Bear', place: 'Kaliningrad', date: 'Winter 2094', available: false,
     summary: 'The front pushes east into the frozen Russian enclave. In a city of snow and ruins, the Pact makes its stand — and the people caught between the armies pay for it.' },
-  { id: 5, numeral: 'V', title: 'Under One Banner', place: 'Harbin', date: 'Summer 2091', available: false,
+  { id: 5, numeral: 'V', title: 'Under One Banner', place: 'Harbin', date: '2095', available: false,
     summary: 'Where the Red Sun and the Bear first united, the Sino-Russian Pact holds its last fortress. Ten years of war come down to one decision.' },
 ];
