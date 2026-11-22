@@ -49,7 +49,7 @@ Chapter I begins with a first-person memory: Orion recalls his birth in London i
 - **Thomas** follows you, picks targets, holds his rifle properly with both hands (arm IK: stock in the shoulder, hands on grip and handguard), shoulders it to fire aimed 3-round bursts (muzzle flash, tracers, ejected casings), rifle-bashes enemies that get close, and gets back up if he goes down. He's built tough: 3× a soldier's health (780), and the Iron Warden's attacks do only half damage to him and don't stagger him.
 - **Codex** (title screen and pause menu): lore entries for Orion and Thomas with live 3D turntables of their models. Adversary entries unlock as you meet each war machine.
 - Fully voiced dialogue: 17 lines for Thomas, Orion and British Command, synced with subtitles.
-- **The Iron Warden speaks Mandarin Chinese** (through your device's built-in Chinese text-to-speech voice, pitched low and slow), with English subtitles and the original Chinese shown underneath. If your device has no Chinese voice installed, the subtitles still appear — on Windows you can add one under Settings → Time & language → Speech.
+- **The Iron Warden speaks Mandarin Chinese** — 11 recorded lines (voice/warden01–11.mp3): intro, taunts (including "The Red Sun and the Bear have united under one banner"), orbital-strike call-out, phase 2, killing Orion and his defeat — with English subtitles and the original Chinese shown underneath.
 - **Manual saving:** the game never autosaves. Use **Save Game** from the pause menu, a beacon or the Chapter Complete screen; there are 3 slots. Load from **Load Game** on the title screen or pause menu, and **Continue** loads your most recent save. You can't save during a boss fight. Saves are stored in the browser you play in.
 
 ## Graphics
@@ -69,6 +69,7 @@ js/chapters.js        chapter list: titles, openings, prologues, summaries
 js/opening.js         the dreamlike first-person opening scene
 js/codex.js           the Codex: character and adversary entries with 3D turntables
 voice/01-17.mp3       voiced dialogue lines (played with the subtitles)
+voice/warden01-11.mp3 the Iron Warden's Mandarin lines
 assets/models.js      the rigged characters embedded for offline play
 models/*_rigged.glb   the rigged, animated characters as standard glTF files (Unity/Blender/Godot)
 tools/*.py            the rigging pipeline used to build them

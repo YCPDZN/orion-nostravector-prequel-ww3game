@@ -423,20 +423,20 @@ let subQ = [], subT = 0, toastT = 0, bannerT = 0;
 const NAMES = { thomas: 'Thomas', orion: 'Orion', radio: 'British Command', warden: 'Iron Warden' };
 /* The Iron Warden speaks Mandarin (browser text-to-speech, deep and slow) with English subtitles */
 const WARDEN = {
-  intro: ['入侵者。伦敦现在属于中俄同盟。', 'Intruder. London belongs to the Sino-Russian Pact now.'],
-  children: ['你们的指挥官把孩子送来送死。', 'Your commanders send children to die.'],
+  intro: ['入侵者。伦敦现在属于中俄同盟。', 'Intruder. London belongs to the Sino-Russian Pact now.', 1, 4.75],
+  children: ['你们的指挥官把孩子送来送死。', 'Your commanders send children to die.', 2, 3.0],
   // five separate taunts, one at a time; the Red Sun and the Bear always comes first in a fight
   taunts: [
-    ['红日与巨熊，已在同一面旗帜下联合。', 'The Red Sun and the Bear have united under one banner.'],
-    ['跪下！', 'Kneel!'],
-    ['无处可逃。', 'There is nowhere to run.'],
-    ['你的剑救不了伦敦。', 'Your sword will not save London.'],
-    ['为了同盟！', 'For the Pact!'],
+    ['红日与巨熊，已在同一面旗帜下联合。', 'The Red Sun and the Bear have united under one banner.', 3, 3.71],
+    ['跪下！', 'Kneel!', 11, 1.57],
+    ['无处可逃。', 'There is nowhere to run.', 8, 2.19],
+    ['你的剑救不了伦敦。', 'Your sword will not save London.', 6, 2.27],
+    ['为了同盟！', 'For the Pact!', 9, 1.8],
   ],
-  barrage: ['轨道打击，锁定目标。', 'Orbital strike. Target locked.'],
-  phase2: ['核心过载……我不会倒下！', 'Core overloading… I will not fall!'],
-  kill: ['又一个英国人倒下了。', 'Another Briton falls.'],
-  death: ['不可能……同盟……是永恒的……', 'Impossible… the Pact… is eternal…'],
+  barrage: ['轨道打击，锁定目标。', 'Orbital strike. Target locked.', 4, 2.27],
+  phase2: ['核心过载……我不会倒下！', 'Core overloading… I will not fall!', 5, 2.93],
+  kill: ['又一个英国人倒下了。', 'Another Briton falls.', 10, 2.27],
+  death: ['不可能……同盟……是永恒的……', 'Impossible… the Pact… is eternal…', 7, 3.71],
 };
 let zhVoice = null, tauntT = 0, tauntBag = [];
 function nextTaunt() { // shuffle bag: every taunt is heard once before any repeats
@@ -460,8 +460,9 @@ GM.warden = (key, story = true) => {
   if (!story && (subQ.length || subT > 0.3)) return; // taunts never interrupt dialogue
   if (key === 'taunts') line = nextTaunt();
   if (story && ['intro', 'phase2', 'death', 'kill'].includes(key)) { subQ.length = 0; subT = 0; try { if (voiceEl) voiceEl.pause(); } catch (e) { } } // boss moments cut in
-  const [zh, en] = line; const dur = Math.max(3.2, en.length * 0.06 + 1.4, zh.length * 0.34 + 1.2);
-  GM.say('warden', en, dur, { zh });
+  const [zh, en, file, secs] = line;
+  const dur = file ? Math.max(2.6, secs + 1.0) : Math.max(3.2, en.length * 0.06 + 1.4, zh.length * 0.34 + 1.2);
+  GM.say('warden', en, dur, { zh, file: file ? 'voice/warden' + String(file).padStart(2, '0') + '.mp3' : null });
 };
 GM.wardenTaunt = () => { if (time - tauntT < 11 || Math.random() > 0.35) return; tauntT = time; GM.warden('taunts', false); };
 GM.say = (who, text, dur = 4, voice = 0) => { subQ.push({ who, text, dur, voice }); };
@@ -469,7 +470,7 @@ let voiceEl = null;
 function playVoice(n) {
   try {
     if (voiceEl) { voiceEl.pause(); }
-    voiceEl = new Audio('voice/' + String(n).padStart(2, '0') + '.mp3');
+    voiceEl = new Audio(typeof n === 'string' ? n : 'voice/' + String(n).padStart(2, '0') + '.mp3');
     voiceEl.volume = Math.min(1, GM.settings.vol / 10 + 0.15);
     AU.musicDuck(0.12); voiceEl.onended = () => AU.musicDuck(GM.inBoss ? 0.4 : 0.28);
     const p = voiceEl.play(); if (p && p.catch) p.catch(() => { });
@@ -488,7 +489,7 @@ function updateHud(dt) {
   if (GM.inBoss && boss) { $('bossbar').querySelector('i').style.transform = `scaleX(${Math.max(0, boss.hp / boss.maxHp)})`; $('bossbar').querySelector('b').style.transform = `scaleX(${Math.max(0, boss.hp / boss.maxHp)})`; }
   // subtitles
   subT -= dt; const sub = $('sub');
-  if (subT <= 0) { if (subQ.length) { const s = subQ.shift(); sub.innerHTML = `<b>${NAMES[s.who] || s.who}:</b> ${s.text}` + (s.voice && s.voice.zh ? `<div class="zh">${s.voice.zh}</div>` : ''); sub.style.opacity = 1; subT = s.dur; if (s.voice && s.voice.zh) speakZh(s.voice.zh); else if (s.voice) playVoice(s.voice); } else sub.style.opacity = 0; }
+  if (subT <= 0) { if (subQ.length) { const s = subQ.shift(); sub.innerHTML = `<b>${NAMES[s.who] || s.who}:</b> ${s.text}` + (s.voice && s.voice.zh ? `<div class="zh">${s.voice.zh}</div>` : ''); sub.style.opacity = 1; subT = s.dur; if (s.voice && s.voice.file) playVoice(s.voice.file); else if (s.voice && s.voice.zh) speakZh(s.voice.zh); else if (s.voice) playVoice(s.voice); } else sub.style.opacity = 0; }
   toastT -= dt; if (toastT <= 0) $('toast').style.opacity = 0;
   bannerT -= dt; if (bannerT <= 0) $('banner').style.opacity = 0;
   // lock-on marker & enemy health bars
