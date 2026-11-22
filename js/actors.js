@@ -528,7 +528,7 @@ A.Gunner = class {
       if (P.state === 'attack' && d < 3.4 && P.ch.t < 0.25 && rnd() < dt * 6) { this.rollDir = ty + Math.PI + (rnd() < 0.5 ? 1 : -1) * R(0.6, 1.2); this.set('roll', 'Roll', 0.06, 1.05); }
       else if (d < 2.4 && this.cd <= 0.4) { this.hitDone = false; this.set('bash', 'Attack1', 0.08, 1.1); }
       else if (this.phase2 && this.nadeCd <= 0 && d > 4) { this.set('nade', 'Block', 0.12); this.nadeCd = R(5, 7); }
-      else if (this.cd <= 0) { this.set('aim', 'Aim', 0.12); this.shots = this.phase2 ? 5 : 4; }
+      else if (this.cd <= 0) { this.set('aim', 'Aim', 0.12); this.shots = this.phase2 ? 5 : 4; if (rnd() < 0.5) GM.wardenTaunt(); }
     } else if (S === 'aim') { // a short, readable aim before the burst: the rifle glows
       face(10); aim = 1; this.light.intensity = 1.5 * Math.min(1, this.t / 0.5);
       if (this.t > (this.phase2 ? 0.45 : 0.6)) { this.set('fire', 'Shoot', 0.05); this.light.intensity = 0; this.next = 0; }

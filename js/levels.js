@@ -325,7 +325,15 @@ window.LEVELS = {
     loading: 'Marching on Moscow', spawns: SPAWNS5, bosses: { orlov: BOSS5.orlov }, pickBoss: () => 'orlov', get boss() { return BOSS5.orlov; },
     get hero() { return asThomas() ? 'thomas' : null; }, get solo() { return asThomas() || CH5.route(GM.save).t === 'evil'; }, ally: 'ines',
     get choice() { return asThomas() ? 'surrender_t' : 'surrender'; }, ambience: 'rain', env: MOSCOW_RAIN,
-    voice: { who: 'orlov', lang: 'ru-RU', file: null, vo: 5, lines: { intro: ['Москва не сдаётся. Никогда.', 'Moscow does not surrender. Ever.', 7], death: ['Медведь… пал…', 'The Bear... has fallen...', 8] } },
+    // Orlov speaks English: his father's unfinished 'Great Trial', and a sadist's patience
+    voice: { who: 'orlov', lang: null, file: null, vo: 5, lines: {
+      intro: [null, 'Forty years ago, you stopped my father, Viktor Orlov, from committing the Great Trial. Now this... this is the true Great Trial.', 7],
+      taunts: [[null, 'I will take you apart slowly. These walls have waited a long time for a good scream.', 8], [null, 'Bleed for me. Every drop is a verdict.', 9],
+        [null, 'My father kept a list of everyone who stopped him. I have crossed out every name but yours.', 10], [null, 'Crawl. I want Moscow to watch you crawl.', 11],
+        [null, 'The Great Trial has no defence. Only a sentence.', 12]],
+      phase2: [null, 'Good. You hurt me. Now I will make you beg for the end.', 13],
+      kill: [null, 'Sentence carried out. I will lay you on my father\'s grave.', 14],
+      death: [null, 'Father... the trial... is not... finished...', 15] } },
     intro() { if (asThomas()) say5(6, 'radio', 'Hawthorne. Orlov is dug in on Red Square. Take the Kremlin.', 4.5);
       else say5(5, 'radio', 'Mascar. Orlov is dug in on Red Square. Command wants the Kremlin by nightfall.', 5); },
     beacon() { }, bossIntro() { }, phase2() { },
@@ -339,15 +347,15 @@ window.LEVELS = {
     choice: null, ambience: 'ash', env: LONDON_DAWN,
     get voice() {
       const b = part5().boss;
-      if (b === 'orion') return { who: 'orion', lang: null, file: null, vo: 5, lines: { intro: [null, 'You were always the better of us, Tom. That\'s why it has to be you.', 12],
-        death: GM.save.child === 'born' ? [null, '...Look after them, Tom. Croxian... look after him.', 13] : [null, '...Finish it.', 14] } };
-      if (b === 'thomas') return { who: 'thomas', lang: null, file: null, vo: 5, lines: { intro: [null, 'You taught me everything, Commander. Even this.', 15], death: [null, '...I just wanted it to be over.', 16] } };
-      return { who: 'josiah', lang: null, file: null, vo: 5, lines: { intro: [null, 'I gave you every order you ever followed, Mascar. Here is the last one: kneel.', 17], death: [null, 'You\'ll find... the war doesn\'t end with me.', 18] } };
+      if (b === 'orion') return { who: 'orion', lang: null, file: null, vo: 5, lines: { intro: [null, 'You were always the better of us, Tom. That\'s why it has to be you.', 19],
+        death: GM.save.child === 'born' ? [null, '...Look after them, Tom. Croxian... look after him.', 20] : [null, '...Finish it.', 21] } };
+      if (b === 'thomas') return { who: 'thomas', lang: null, file: null, vo: 5, lines: { intro: [null, 'You taught me everything, Commander. Even this.', 22], death: [null, '...I just wanted it to be over.', 23] } };
+      return { who: 'josiah', lang: null, file: null, vo: 5, lines: { intro: [null, 'I gave you every order you ever followed, Mascar. Here is the last one: kneel.', 24], death: [null, 'You\'ll find... the war doesn\'t end with me.', 25] } };
     },
     intro() { const b = part5().boss;
-      if (b === 'orion') say5(9, 'radio', 'Hawthorne... Mascar has taken the city. He isn\'t the Commander any more. Bring him down.', 6);
-      else if (b === 'thomas') say5(10, 'radio', 'Mascar. It\'s Hawthorne. He\'s holding the cathedral plaza, and he isn\'t answering us.', 5.5);
-      else say5(11, 'thomas', 'Williams is in the cathedral plaza, Orion. All of Command is with him.', 4.5); },
+      if (b === 'orion') say5(16, 'radio', 'Hawthorne... Mascar has taken the city. He isn\'t the Commander any more. Bring him down.', 6);
+      else if (b === 'thomas') say5(17, 'radio', 'Mascar. It\'s Hawthorne. He\'s holding the cathedral plaza, and he isn\'t answering us.', 5.5);
+      else say5(18, 'thomas', 'Williams is in the cathedral plaza, Orion. All of Command is with him.', 4.5); },
     beacon() { }, bossIntro() { }, phase2() { },
     victory() { const b = part5().boss;
       return { banner: b === 'orion' ? ['ORION MASCAR DEFEATED', 'NEW LONDON IS FREE'] : b === 'thomas' ? ['THOMAS HAWTHORNE DEFEATED', 'NEW LONDON IS QUIET'] : ['JOSIAH WILLIAMS I DEFEATED', 'BRITISH COMMAND HAS FALLEN'], endIn: 7 }; },
