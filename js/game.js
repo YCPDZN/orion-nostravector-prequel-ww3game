@@ -523,7 +523,7 @@ function nextCrawl() {
     else banner(ch.title.toUpperCase(), `CHAPTER ${ch.numeral} · ${ch.place.toUpperCase()}, ${ch.date.toUpperCase()}`, 'gold', 4.5); return; }
   const p = ps[crawlIdx]; GM._crawlFade = setTimeout(() => { if (GM.state === 'crawl') p.style.opacity = 1; }, crawlIdx ? 700 : 200);
   let ms = 1800 + p.textContent.length * 55;
-  const vn = +p.dataset.vo; if (GM.vo(vn)) { playVoice(GM.vo(vn)); ms = Math.max(ms, (window.DOVER_VO[vn] + 1.1) * 1000); } // narrated line
+  const vn = +p.dataset.vo; if (GM.vo(vn)) { playVoice(GM.vo(vn)); ms = Math.max(ms, (GM.voDur(vn, 0) + 0.7) * 1000); } // narrated line
   crawlTimer = setTimeout(nextCrawl, ms);
 }
 function endCrawl() { if (GM.state === 'crawl') nextCrawl(); }
