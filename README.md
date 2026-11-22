@@ -39,6 +39,12 @@ The game is split into chapters, each a self-contained mission. Pick one from **
 
 Chapter I begins with a first-person memory: Orion recalls his birth in London in 2069 AD, shown as a soft, out-of-focus dream with a heartbeat, narrated by Orion (voice/intro1-6.mp3). Each chapter then opens with its own title card and prologue and ends with a *Chapter Complete* screen showing your time, kills, deaths and rank. Replaying a chapter keeps Orion's rank and upgrades. Chapters are defined in `js/chapters.js`.
 
+## Alignment
+Orion's choices decide who he becomes, and Thomas follows his lead. Both start **Neutral (yellow)** and can end up **Good (blue)** or **Evil (red)**.
+- Chapter I has four moral choices, each with a good, neutral and evil option: *Survivors in the Rubble*, *The Pilot*, *The Field Hospital* and *The Warden's Core*. Walk up to the glowing spot and press **Investigate** (E / ACT).
+- Every choice moves Orion's alignment, and moves Thomas's by 90% as much. Evil choices pay in scrap and stims; good ones cost you.
+- You can see alignment in the HUD chips under the health bars, the colour of Orion's sabre and Thomas's rifle stripe, Thomas's reactions, the Codex, and the Chapter Complete screen (with an ending line for Orion's path). It is kept in your save slots.
+
 ## Souls-like systems
 - **Stamina** for every swing, roll and block. Run dry and your guard breaks.
 - **Stims** (your flasks) refill at **Signal Beacons**. Resting also respawns every war machine.
@@ -67,6 +73,7 @@ js/game.js            input (keyboard, touch, gamepad), camera, HUD, saves, stor
 js/audio.js           procedural sound effects, ambience and music
 js/chapters.js        chapter list: titles, openings, prologues, summaries
 js/opening.js         the dreamlike first-person opening scene
+js/alignment.js       alignment system and the moral choices
 js/codex.js           the Codex: character and adversary entries with 3D turntables
 voice/01-17.mp3       voiced dialogue lines (played with the subtitles)
 voice/warden01-11.mp3 the Iron Warden's Mandarin lines

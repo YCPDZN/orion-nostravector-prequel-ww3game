@@ -180,12 +180,13 @@ A.Player = class {
     this.syncNode();
     // sword glow light and trail
     const tg = this.swordLit ? 1 : 0; this.glowAmt = OE.lerp(this.glowAmt || 0, tg, Math.min(1, dt * 18));
-    this.swordGlow.mat.emissive = [0.6 + 2.4 * this.glowAmt, 2.2 + 3 * this.glowAmt, 3.2 + 3.5 * this.glowAmt];
+    const AT = GM.align ? GM.align.info('o') : { glow: [0.6, 2.2, 3.2], light: [0.3, 0.8, 1.0], trail: [0.35, 1.1, 2.0] }; // blade colour follows Orion's alignment
+    this.swordGlow.mat.emissive = AT.glow.map((c) => c * (1 + 1.1 * this.glowAmt)); this.light.color = AT.light;
     M4.point(this.tipW, this.sword.world, [0, 0, 1.25]); M4.point(this.baseW, this.sword.world, [0, 0, 0.3]);
     this.light.pos = [(this.tipW[0] + this.baseW[0]) / 2, (this.tipW[1] + this.baseW[1]) / 2, (this.tipW[2] + this.baseW[2]) / 2];
     this.light.intensity = 0.12 + this.glowAmt * 2.2;
     if (this.glowAmt > 0.3) {
-      for (let i = 0; i < 4; i++) { const u = rnd(); GM.parts.emit({ pos: [OE.lerp(this.baseW[0], this.tipW[0], u), OE.lerp(this.baseW[1], this.tipW[1], u), OE.lerp(this.baseW[2], this.tipW[2], u)], vel: [0, 0, 0], life: 0.14, size: 0.03, col: [0.35, 1.1, 2.0, 0.55], soft: 0.0, fade: 1 }); }
+      for (let i = 0; i < 4; i++) { const u = rnd(); GM.parts.emit({ pos: [OE.lerp(this.baseW[0], this.tipW[0], u), OE.lerp(this.baseW[1], this.tipW[1], u), OE.lerp(this.baseW[2], this.tipW[2], u)], vel: [0, 0, 0], life: 0.14, size: 0.03, col: [AT.trail[0], AT.trail[1], AT.trail[2], 0.55], soft: 0.0, fade: 1 }); }
     }
   }
   stepSound(dt, speed) {
@@ -237,7 +238,7 @@ A.Companion = class {
     this.ch = new OE.Character(asset, { rim: 0.06 }); this.node = this.ch.node; OE.scene.add(this.node);
     this.pos = [1.5, 0, -1.5]; this.yaw = 0; this.state = 'follow'; this.t = 0; this.cool = 1; this.maxHp = 780; this.hp = 780; // 3x durability this.alive = true; this.radius = 0.42;
     const rf = new OE.Node(rifleMesh, metalMat()); rf.mat.color = [0.7, 0.7, 0.72];
-    const rg = new OE.Node(rifleGlow, { mode: 2, color: [0, 0, 0], emissive: [3, 0.6, 0.2] }); rg.castShadow = false; rf.add(rg);
+    const rg = new OE.Node(rifleGlow, { mode: 2, color: [0, 0, 0], emissive: [3, 0.6, 0.2] }); rg.castShadow = false; rf.add(rg); this.rifleGlowNode = rg;
     // the rifle is aimed procedurally: grip sits in the right hand, barrel points along the aim direction
     this.aimDir = [0, 0, 1]; this.aimBlend = 0; this.recoil = 0; this._rm = M4.create(); this._hm = M4.create(); this._hp = [0, 0, 0];
     this.rifleModel = M4.create(); this._rw = M4.create();
@@ -357,6 +358,7 @@ A.Companion = class {
   }
   sync() {
     this.node.pos = this.pos; Q.yaw(this.node.rot, this.yaw);
+    if (GM.align && this.rifleGlowNode) this.rifleGlowNode.mat.emissive = GM.align.info('t').glow; // rifle stripe follows Thomas's alignment
     if (!this.alive) return;
     // aim direction from world into Thomas's model space
     const c = Math.cos(this.yaw), s = Math.sin(this.yaw), d = this.aimDir;

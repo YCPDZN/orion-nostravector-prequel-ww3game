@@ -11,7 +11,7 @@ const SET_KEY = 'orion_ww3_settings', SAVE_KEY = 'orion_ww3_save';
 const load = (k, d) => { try { return Object.assign({}, d, JSON.parse(localStorage.getItem(k) || '{}')); } catch (e) { return Object.assign({}, d); } };
 const store = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
 GM.settings = load(SET_KEY, { quality: 'auto', sens: 5, inv: false, vol: 8, touch: 'auto' });
-const NEW_SAVE = { started: false, chapter: 1, done: {}, stats: { time: 0, deaths: 0, kills: 0 }, vig: 0, end: 0, str: 0, rank: 1, scrap: 0, maxStims: 4, beacon: 0, lit: [true, false], bossDead: false, echo: null, seen: {} };
+const NEW_SAVE = { started: false, align: { o: 0, t: 0 }, choices: {}, chapter: 1, done: {}, stats: { time: 0, deaths: 0, kills: 0 }, vig: 0, end: 0, str: 0, rank: 1, scrap: 0, maxStims: 4, beacon: 0, lit: [true, false], bossDead: false, echo: null, seen: {} };
 GM.save = JSON.parse(JSON.stringify(NEW_SAVE));
 GM.persist = () => { }; // no autosave: progress is only written when the player saves
 const SLOT_KEY = 'orion_ww3_slots', NSLOTS = 3;
@@ -52,7 +52,7 @@ GM.boot = async function () {
     OE.init($('c'), QUALITY[qName()]);
     OE.scene = new OE.Node();
     msg('Building New London', 0.15); await tick();
-    W.build();
+    W.build(); GM.align.build();
     msg('Loading Orion Mascar', 0.45); await tick();
     const dec = (s) => { const b = atob(s); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u.buffer; };
     const orion = await OE.loadGLB(dec(ORION_MODELS.orion));
@@ -84,6 +84,7 @@ function spawnPoint() {
 }
 function respawnAll(first) {
   try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) { }
+  if (GM.align) GM.align.hud(true);
   const sp = spawnPoint();
   GM.player.reset(sp.pos, sp.yaw);
   GM.companion.reset([sp.pos[0] - 1.6, 0, sp.pos[2] - 0.8]);
@@ -396,8 +397,11 @@ function chapterComplete() {
   S.done = S.done || {}; S.done[c.id] = { time: S.stats.time, deaths: S.stats.deaths, kills: S.stats.kills, rank: S.rank }; GM.persist();
   GM.state = 'complete'; hudVisible(false); if (document.pointerLockElement) document.exitPointerLock();
   $('cmpNum').textContent = `CHAPTER ${c.numeral} COMPLETE`; $('cmpTitle2').textContent = c.title;
-  $('cmpStats').innerHTML = [['Time', fmtTime(S.stats.time)], ['War machines destroyed', S.stats.kills], ['Times killed in action', S.stats.deaths], ['Rank', S.rank]]
-    .map(([k, v]) => `<div class="row"><span>${k}</span><span class="v">${v}</span></div>`).join('');
+  $('cmpStats').innerHTML = [['Time', fmtTime(S.stats.time)], ['War machines destroyed', S.stats.kills], ['Times killed in action', S.stats.deaths], ['Rank', S.rank],
+    ['Orion', GM.align.chip('', 'o')], ['Thomas', GM.align.chip('', 't')]]
+    .map(([k, v]) => `<div class="row"><span>${k}</span><span class="v">${v}</span></div>`).join('') +
+    `<div class="small" style="margin-top:10px;font-style:italic;text-align:center">${{ good: 'London will remember the commander who fought for its people.', neutral: 'A soldier who did his duty — no more, no less.', evil: 'London is free. But the man who freed it is not the man who arrived.' }[GM.align.tier('o')]}</div>`;
+  S.done[c.id].align = GM.align.tier('o');
   const next = CHAPTERS.find((x) => x.id === c.id + 1);
   $('cmpNext').textContent = next ? (next.available ? `Next: Chapter ${next.numeral} — ${next.title}` : `Chapter ${next.numeral}: ${next.summary}`) : '';
   $('banner').style.opacity = 0; show('complete'); AU.beacon();
@@ -485,7 +489,7 @@ function updateHud(dt) {
   $('stb').querySelector('i').style.transform = `scaleX(${Math.max(0, P.stam / P.maxStam)})`;
   const st = $('stims'); const key = P.stims + '/' + GM.save.maxStims;
   if (st.dataset.k !== key) { st.dataset.k = key; st.innerHTML = Array.from({ length: GM.save.maxStims }, (_, i) => `<div class="vial ${i < P.stims ? '' : 'empty'}"></div>`).join('') + `<span>STIM ×${P.stims}</span>`; }
-  $('scrapv').textContent = GM.save.scrap;
+  $('scrapv').textContent = GM.save.scrap; GM.align.hud();
   if (GM.inBoss && boss) { $('bossbar').querySelector('i').style.transform = `scaleX(${Math.max(0, boss.hp / boss.maxHp)})`; $('bossbar').querySelector('b').style.transform = `scaleX(${Math.max(0, boss.hp / boss.maxHp)})`; }
   // subtitles
   subT -= dt; const sub = $('sub');
@@ -619,10 +623,12 @@ function interactables() {
   const P = GM.player; let best = null;
   W.beacons.forEach((b, i) => { const d = Math.hypot(P.pos[0] - b.pos[0], P.pos[2] - b.pos[2]); if (d < 2.4) best = { type: 'beacon', b, i, label: b.lit ? 'Rest at beacon' : 'Light the beacon' }; });
   if (!GM.save.bossDead && !GM.inBoss && Math.abs(P.pos[0]) < 4 && P.pos[2] > 118.5 && P.pos[2] < 122) best = { type: 'gate', label: 'Pass through the fog' };
+  if (!best) best = GM.align.nearby(P.pos);
   return best;
 }
 function doInteract(it) {
   const P = GM.player;
+  if (it.type === 'choice') { $('prompt').classList.add('hidden'); GM.align.open(it.id); return; }
   if (it.type === 'beacon') {
     const first = !it.b.lit;
     GM.save.lit[it.i] = true; GM.save.beacon = it.i; setBeaconLit(it.b, true);
@@ -718,7 +724,7 @@ function step(dt, inp) {
     GM.cam.shadowCenter = P.pos; P.ch.update(dt); GM.companion.ch.update(dt); P.syncNode(); GM.companion.sync();
     for (const e of GM.enemies) e.update(0);
   } else if (st === 'play' || st === 'dead') {
-    if (st === 'play') { GM.save.stats.time += dt; if (GM.chapterEndT > 0) { GM.chapterEndT -= dt; if (GM.chapterEndT <= 0) chapterComplete(); } }
+    if (st === 'play') { GM.save.stats.time += dt; if (GM.chapterEndT > 0) { GM.chapterEndT -= dt; if (GM.chapterEndT <= 0) GM.align.open('core', chapterComplete); } }
     if (inp.lock) toggleLock();
     const P = GM.player;
     if (P.state === 'rest') P.setState('move', null);
@@ -739,6 +745,7 @@ function step(dt, inp) {
     $('tb_interact') && $('tb_interact').classList.toggle('hidden', !it);
     if (!P.alive) OE.R.desat = Math.min(0.85, OE.R.desat + dt * 0.4);
     if (st === 'dead') updateDeath(dt);
+    GM.align.markers(time);
     if (!GM.debug || !GM.debug.freeze) updateCamera(dt, st === 'play' ? inp : { cx: 0, cy: 0 });
     updateHud(dt);
   } else {
@@ -755,6 +762,6 @@ function step(dt, inp) {
   W.update(sdt, time, { parts: GM.parts, camPos: GM.cam.pos });
   GM.parts.update(sdt);
 }
-GM.ui = { show, hudVisible };
+GM.ui = { show, hudVisible, lock: lockPointer };
 GM.debug = { sim(sec, inpF) { GM.simulating = true; const n = Math.round(sec * 60); for (let i = 0; i < n; i++) step(1 / 60, Object.assign({ mx: 0, my: 0, cx: 0, cy: 0 }, inpF ? inpF(i) : {})); GM.simulating = false; }, startPlay, respawnAll, doInteract, interactables, toggleLock, show, banner, get boss() { return boss; } };
 })();

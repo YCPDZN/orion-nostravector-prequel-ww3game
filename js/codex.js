@@ -13,7 +13,7 @@ const ENTRIES = [
       'He enlisted the day he was old enough and rose faster than anyone in British Command\'s history. At twenty-one he is its youngest commander: trusted, feared, and — some whisper — sent where older officers will not go.',
       'When London fell in a single night, Command gave him one order: break the siege of New London and destroy the Iron Warden. His dropship never reached the line. He walked the rest of the way.',
     ],
-    combat: 'Fights with a thermal sabre whose edge burns cyan as it strikes. Light attacks chain into combos; the heavy overhead trades speed for raw damage. Rolling, blocking and stims keep him standing — but stamina decides every exchange.',
+    combat: 'Fights with a thermal sabre whose edge burns with the colour of his conscience — blue, gold or red. Light attacks chain into combos; the heavy overhead trades speed for raw damage. Rolling, blocking and stims keep him standing — but stamina decides every exchange.',
     quote: 'Ten years of war won\'t end tonight, Tom. But tonight, London breathes.',
     show: ['Idle', 'Attack1', 'Attack2', 'Heavy', 'Block'] },
   { id: 'thomas', sec: 'CHARACTERS', name: 'Thomas Hawthorne', role: 'Apprentice · British Command', model: 'thomas', h: 1.82,
@@ -105,7 +105,7 @@ function select(id) {
   if (locked) { b.innerHTML = `<h1>???</h1><div class="cx-role">Unknown</div><p class="cx-lockedmsg">Not yet encountered. Venture further into New London to learn more.</p>`; }
   else {
     b.innerHTML = `<h1>${e.name}</h1><div class="cx-role">${e.role}</div>
-      <dl class="cx-facts">${e.facts.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
+      <dl class="cx-facts">${e.facts.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}${e.id === 'orion' || e.id === 'thomas' ? `<dt>Alignment</dt><dd>${GM.align.chip('', e.id === 'orion' ? 'o' : 't')}</dd>` : ''}</dl>
       ${e.lore.map((p) => `<p>${p}</p>`).join('')}
       <h3>IN COMBAT</h3><p>${e.combat}</p>${e.quote ? `<p class="cx-quote">“${e.quote}”</p>` : ''}`;
   }
