@@ -34,18 +34,20 @@ const ENTRIES = [
       'At Dover she met Orion Mascar, and took his left eye.',
     ],
     fate: { fled: 'She walked out of Dover Castle alive. What Orion told her before she went, only the two of them know.', executed: 'She died in the inner bailey of Dover Castle, at Orion\'s hand.' },
+    fate3: { saved: 'In Normandy he beat her a second time, and held out his hand instead of his sword. She took it.', command: 'In Normandy he beat her a second time and handed her to British Command.', dead: 'In Normandy he beat her a second time, and she died in the church square.' },
     quote: 'Then let me leave you something to remember me by.',
     combat: 'A duelist, not a machine. She circles out of reach, parries quick strikes and answers with a riposte, and rolls clear of anything she sees coming. Heavy attacks break through her guard. At half strength she drops the act: she gets faster and finishes her combos with an unblockable lunge.',
     show: ['Idle', 'Attack1', 'Attack2', 'Heavy', 'Block', 'Idle'] },
-  { id: 'ines', sec: 'ADVERSARIES', name: 'Inés Alvarez', role: 'Talina\'s Twin', model: 'talina', h: 1.72, unlock: 'boss3i',
-    facts: [['Born', 'Seville, Spain'], ['Sister', 'Talina Alvarez (twin)'], ['Allegiance', 'Sino-Russian Pact'], ['Weapon', 'Thermal sabre (her sister\'s style)']],
+  { id: 'ines', sec: 'ADVERSARIES', name: 'Inés Alvarez', role: 'Talina\'s Twin', model: 'ines', h: 1.72, unlock: 'boss3i',
+    facts: [['Born', 'Seville, Spain'], ['Sister', 'Talina Alvarez (twin)'], ['Allegiance', 'Sino-Russian Pact'], ['Weapon', 'Twin thermal sabres']],
     lore: [
       'Talina\'s twin. Where Talina went to London and British Command, Inés stayed in Seville, until the war took everything there too.',
       'When word reached her of how her sister died at Dover, she asked the Pact for one thing: Normandy, and the man with one eye.',
     ],
     quote: 'Look at me. Do you see her?',
-    combat: 'She fights exactly as her sister did: circling, parrying quick strikes into a riposte, rolling clear of anything telegraphed. Heavy attacks break her guard. At half strength she abandons caution entirely.',
-    show: ['Idle', 'Attack1', 'Attack2', 'Heavy', 'Block', 'Idle'] },
+    combat: 'Her sister\'s footwork with twice the fury and twice the strength. Two blades: she parries, ripostes and rolls clear like Talina did, but she also spins, both sabres out, cutting anything close. Back off when she starts to turn. At half strength she spins more and abandons caution entirely.',
+    fate: { companion: 'At Normandy, Orion spared her. She fights beside him now, and has not forgiven him.', command: 'At Normandy, Orion handed her to British Command.', dead: 'She died in the church square at Normandy, at Orion\'s hand, beside her sister\'s killer.' }, fateKey: 'ines',
+    show: ['Idle', 'Attack1', 'SpinPose', 'Attack2', 'Heavy', 'Idle'] },
   { id: 'boss', sec: 'ADVERSARIES', name: 'The Iron Warden', role: 'Last Sentinel of the Sino-Russian Pact', enemy: 'boss', h: 4.7, unlock: 'boss',
     facts: [['Class', 'Siege sentinel'], ['Height', '4.6 m'], ['Armament', 'Breaching cleaver, orbital uplink'], ['Origin', 'Sino-Russian Pact'], ['Voice', 'Mandarin Chinese']],
     lore: [
@@ -92,13 +94,17 @@ function build() {
   const sw = new OE.Node(Wp.swordMesh, Wp.metalMat()); const sg = new OE.Node(Wp.swordGlow, { mode: 2, color: [0, 0, 0], emissive: [1.2, 3.6, 5] }); sw.add(sg); sg.castShadow = false;
   const hm = M4.create(); sw.attach = () => o.boneWorld('R_Hand', hm); sw.pos = [0, -0.085, 0.02]; o.node.add(sw);
   C.models.orion = { ch: o, node: o.node };
-  const swordChar = (asset, glow) => { // another sword-bearer: eyepatch Orion, Talina
+  const swordChar = (asset, glow, dual) => { // another sword-bearer: eyepatch Orion, Talina, Ines (two blades)
     const c = new OE.Character(asset, { rim: 0.06 }); root.add(c.node);
-    const s2 = new OE.Node(Wp.swordMesh, Wp.metalMat()); const g2 = new OE.Node(Wp.swordGlow, { mode: 2, color: [0, 0, 0], emissive: glow }); s2.add(g2); g2.castShadow = false;
-    const m2 = M4.create(); s2.attach = () => c.boneWorld('R_Hand', m2); s2.pos = [0, -0.085, 0.02]; c.node.add(s2); return { ch: c, node: c.node };
+    for (const hand of dual ? ['R_Hand', 'L_Hand'] : ['R_Hand']) {
+      const s2 = new OE.Node(Wp.swordMesh, Wp.metalMat()); const g2 = new OE.Node(Wp.swordGlow, { mode: 2, color: [0, 0, 0], emissive: glow }); s2.add(g2); g2.castShadow = false;
+      const m2 = M4.create(); s2.attach = () => c.boneWorld(hand, m2); s2.pos = [0, -0.085, 0.02]; c.node.add(s2);
+    }
+    return { ch: c, node: c.node };
   };
   C.models.orionEye = swordChar(GM.assets.orionEye, [1.2, 3.6, 5]);
   C.models.talina = swordChar(GM.assets.talina, [2.2, 0.35, 2.8]);
+  C.models.ines = swordChar(GM.assets.ines, [3.0, 0.3, 1.1], true);
   // Thomas with rifle (aimed procedurally, like in game)
   const t = new OE.Character(GM.assets.thomas, { rim: 0.06 }); root.add(t.node);
   const rf = new OE.Node(Wp.rifleMesh, Wp.metalMat()); rf.mat.color = [0.7, 0.7, 0.72];
@@ -142,7 +148,7 @@ function select(id) {
   else {
     b.innerHTML = `<h1>${e.name}</h1><div class="cx-role">${e.role}</div>
       <dl class="cx-facts">${e.facts.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}${e.id === 'orion' || e.id === 'thomas' ? `<dt>Alignment</dt><dd>${GM.align.chip('', e.id === 'orion' ? 'o' : 't')}</dd>` : ''}</dl>
-      ${e.lore.concat(e.fate && GM.save.talina && e.fate[GM.save.talina] ? [e.fate[GM.save.talina]] : []).map((p) => `<p>${p}</p>`).join('')}
+      ${e.lore.concat(e.fate && GM.save[e.fateKey || 'talina'] && e.fate[GM.save[e.fateKey || 'talina']] ? [e.fate[GM.save[e.fateKey || 'talina']]] : []).concat(e.fate3 && GM.save.talina3 && e.fate3[GM.save.talina3] ? [e.fate3[GM.save.talina3]] : []).map((p) => `<p>${p}</p>`).join('')}
       <h3>IN COMBAT</h3><p>${e.combat}</p>${e.quote ? `<p class="cx-quote">“${e.quote}”</p>` : ''}`;
   }
   b.scrollTop = 0; renderTabs();

@@ -49,6 +49,7 @@ CHARS['TalinaAlvarez'] = dict(joints=_t, ends=_te,
           'L_UpperArm': .046, 'L_ForeArm': .042, 'L_Hand': .036, 'L_UpLeg': .062, 'L_Leg': .05, 'L_Foot': .046, 'L_Toe': .036}),
    cloak=True, arm_cut=1.25)
 CHARS['OrionEyepatch'] = CHARS['OrionMascar']  # same body, new face
+CHARS['InesAlvarez'] = CHARS['TalinaAlvarez']  # Talina's twin: same build and stance
 CHILD_FOR_SEG = {'Hips': None, 'Spine': 'Chest', 'Chest': 'Neck', 'Neck': 'Head', 'Head': None,
                  'L_Shoulder': 'L_UpperArm', 'L_UpperArm': 'L_ForeArm', 'L_ForeArm': 'L_Hand', 'L_Hand': None,
                  'R_Shoulder': 'R_UpperArm', 'R_UpperArm': 'R_ForeArm', 'R_ForeArm': 'R_Hand', 'R_Hand': None,
@@ -315,9 +316,9 @@ if __name__ == '__main__':
     out = sys.argv[1] if len(sys.argv) > 1 else './work/out'
     import os; os.makedirs(out, exist_ok=True)
     names = sys.argv[2].split(',') if len(sys.argv) > 2 else ['OrionMascar', 'ThomasHawthorne']
-    HT = {'TalinaAlvarez': 1.72}
+    HT = {'TalinaAlvarez': 1.72, 'InesAlvarez': 1.72}
     for name in names:
-        cs = anims.rifle_set() if name == 'ThomasHawthorne' else anims.duelist_set() if name == 'TalinaAlvarez' else anims.sword_set()
+        cs = anims.rifle_set() if name == 'ThomasHawthorne' else anims.duelist_set() if name == 'TalinaAlvarez' else anims.ines_set() if name == 'InesAlvarez' else anims.sword_set()
         sc = HT.get(name, H) / 0.98
         nv, nf = build(name, f'./work/{name}_raw.npz', f'./work/{name}', f'{out}/{name}_rigged.glb', sc, cs)
         print(name, nv, nf, os.path.getsize(f'{out}/{name}_rigged.glb') // 1024, 'KB')

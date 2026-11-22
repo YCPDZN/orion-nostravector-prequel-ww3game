@@ -79,10 +79,17 @@ GM.loadLevel = function (id) {
     const before = new Set(OE.R.lights), prevScene = OE.scene, root = new OE.Node(); OE.scene = root;
     const st = W.make(id), def = LEVELS[id];
     const enemies = def.spawns.map(([t, p]) => new A.Enemy(t, p, Math.PI));
-    const b = def.boss.duelist ? new A.Duelist(GM.assets[def.boss.duelist], def.boss.pos, Math.PI, def.boss.T) : new A.Enemy(def.boss.type, def.boss.pos, Math.PI); enemies.push(b);
+    const mk = (bd) => bd.duelist ? new A.Duelist(GM.assets[bd.duelist], bd.pos, Math.PI, bd.T) : new A.Enemy(bd.type, bd.pos, Math.PI);
+    const b = mk(def.boss), alt = def.bossAlt ? mk(def.bossAlt) : null; // bossAlt: a different boss when its condition holds (Ines for Talina)
     const env = clone(GM.baseEnv); if (def.env) Object.assign(env, clone(def.env));
-    L = GM.levels[id] = { id, def, root, st, enemies, boss: b, env, lights: OE.R.lights.filter((l) => !before.has(l)) };
+    L = GM.levels[id] = { id, def, root, st, base: enemies, enemies: enemies.concat([b]), boss: b, main: b, alt, env, lights: OE.R.lights.filter((l) => !before.has(l)) };
     OE.scene = prevScene;
+  }
+  if (L.alt) { // which of the level's bosses waits at the end of it this time
+    const useAlt = !!L.def.bossAlt.when(), on = useAlt ? L.alt : L.main, off = useAlt ? L.main : L.alt;
+    off.node.visible = false; off.alive = false; off.state = 'dead'; if (off.light) off.light.intensity = 0;
+    if (L.boss !== on) { on.node.visible = true; on.reset(); }
+    L.boss = on; L.enemies = L.base.concat([on]); if (LV === L) { GM.enemies = L.enemies; boss = GM.boss = on; }
   }
   if (LV !== L) {
     if (LV) OE.R.lights = OE.R.lights.filter((l) => !LV.lights.includes(l));
@@ -113,8 +120,8 @@ GM.boot = async function () {
     msg('Waking the war machines', 0.9); await tick();
     GM.parts = new OE.Particles(QUALITY[qName()].particles);
     msg('Loading Talina Alvarez', 0.8); await tick();
-    const orionEye = await OE.loadGLB(dec(ORION_MODELS.orionEye)), talina = await OE.loadGLB(dec(ORION_MODELS.talina));
-    GM.assets = { orion, thomas, orionEye, talina };
+    const orionEye = await OE.loadGLB(dec(ORION_MODELS.orionEye)), talina = await OE.loadGLB(dec(ORION_MODELS.talina)), ines = await OE.loadGLB(dec(ORION_MODELS.ines));
+    GM.assets = { orion, thomas, orionEye, talina, ines };
     GM.heroes.orion = GM.player = new A.Player(orion); GM.companion = new A.Companion(thomas);
     msg('Building New London', 0.95); await tick();
     GM.loadLevel(1);
@@ -431,7 +438,7 @@ function startChapter(n, opts = {}) {
   const choices = clone(S0.choices || {}); // choices already made stay made, so a replay doesn't shift alignment twice
   const seen = clone(S0.seen || {});
   for (const id of Object.keys(LEVELS)) if (String(id)[0] === String(n)) { delete seen[introKey(isNaN(id) ? id : +id)]; delete seen['talk_' + LEVELS[id].boss.seen]; }
-  const keep = { vig: S0.vig, end: S0.end, str: S0.str, rank: S0.rank, maxStims: S0.maxStims, done: S0.done || {}, align, alignAt, choices, seen, eye: !!S0.eye, reached: S0.reached || {}, talina: S0.talina };
+  const keep = { vig: S0.vig, end: S0.end, str: S0.str, rank: S0.rank, maxStims: S0.maxStims, done: S0.done || {}, align, alignAt, choices, seen, eye: !!S0.eye, reached: S0.reached || {}, talina: S0.talina, talina3: S0.talina3, ines: S0.ines };
   GM.save = Object.assign(clone(NEW_SAVE), keep, { started: true, chapter: n, part: opts.part || 1 });
   GM.save.stats = { time: 0, deaths: 0, kills: 0 };
   if (opts.part === 2) { GM.save.eyeLost = true; GM.save.eye = true; }
@@ -497,7 +504,7 @@ function chapterComplete() {
   $('cmpStats').innerHTML = [['Time', fmtTime(S.stats.time)], ['War machines destroyed', S.stats.kills], ['Times killed in action', S.stats.deaths], ['Rank', S.rank],
     ['Orion', GM.align.chip('', 'o')], ['Thomas', GM.align.chip('', 't')]]
     .map(([k, v]) => `<div class="row"><span>${k}</span><span class="v">${v}</span></div>`).join('') +
-    `<div class="small" style="margin-top:10px;font-style:italic;text-align:center">${LV.def.endings[GM.align.tier(LV.def.endingBy || 'o')]}</div>`;
+    `<div class="small" style="margin-top:10px;font-style:italic;text-align:center">${LV.def.ending ? LV.def.ending(GM.save) : LV.def.endings[GM.align.tier(LV.def.endingBy || 'o')]}</div>`;
   S.done[c.id].align = GM.align.tier('o');
   S.alignAt = S.alignAt || {}; S.alignAt[c.id + 1] = clone(S.align); // the next chapter starts from how this one ended
   const next = CHAPTERS.find((x) => x.id === c.id + 1);

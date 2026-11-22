@@ -339,6 +339,10 @@ A.Duelist = class {
     const sw = new OE.Node(swordMesh, metalMat()); const gl = new OE.Node(swordGlow, { mode: 2, color: [0, 0, 0], emissive: T.glow });
     sw.add(gl); gl.castShadow = false; sw.attach = () => this.ch.boneWorld('R_Hand', this._hm || (this._hm = M4.create()));
     sw.pos = [0.0, -0.085, 0.02]; this.node.add(sw); this.sword = sw; this.swordGlow = gl; this.tipW = [0, 0, 0]; this.baseW = [0, 0, 0];
+    if (T.dual) { // a second blade in the left hand (Ines)
+      const s2 = new OE.Node(swordMesh, metalMat()); const g2 = new OE.Node(swordGlow, { mode: 2, color: [0, 0, 0], emissive: T.glow }); s2.add(g2); g2.castShadow = false;
+      s2.attach = () => this.ch.boneWorld('L_Hand', this._hm2 || (this._hm2 = M4.create())); s2.pos = [0.0, -0.085, 0.02]; this.node.add(s2); this.sword2 = s2; this.swordGlow2 = g2; this.tip2 = [0, 0, 0]; this.base2 = [0, 0, 0];
+    }
     this.light = { pos: [0, 1, 0], color: T.light, intensity: 0, range: 4 }; OE.R.lights.push(this.light);
     this.reset();
   }
@@ -346,7 +350,8 @@ A.Duelist = class {
     this.pos = this.home.slice(); this.yaw = this.homeYaw; this.maxHp = this.T.hp; this.hp = this.T.hp; this.alive = true; this.active = false;
     this.state = 'idle'; this.t = 0; this.cd = 1; this.phase2 = false; this.showBar = 0; this.poiseDmg = 0; this.combo = []; this.circ = 1; this.iframe = false;
     this.node.visible = true; this.ch.play('Idle', 0); this.lit = 0; this.deadT = 0;
-    this.T = this.T0 || (this.T0 = this.T); if (this.sword) this.sword.visible = true; // undo any cutscene changes
+    this.T = this.T0 || (this.T0 = this.T); if (this.sword) this.sword.visible = true; if (this.sword2) this.sword2.visible = true; // undo any cutscene changes
+    this.spinA = 0;
   }
   hitY() { return 1.15; }
   get spd() { return this.phase2 ? 1.22 : 1; }
@@ -369,19 +374,23 @@ A.Duelist = class {
     return true;
   }
   defeat() { // she doesn't die: she drops to one knee
-    this.alive = false; this.state = 'defeated'; this.t = 0; this.ch.play('Kneel', 0.15, 1, true); this.lit = 0; GM.onEnemyKilled(this);
+    this.spinA = 0; this.alive = false; this.state = 'defeated'; this.t = 0; this.ch.play('Kneel', 0.15, 1, true); this.lit = 0; GM.onEnemyKilled(this);
   }
   startCombo() {
+    if (this.T.spin && rnd() < (this.phase2 ? 0.5 : 0.3)) { this.startSpin(); return; }
     const r = rnd(); const p2 = this.phase2;
     this.combo = r < 0.35 ? ['Attack1', 'Attack2'] : r < 0.6 ? ['Attack1', 'Attack2', p2 ? 'Heavy' : 'Attack1'] : r < 0.8 ? ['Attack2', 'Attack1'] : ['Heavy'];
     if (rnd() < 0.3) GM.wardenTaunt();
     this.nextSwing();
   }
+  startSpin() { // both blades out, two full turns, cutting anything close
+    this.set('spin', 'SpinPose', 0.1); this.spinA = 0; this.spinHits = 0; this.lit = 1; if (rnd() < 0.5) GM.wardenTaunt();
+  }
   nextSwing() { const c = this.combo.shift(); if (!c) { this.set('chase', null); this.cd = R(0.7, 1.5) / this.spd; return; } this.atk = DUEL[c]; this.hitDone = false; this.set('attack', c, 0.08, this.spd); }
   update(dt) {
     this.t += dt; this.showBar -= dt;
     const P = GM.player, S = this.state;
-    const sync = () => { this.node.pos = this.pos; Q.yaw(this.node.rot, this.yaw); this.ch.update(dt); this.glow(dt); };
+    const sync = () => { this.node.pos = this.pos; Q.yaw(this.node.rot, this.yaw + (this.spinA || 0)); this.ch.update(dt); this.glow(dt); };
     if (S === 'defeated' || S === 'cut') { sync(); return; }
     if (!this.active || !P.alive) { if (S !== 'idle') this.set('idle', 'Idle', 0.3); sync(); return; }
     const d = dist2(this.pos, P.pos), ty = yawTo(this.pos, P.pos), sp = this.spd;
@@ -416,6 +425,15 @@ A.Duelist = class {
         this.hitDone = true; P.damage(this.T.dmg * a.dmg * (this.phase2 ? 1.1 : 1), this.pos, { boss: true, unblockable: a.unblockable });
       }
       if (this.ch.finished || t > this.ch.cur.dur - 0.04) { this.lit = 0; this.nextSwing(); }
+    } else if (S === 'spin') {
+      const dur = this.phase2 ? 1.15 : 1.4, turns = 2, u = Math.min(1, this.t / dur);
+      this.spinA = u * turns * Math.PI * 2;
+      const v = 2.6 * sp; if (d > 1.2) { this.pos[0] += Math.sin(ty) * v * dt; this.pos[2] += Math.cos(ty) * v * dt; }
+      const turn = Math.floor(u * turns * 2); // a cut every half turn
+      if (turn > this.spinHits && d < 2.9 + P.radius) { this.spinHits = turn; P.damage(this.T.dmg * 0.6, this.pos, { boss: true }); GM.audio.hit(false); }
+      else if (turn > this.spinHits) this.spinHits = turn;
+      if (rnd() < 0.5) GM.parts.emit({ pos: [this.pos[0] + R(-1.6, 1.6), 1.1, this.pos[2] + R(-1.6, 1.6)], vel: [0, 0.3, 0], life: 0.2, size: 0.05, col: [this.T.glow[0] * 0.6, this.T.glow[1] * 0.6, this.T.glow[2] * 0.6, 0.6], soft: 0, fade: 1 });
+      if (u >= 1) { this.spinA = 0; this.yaw = ty; this.lit = 0; this.set('chase', null); this.cd = R(0.9, 1.6) / sp; }
     } else if (S === 'roll') {
       const u = this.ch.t / this.ch.cur.dur; this.iframe = u > 0.05 && u < 0.6;
       const v = u < 0.75 ? 6.0 * (1 - u * 0.6) : 1; this.pos[0] += Math.sin(this.rollDir) * v * dt; this.pos[2] += Math.cos(this.rollDir) * v * dt;
@@ -439,6 +457,11 @@ A.Duelist = class {
     M4.point(this.tipW, this.sword.world, [0, 0, 1.25]); M4.point(this.baseW, this.sword.world, [0, 0, 0.3]);
     this.light.pos = [(this.tipW[0] + this.baseW[0]) / 2, (this.tipW[1] + this.baseW[1]) / 2, (this.tipW[2] + this.baseW[2]) / 2]; this.light.intensity = 0.15 + this.glowAmt * 2.2;
     if (this.glowAmt > 0.3) for (let i = 0; i < 3; i++) { const u = rnd(); GM.parts.emit({ pos: [OE.lerp(this.baseW[0], this.tipW[0], u), OE.lerp(this.baseW[1], this.tipW[1], u), OE.lerp(this.baseW[2], this.tipW[2], u)], vel: [0, 0, 0], life: 0.14, size: 0.03, col: [this.T.glow[0] * 0.7, this.T.glow[1] * 0.7, this.T.glow[2] * 0.7, 0.55], soft: 0, fade: 1 }); }
+    if (this.sword2) {
+      this.swordGlow2.mat.emissive = this.swordGlow.mat.emissive;
+      if (this.glowAmt > 0.3) { M4.point(this.tip2, this.sword2.world, [0, 0, 1.25]); M4.point(this.base2, this.sword2.world, [0, 0, 0.3]);
+        for (let i = 0; i < 3; i++) { const u = rnd(); GM.parts.emit({ pos: [OE.lerp(this.base2[0], this.tip2[0], u), OE.lerp(this.base2[1], this.tip2[1], u), OE.lerp(this.base2[2], this.tip2[2], u)], vel: [0, 0, 0], life: 0.14, size: 0.03, col: [this.T.glow[0] * 0.7, this.T.glow[1] * 0.7, this.T.glow[2] * 0.7, 0.55], soft: 0, fade: 1 }); } }
+    }
   }
 };
 

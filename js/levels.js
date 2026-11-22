@@ -179,9 +179,11 @@ window.LEVELS = {
       ['drone', [-6, 0, 64]], ['trooper', [7, 0, 74]], ['trooper', [-2, 0, 78]], ['drone', [2, 0, 92]], ['trooper', [-3, 0, 100]],
       ['brute', [0, 0, 110]], ['trooper', [-4, 0, 116]], ['trooper', [4, 0, 117]]],
     boss: { duelist: 'talina', pos: [0, 0, 158], seen: 'boss3',
-      T: { get name() { return GM.save.talina === 'executed' ? 'INÉS ALVAREZ, Talina\'s Twin' : 'TALINA ALVAREZ, Traitor of British Command'; },
-        hp: 1900, dmg: 50, scrap: 3800, s: 1, glow: [2.2, 0.35, 2.8], light: [0.8, 0.2, 1.0] } },
-    choice: 'hospital', // replaced by the chapter's own choice once it is written
+      T: { name: 'TALINA ALVAREZ, Traitor of British Command', hp: 1900, dmg: 50, scrap: 3800, s: 1, glow: [2.2, 0.35, 2.8], light: [0.8, 0.2, 1.0] } },
+    // if Orion executed Talina at Dover, her twin is here instead: two blades, spinning cuts, twice her sister's strength
+    bossAlt: { duelist: 'ines', pos: [0, 0, 158], when: () => GM.save.talina === 'executed',
+      T: { name: 'INÉS ALVAREZ, Talina\'s Twin', hp: 3800, dmg: 100, scrap: 5200, s: 1, dual: true, spin: true, glow: [3.0, 0.3, 1.1], light: [1.0, 0.15, 0.35] } },
+    get choice() { return GM.save.talina === 'executed' ? 'ines' : 'talina3'; },
     ambience: 'summer',
     env: { // a clear June morning over the bocage
       sunDir: [0.45, 0.62, 0.42], sunCol: [1.45, 1.32, 1.1], sky: [0.34, 0.4, 0.52], ground: [0.16, 0.15, 0.1], fogCol: [0.55, 0.64, 0.78], fogDen: 0.0055, exposure: 1.0,
@@ -214,7 +216,12 @@ window.LEVELS = {
       say('radio', 'Command to Mascar. The square is ours. The Americans are moving up — Normandy is open.', 6);
       return { banner: [ines ? 'INÉS ALVAREZ DEFEATED' : 'TALINA ALVAREZ DEFEATED', 'THE BOCAGE IS OURS'], endIn: 10 };
     },
-    endings: { good: 'Normandy is free, and Orion Mascar kept something of himself in the hedgerows.', neutral: 'Normandy is free. Orion did what the war asked of him.', evil: 'Normandy is free. The villagers watched Orion Mascar leave and did not wave.' },
+    ending(S) {
+      return ({ saved: 'Talina Alvarez walked out of Normandy at Orion\'s side. Command does not know yet. Neither, for now, does anyone else.',
+        command: 'Talina Alvarez went to British Command in chains. Normandy is free.', dead: 'Talina Alvarez died in the church square. Normandy is free, and Orion did not look back.',
+        companion: 'Inés Alvarez will fight beside the man who killed her sister. Neither of them has said a word about it.',
+        icommand: 'Inés Alvarez went to British Command in chains. She is still waiting.', idead: 'Both Alvarez sisters are gone now. Normandy is free.' })[S.talina === 'executed' ? (S.ines === 'companion' ? 'companion' : 'i' + (S.ines || 'command')) : (S.talina3 || 'command')];
+    },
   },
 };
 })();

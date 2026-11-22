@@ -41,13 +41,22 @@ const CHOICES = [
       { align: 'neutral', say: 'Hands where I can see them. Command decides what happens to you.', reply: '...Yes. Yes, okay.', vo: [77, 78], result: 'Thomas binds his wrists and radios his position for pickup.', reward: { scrap: 100 } },
       { align: 'evil', say: 'You don\'t get to walk away. Not after what your lot did to the Commander.', reply: 'No — please —', vo: [79, 80], result: 'Thomas takes his kit and leaves him on the beach. Behind him, the drones are already circling.', reward: { scrap: 220 } },
     ] },
-  { id: 'hospital', chapter: 3, title: 'The Field Hospital',
-    scene: 'An abandoned field hospital. Wounded soldiers on every cot, and a handful of stims left on the shelf.',
-    thomas: 'There\'s wounded on every cot, Orion. And there\'s stims — not many. We\'re running low ourselves. Your call.',
+  // Chapter III: what Orion does with the woman he has just beaten. Only Orion's alignment moves.
+  { id: 'talina3', chapter: 3, title: 'The Second Time', auto: true, only: 'o', asker: 'talina', when: () => GM.save.talina !== 'executed',
+    scene: 'Talina is on her knees on the cobbles of the church square, her sabre out of reach. For the second time, she looks up at the man whose eye she took.',
+    thomas: 'Well, Comandante? You have beaten me twice now. Finish it, or don\'t.',
     options: [
-      { align: 'good', say: 'Leave them. They need them more than we do.', reply: 'They\'ll make it now. Some of them, anyway.', result: 'Thomas kneels by each cot and leaves a stim within reach.' },
-      { align: 'neutral', say: 'Take one. Leave the rest.', reply: 'Fair. One for the road.', result: 'One stim goes into Orion\'s pack. The rest stay where they are.', reward: { stims: 1 } },
-      { align: 'evil', say: 'Take them all. We\'re the ones still fighting.', reply: 'They needed those more than we do, Orion.', result: 'Every stim goes into Orion\'s pack. One of the wounded watches him do it.', reward: { stims: 3 } },
+      { align: 'good', say: 'Get up, Talina. You\'re coming with me. Not as a prisoner.', reply: '...You are a fool, Orion Mascar. ...Bien. I will come.', result: 'Orion holds out his hand. After a long moment, Talina takes it.', set: { talina3: 'saved' } },
+      { align: 'neutral', say: 'British Command will decide what you\'re owed.', reply: 'Command. Of course. It was always Command.', result: 'Thomas binds her wrists. She does not look back as the Americans lead her away.', set: { talina3: 'command' }, reward: { scrap: 150 } },
+      { align: 'evil', say: 'You should have killed me at Dover.', reply: 'I know.', result: 'The church bell is still ringing when Orion sheathes his sword.', set: { talina3: 'dead' }, reward: { scrap: 300 } },
+    ] },
+  { id: 'ines', chapter: 3, title: 'The Other Sister', auto: true, only: 'o', asker: 'ines', when: () => GM.save.talina === 'executed',
+    scene: 'Inés Alvarez is on her knees in the church square, both blades on the cobbles beside her. Her eyes never leave Orion.',
+    thomas: 'Go on. You did it to her. Do it to me.',
+    options: [
+      { align: 'good', say: 'No. Enough Alvarez blood has been spilled. Fight with us instead.', reply: '...You do not get to decide what she would want. ...But I will hear you out.', result: 'Inés picks up her blades and, after a long moment, falls in beside Thomas. Thomas looks at Orion as if he has never seen him before.', set: { ines: 'companion' }, thomasOpposite: true },
+      { align: 'neutral', say: 'Command will decide what happens to you.', reply: 'Then I will wait. I am good at waiting.', result: 'The Americans take her away in chains. She watches Orion until the truck turns the corner.', set: { ines: 'command' }, reward: { scrap: 150 } },
+      { align: 'evil', say: 'Then go and find her.', reply: 'Talina —', result: 'Inés falls beside her blades in the church square, and the bell tower goes quiet.', set: { ines: 'dead' }, reward: { scrap: 300 } },
     ] },
   { id: 'rubble', chapter: 4, title: 'Survivors in the Rubble',
     scene: 'A collapsed apartment block. Somewhere under the concrete, someone is knocking.',
@@ -67,7 +76,8 @@ const CHOICES = [
     ] },
 ];
 AL.CHOICES = CHOICES;
-AL.forChapter = (n) => CHOICES.find((c) => c.chapter === n);
+const ASKER = { pilot: 'Pact Pilot', talina: 'Talina', ines: 'Inés' };
+AL.forChapter = (n) => CHOICES.find((c) => c.chapter === n && (!c.when || c.when())) || CHOICES.find((c) => c.chapter === n);
 const done = (id) => !!(GM.save.choices && GM.save.choices[id]);
 
 AL.build = function () { }; // Chapter I's choice happens after the boss; later chapters will place theirs in their own levels
@@ -92,7 +102,7 @@ AL.open = function (id, after) {
   const c = CHOICES.find((x) => x.id === id); if (!c || done(id)) { if (after) after(); return; }
   current = c; onClose = after || null; prevState = GM.state; GM.state = 'choice';
   if (document.pointerLockElement) document.exitPointerLock();
-  const askN = c.asker === 'pilot' ? 'Pact Pilot' : 'Thomas', chN = c.chooser === 't' ? 'THOMAS' : 'ORION';
+  const askN = ASKER[c.asker] || 'Thomas', chN = c.chooser === 't' ? 'THOMAS' : 'ORION';
   $('chTitle').textContent = c.title; $('chText').innerHTML = `<i>${c.scene}</i><div class="tline"><b>${askN}:</b> “${c.thomas}”</div>`;
   $('chResult').textContent = ''; $('chResult').style.display = 'none';
   $('chOpts').innerHTML = `<div class="orionsay">${chN}</div>` + c.options.map((o, i) => `<button class="btn chopt" data-i="${i}" style="border-color:${AL.TIERS[o.align].css}"><span class="dot" style="background:${AL.TIERS[o.align].css}"></span>“${o.say}”</button>`).join('');
@@ -108,7 +118,9 @@ function choose(i) {
   const d = o.align === 'good' ? STEP : o.align === 'evil' ? -STEP : 0;
   const a = S.align || (S.align = { o: 0, t: 0 });
   const before = [AL.tier('o'), AL.tier('t')];
-  if (c.chooser === 't') a.t = OE.clamp(a.t + d, -100, 100);
+  if (o.set) Object.assign(S, o.set); // what this choice decided, for later chapters
+  if (c.only === 'o') { a.o = OE.clamp(a.o + d, -100, 100); if (o.thomasOpposite) a.t = OE.clamp(a.t - d, -100, 100); } // Orion's choice; sparing Ines turns Thomas the other way
+  else if (c.chooser === 't') a.t = OE.clamp(a.t + d, -100, 100);
   else { a.o = OE.clamp(a.o + d, -100, 100); a.t = OE.clamp(a.t + d * THOMAS_SHARE, -100, 100); }
   if (o.reward) {
     if (o.reward.scrap) S.scrap += o.reward.scrap;
@@ -116,7 +128,7 @@ function choose(i) {
   }
   GM.audio.ui();
   $('chOpts').innerHTML = ''; $('chResult').style.display = '';
-  const tSay = c.chooser === 't' ? 'Thomas' : 'Orion', tRep = c.asker === 'pilot' ? 'Pact Pilot' : 'Thomas';
+  const tSay = c.chooser === 't' ? 'Thomas' : 'Orion', tRep = ASKER[c.asker] || 'Thomas';
   $('chResult').innerHTML = `<div class="tline"><b class="o">${tSay}:</b> “${o.say}”</div><div class="tline"><b>${tRep}:</b> “${o.reply}”</div><div class="res">${o.result}</div>` +
     (o.reward ? `<div class="rw">${o.reward.scrap ? '+' + o.reward.scrap + ' scrap ' : ''}${o.reward.stims ? '+' + o.reward.stims + ' stim' + (o.reward.stims > 1 ? 's' : '') : ''}</div>` : '') +
     `<div class="al">${chip('ORION', 'o')} ${chip('THOMAS', 't')}</div>`;

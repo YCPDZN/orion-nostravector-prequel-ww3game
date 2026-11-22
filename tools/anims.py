@@ -266,5 +266,17 @@ def rifle_set():
         'Roll': roll(), 'Hit': hit(), 'Death': death(), 'Heal': heal(),
     }
 
+def spin_pose():
+    """Ines: both blades out wide for a spinning attack (the turning itself is done in code)"""
+    base = merge(legs_stance(), SWORD_ARMS)
+    sp = merge(base, P(Spine=(10, 0, 0), Chest=(6, 0, 0), Head=(4, 0, 0),
+                       L_UpperArm=(-10, 0, 82), L_ForeArm=(-8, 0, 0), L_Hand=(0, 0, 0),
+                       R_UpperArm=(-10, 0, -82), R_ForeArm=(-8, 0, 0), R_Hand=(0, 0, 0),
+                       L_UpLeg=(-28, 0, 8), L_Leg=(40, 0, 0), R_UpLeg=(-10, 0, -8), R_Leg=(30, 0, 0), hy=-0.12))
+    return keyed([(0, base), (0.14, sp, 'out'), (0.9, sp)], 0.9)
+
+def ines_set():
+    d = duelist_set(); d['SpinPose'] = spin_pose(); return d
+
 def duelist_set():
     d = sword_set(); d['Kneel'] = kneel(); d['Strike'] = strike(); return d
