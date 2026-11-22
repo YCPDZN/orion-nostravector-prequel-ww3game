@@ -822,7 +822,7 @@ OE.proceduralTex = function (kind, size = 512) {
     const sx = tx*tx*(3-2*tx), sy = ty*ty*(3-2*ty); const A = o.a;
     const i0 = ((iy % g) * g), i1 = (((iy + 1) % g) * g), x0 = ix % g, x1 = (ix + 1) % g;
     return (A[i0+x0]*(1-sx)+A[i0+x1]*sx)*(1-sy)+(A[i1+x0]*(1-sx)+A[i1+x1]*sx)*sy; };
-  const P = { concrete: [0.42, 0.40, 0.38], ground: [0.26, 0.22, 0.19], metal: [0.30, 0.28, 0.26], brick: [0.36, 0.22, 0.17], chalk: [0.66, 0.65, 0.61], shingle: [0.33, 0.31, 0.28] }[kind];
+  const P = { concrete: [0.42, 0.40, 0.38], ground: [0.26, 0.22, 0.19], metal: [0.30, 0.28, 0.26], brick: [0.36, 0.22, 0.17], chalk: [0.66, 0.65, 0.61], shingle: [0.33, 0.31, 0.28], snow: [0.78, 0.8, 0.84] }[kind];
   for (let y = 0; y < size; y++) for (let xx = 0; xx < size; xx++) {
     const u = xx / size, v = y / size; let n = 0, amp = 0.5;
     for (const o of octs) { n += vn(o, u, v) * amp; amp *= 0.55; }
@@ -860,6 +860,9 @@ OE.proceduralTex = function (kind, size = 512) {
       const streak = Math.max(0, vn(octs[2], u, v) - 0.5) * 0.9, crack = Math.abs(vn(octs[3], u, v) - 0.5) < 0.012 ? 1 : 0;
       col = col.map(c => c * (0.84 + n * 0.22) * (1 - streak * 0.3) * (1 - band * 0.03) * (crack ? 0.7 : 1)); h = n * 0.7 + band * 0.05 - crack * 0.2;
       if (flint) { col = col.map(c => c * 0.45); h -= 0.15; }
+    } else if (kind === 'snow') { // wind-packed snow: soft drifts, footprints of grit, a little sparkle
+      const drift = vn(octs[1], u, v), grit = vn(octs[5], u, v) > 0.86 ? 1 : 0, sparkle = vn(octs[5], v, u) > 0.93 ? 1 : 0;
+      col = col.map((c, i) => c * (0.9 + n * 0.16 + drift * 0.08) * (grit ? 0.72 : 1) * (sparkle ? 1.15 : 1) * (i === 2 ? 1.03 : 1)); h = n * 0.45 + drift * 0.35 - grit * 0.1;
     } else if (kind === 'shingle') { // rounded beach pebbles
       const cell = 22; const cx = u * cell, cy = v * cell; let best = 9, id = 0;
       for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) { const gx = Math.floor(cx) + ox, gy = Math.floor(cy) + oy; const k = ((gx % cell + cell) % cell) * 131 + ((gy % cell + cell) % cell) * 71;

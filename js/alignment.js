@@ -58,13 +58,13 @@ const CHOICES = [
       { align: 'neutral', say: 'Command will decide what happens to you.', reply: 'Then I will wait. I am good at waiting.', result: 'The Americans take her away in chains. She watches Orion until the truck turns the corner.', set: { ines: 'command' }, vo: [41, 42], reward: { scrap: 150 } },
       { align: 'evil', say: 'Then go and find her.', reply: 'Talina —', result: 'Inés falls beside her blades in the church square, and the bell tower goes quiet.', set: { ines: 'dead' }, vo: [43, 44], reward: { scrap: 300 } },
     ] },
-  { id: 'rubble', chapter: 4, title: 'Survivors in the Rubble',
+  { id: 'rubble', chapter: 4, title: 'Survivors in the Rubble', level: '4b', pos: [-7.2, 0, 52], vox: 4, vo: 20,
     scene: 'A collapsed apartment block. Somewhere under the concrete, someone is knocking.',
     thomas: 'There\'s people under there, Commander — a mother and her little girl. If we dig, the machines will hear us.',
     options: [
-      { align: 'good', say: 'Then let them hear us. Start digging.', reply: 'That\'s why we fight. Not for Command — for them.', result: 'The girl clings to Thomas until her mother pulls her away.' },
-      { align: 'neutral', say: 'Mark it for the rescue teams. We can\'t stop.', reply: 'Command will send someone... if there\'s anyone left to send.', result: 'Orion sprays a beacon mark on the rubble and moves on.' },
-      { align: 'evil', say: 'Take whatever supplies they had and keep moving.', reply: '...Orion. They\'re people.', result: 'Their supplies go into Orion\'s pack. The knocking stops.', reward: { scrap: 150 } },
+      { align: 'good', say: 'Then let them hear us. Start digging.', reply: 'That\'s why we fight. Not for Command — for them.', result: 'The girl clings to Thomas until her mother pulls her away.', vo: [21, 22] },
+      { align: 'neutral', say: 'Mark it for the rescue teams. We can\'t stop.', reply: 'Command will send someone... if there\'s anyone left to send.', result: 'Orion sprays a beacon mark on the rubble and moves on.', vo: [23, 24] },
+      { align: 'evil', say: 'Take whatever supplies they had and keep moving.', reply: '...Orion. They\'re people.', result: 'Their supplies go into Orion\'s pack. The knocking stops.', reward: { scrap: 150 }, vo: [25, 26] },
     ] },
   { id: 'surrender', chapter: 5, title: 'The Surrender',
     scene: 'The Pact\'s marshal kneels before Orion, offering the surrender of his whole army in exchange for his life.',
@@ -85,14 +85,14 @@ AL.build = function () { }; // Chapter I's choice happens after the boss; later 
 /* ---------------- interaction ---------------- */
 AL.nearby = function (pos) {
   for (const c of CHOICES) {
-    if (c.auto || !c.pos || c.chapter !== GM.save.chapter || done(c.id)) continue;
+    if (c.auto || !c.pos || c.chapter !== GM.save.chapter || done(c.id) || (c.level && c.level !== GM.levelId(GM.save))) continue;
     if (Math.hypot(pos[0] - c.pos[0], pos[2] - c.pos[2]) < 2.6) return { type: 'choice', id: c.id, label: 'Talk to Thomas — ' + c.title };
   }
   return null;
 };
 AL.markers = function (time) { // gentle white glow over undecided choice points
   for (const c of CHOICES) {
-    if (c.auto || !c.pos || c.chapter !== GM.save.chapter || done(c.id) || Math.random() > 0.35) continue;
+    if (c.auto || !c.pos || c.chapter !== GM.save.chapter || done(c.id) || (c.level && c.level !== GM.levelId(GM.save)) || Math.random() > 0.35) continue;
     GM.parts.emit({ pos: [c.pos[0] + (Math.random() - 0.5) * 0.5, 0.6 + Math.random() * 0.8, c.pos[2] + (Math.random() - 0.5) * 0.5], vel: [0, 0.5, 0], size: 0.035, life: 1.3, col: [2.2, 2.1, 1.8, 1], soft: 0.3 });
   }
 };
@@ -107,7 +107,7 @@ AL.open = function (id, after) {
   $('chResult').textContent = ''; $('chResult').style.display = 'none';
   $('chOpts').innerHTML = `<div class="orionsay">${chN}</div>` + c.options.map((o, i) => `<button class="btn chopt" data-i="${i}" style="border-color:${AL.TIERS[o.align].css}"><span class="dot" style="background:${AL.TIERS[o.align].css}"></span>“${o.say}”</button>`).join('');
   $('chOpts').querySelectorAll('.chopt').forEach((b) => b.onclick = () => choose(+b.dataset.i));
-  const VO = c.vox === 3 ? GM.vo3 : GM.vo, VD = c.vox === 3 ? GM.voDur3 : GM.voDur;
+  const [VO, VD] = GM.voSet(c.vox);
   if (c.vo) GM.say(c.asker || 'thomas', c.thomas, VD(c.vo, Math.max(4, c.thomas.length * 0.06)), VO(c.vo));
   else GM.say(c.asker || 'thomas', c.thomas, Math.max(4, c.thomas.length * 0.06));
   $('chLeave').style.display = c.auto ? 'none' : ''; $('chLeave').textContent = 'STEP AWAY';
@@ -136,7 +136,7 @@ function choose(i) {
   $('chLeave').style.display = ''; $('chLeave').textContent = 'CONTINUE';
   subQ_clear();
   if (o.voice) { GM.say('orion', o.say, o.voice[1] + 0.6, o.voice[0]); GM.say('thomas', o.reply, o.voice[3] + 0.8, o.voice[2]); } // recorded lines
-  else { const v = o.vo || [], VO = c.vox === 3 ? GM.vo3 : GM.vo, VD = c.vox === 3 ? GM.voDur3 : GM.voDur; GM.say(c.chooser === 't' ? 'thomas' : 'orion', o.say, VD(v[0], Math.max(3, o.say.length * 0.055)), VO(v[0])); GM.say(c.asker || 'thomas', o.reply, VD(v[1], Math.max(3, o.reply.length * 0.065)), VO(v[1])); }
+  else { const v = o.vo || [], [VO, VD] = GM.voSet(c.vox); GM.say(c.chooser === 't' ? 'thomas' : 'orion', o.say, VD(v[0], Math.max(3, o.say.length * 0.055)), VO(v[0])); GM.say(c.asker || 'thomas', o.reply, VD(v[1], Math.max(3, o.reply.length * 0.065)), VO(v[1])); }
   const after = [AL.tier('o'), AL.tier('t')];
   if (after[0] !== before[0]) GM.pendingAlignBanner = 'o';
   else if (after[1] !== before[1]) GM.pendingAlignBanner = 't';

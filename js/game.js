@@ -46,7 +46,10 @@ let LV = null; GM.levels = {};
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const ENV_KEYS = ['sunDir', 'sunCol', 'sky', 'ground', 'fogCol', 'fogDen', 'exposure', 'skyPal'];
 /* a chapter can have parts, each with its own level: Chapter II is '2a' (Orion, Dover Castle) then '2b' (Thomas, the beach) */
-const levelId = (S) => S.chapter === 2 ? (S.part === 2 ? '2b' : '2a') : (S.chapter || 1);
+/* Chapter IV has two parts only if Talina is alive and with Orion (saved at Normandy): Part I is her labour, '4a'; Part II (or the whole chapter) is '4b' */
+const labour = (S) => !!S && S.talina !== 'executed' && S.talina3 === 'saved';
+GM.labour = labour;
+const levelId = (S) => S.chapter === 2 ? (S.part === 2 ? '2b' : '2a') : S.chapter === 4 ? (labour(S) && S.part !== 2 ? '4a' : '4b') : (S.chapter || 1);
 GM.levelId = levelId;
 /* who you play: Orion (sword; eyepatch once he has lost the eye, except in Chapter I) or Thomas (rifle) */
 GM.heroes = {};
@@ -70,6 +73,10 @@ GM.pickHero = function () {
   GM.player = P; GM.heroKey = key; LV.root.add(P.node);
   if (GM.companion.node.parent) GM.companion.node.parent.remove(GM.companion.node);
   GM.solo = !!def.solo; if (!GM.solo) LV.root.add(GM.companion.node);
+  // Ines fights at Orion's side from Chapter IV, if he spared her at Normandy
+  const ally = def.ally === 'ines' && GM.save.ines === 'companion';
+  if (ally && !GM.ally) { const prev = OE.scene; OE.scene = new OE.Node(); GM.ally = new A.SwordAlly(GM.assets.ines, [3.0, 0.3, 1.1]); OE.scene = prev; }
+  if (GM.ally) { if (GM.ally.node.parent) GM.ally.node.parent.remove(GM.ally.node); GM.ally.on = ally; GM.ally.light.intensity = 0; if (ally) LV.root.add(GM.ally.node); }
   document.querySelector('.bars').dataset.who = key === 'thomas' ? 'VITALS // APPR. T. HAWTHORNE' : 'VITALS // CMDR. O. MASCAR';
 };
 GM.loadLevel = function (id) {
@@ -82,7 +89,10 @@ GM.loadLevel = function (id) {
     const mk = (bd) => bd.duelist ? new A.Duelist(GM.assets[bd.duelist], bd.pos, Math.PI, bd.T) : new A.Enemy(bd.type, bd.pos, Math.PI);
     const b = mk(def.boss), alt = def.bossAlt ? mk(def.bossAlt) : null; // bossAlt: a different boss when its condition holds (Ines for Talina)
     const env = clone(GM.baseEnv); if (def.env) Object.assign(env, clone(def.env));
-    L = GM.levels[id] = { id, def, root, st, base: enemies, enemies: enemies.concat([b]), boss: b, main: b, alt, env, lights: OE.R.lights.filter((l) => !before.has(l)) };
+    let npc = null; // a character standing in the level (Talina at the field hospital)
+    if (def.npc && st.npcSpot) { const ch = new OE.Character(GM.assets[def.npc.asset], { rim: 0.06 }); root.add(ch.node); ch.play(def.npc.clip, 0, 1, true);
+      npc = { ch, pos: st.npcSpot.slice(), yaw: def.npc.yaw || 0 }; }
+    L = GM.levels[id] = { id, def, root, st, npc, base: enemies, enemies: enemies.concat([b]), boss: b, main: b, alt, env, lights: OE.R.lights.filter((l) => !before.has(l)) };
     OE.scene = prevScene;
   }
   if (L.alt) { // which of the level's bosses waits at the end of it this time
@@ -121,7 +131,8 @@ GM.boot = async function () {
     GM.parts = new OE.Particles(QUALITY[qName()].particles);
     msg('Loading Talina Alvarez', 0.8); await tick();
     const orionEye = await OE.loadGLB(dec(ORION_MODELS.orionEye)), talina = await OE.loadGLB(dec(ORION_MODELS.talina)), ines = await OE.loadGLB(dec(ORION_MODELS.ines));
-    GM.assets = { orion, thomas, orionEye, talina, ines };
+    const talinaP = await OE.loadGLB(dec(ORION_MODELS.talinaP));
+    GM.assets = { orion, thomas, orionEye, talina, ines, talinaP };
     GM.heroes.orion = GM.player = new A.Player(orion); GM.companion = new A.Companion(thomas);
     msg('Building New London', 0.95); await tick();
     GM.loadLevel(1);
@@ -149,6 +160,7 @@ function respawnAll(first) {
   const sp = spawnPoint();
   GM.player.reset(sp.pos, sp.yaw);
   GM.companion.reset([sp.pos[0] - 1.6, 0, sp.pos[2] - 0.8]); if (GM.solo) GM.companion.alive = false;
+  if (GM.ally && GM.ally.on) GM.ally.reset([sp.pos[0] + 1.8, 0, sp.pos[2] - 0.8]);
   for (const e of GM.enemies) { if (e.boss && GM.save.bossDead) { e.alive = false; e.state = 'dead'; e.root.visible = false; continue; } e.reset(); }
   GM.projectiles.length = 0; GM.markers.length = 0; GM.shocks.length = 0; GM.lock = null;
   W.beacons.forEach((b, i) => setBeaconLit(b, !!GM.save.lit[i]));
@@ -438,7 +450,7 @@ function startChapter(n, opts = {}) {
   const choices = clone(S0.choices || {}); // choices already made stay made, so a replay doesn't shift alignment twice
   const seen = clone(S0.seen || {});
   for (const id of Object.keys(LEVELS)) if (String(id)[0] === String(n)) { delete seen[introKey(isNaN(id) ? id : +id)]; delete seen['talk_' + LEVELS[id].boss.seen]; }
-  const keep = { vig: S0.vig, end: S0.end, str: S0.str, rank: S0.rank, maxStims: S0.maxStims, done: S0.done || {}, align, alignAt, choices, seen, eye: !!S0.eye, reached: S0.reached || {}, talina: S0.talina, talina3: S0.talina3, ines: S0.ines };
+  const keep = { vig: S0.vig, end: S0.end, str: S0.str, rank: S0.rank, maxStims: S0.maxStims, done: S0.done || {}, align, alignAt, choices, seen, eye: !!S0.eye, reached: S0.reached || {}, talina: S0.talina, talina3: S0.talina3, ines: S0.ines, child: S0.child };
   GM.save = Object.assign(clone(NEW_SAVE), keep, { started: true, chapter: n, part: opts.part || 1 });
   GM.save.stats = { time: 0, deaths: 0, kills: 0 };
   if (opts.part === 2) { GM.save.eyeLost = true; GM.save.eye = true; }
@@ -449,7 +461,7 @@ function startChapter(n, opts = {}) {
 }
 /* progression: a chapter opens once the one before it has been completed (in this game or any saved one) */
 /* a save counts as having finished its chapter once the final boss of the chapter is down (even if it was saved before the Complete screen) */
-const finishedIn = (S) => !!(S && S.started && S.bossDead && (() => { const c = chapterDef(S.chapter); return !c.parts || (S.part || 1) === c.parts.length; })());
+const finishedIn = (S) => !!(S && S.started && S.bossDead && (() => { const c = chapterDef(S.chapter), n = c.id === 4 ? (labour(S) ? 2 : 0) : c.parts ? c.parts.length : 0; return !n || (S.part || 1) === n; })());
 GM.completed = function () {
   const d = Object.assign({}, GM.save.done || {}); if (finishedIn(GM.save)) d[GM.save.chapter] = d[GM.save.chapter] || {};
   for (const sl of readSlots()) if (sl && sl.save) { if (sl.save.done) Object.assign(d, sl.save.done); if (finishedIn(sl.save)) d[sl.save.chapter] = d[sl.save.chapter] || {}; }
@@ -466,7 +478,7 @@ GM.advance = function () {
 };
 const refreshAdvance = () => { const n = nextChapter(), ok = GM.canAdvance(); for (const id of ['pNext', 'rNext']) { const b = $(id); b.style.display = ok ? '' : 'none'; if (n) b.textContent = `CHAPTER ${n.numeral}: ${n.title.toUpperCase()}`; } };
 GM.unlocked = (id) => id <= 1 || !!GM.completed()[id - 1];
-const COVERS = { 1: 'assets/chapters/ch1.jpg', 2: 'assets/chapters/ch2.jpg', 3: 'assets/chapters/ch3.jpg' };
+const COVERS = { 1: 'assets/chapters/ch1.jpg', 2: 'assets/chapters/ch2.jpg', 3: 'assets/chapters/ch3.jpg', 4: 'assets/chapters/ch4.jpg' };
 function openChapters(ret) {
   chapterReturn = ret; const S = baseSave();
   $('chList').innerHTML = CHAPTERS.map((c) => {
@@ -516,7 +528,7 @@ function chapterComplete() {
 /* Part I ends (Talina has taken Orion's eye): Thomas carries on alone on the beach */
 GM.toPart2 = function () {
   const S = GM.save; S.part = 2; S.eyeLost = true; S.eye = true; S.bossDead = false; S.lit = [true, false]; S.beacon = 0; S.echo = null;
-  S.reached = S.reached || {}; S.reached['2b'] = 1; GM.chapterEndT = 0; GM.inBoss = false;
+  S.reached = S.reached || {}; S.reached[S.chapter + 'b'] = 1; GM.chapterEndT = 0; GM.inBoss = false;
   GM.loadLevel(levelId(S)); respawnAll(); hudVisible(false); startCrawl(2);
 };
 function startCrawl(part) {
@@ -545,7 +557,7 @@ function endCrawl() { if (GM.state === 'crawl') nextCrawl(); }
 
 /* ---------------- HUD helpers ---------------- */
 let subQ = [], subT = 0, toastT = 0, bannerT = 0;
-const NAMES = { thomas: 'Thomas', orion: 'Orion', radio: 'British Command', warden: 'Iron Warden', tide: 'Tidebreaker', talina: 'Talina', ines: 'Inés', pilot: 'Pact Pilot' };
+const NAMES = { thomas: 'Thomas', orion: 'Orion', radio: 'British Command', warden: 'Iron Warden', tide: 'Tidebreaker', talina: 'Talina', ines: 'Inés', pilot: 'Pact Pilot', hunter: 'The Hunter', bear: 'The Bear' };
 /* Each level's boss speaks its own language (Mandarin for the Iron Warden, Russian for the Tidebreaker) with English subtitles.
    Lines with a recording play the mp3; the rest use the browser's text-to-speech. */
 const BV = () => LV.def.voice;
@@ -574,7 +586,7 @@ GM.warden = (key, story = true) => {
   if (story && ['intro', 'phase2', 'death', 'kill'].includes(key)) { subQ.length = 0; subT = 0; try { if (voiceEl) voiceEl.pause(); } catch (e) { } } // boss moments cut in
   const [zh, en, file, secs] = line;
   if (V.vo) { // numbered Chapter II line: its recording if there is one, else text-to-speech (if any)
-    const vo = V.vo === 3 ? GM.vo3 : GM.vo, voDur = V.vo === 3 ? GM.voDur3 : GM.voDur;
+    const [vo, voDur] = GM.voSet(V.vo);
     const f = vo(file), base = Math.max(3.2, en.length * 0.06 + 1.4, zh ? zh.length * (V.lang === 'zh-CN' ? 0.34 : 0.075) + 1.2 : 0);
     GM.say(V.who, en, voDur(file, base), { zh: f ? null : zh, lang: V.lang, file: f || null }); return;
   }
@@ -763,6 +775,7 @@ function doInteract(it) {
   } else if (it.type === 'gate') {
     AU.gate(); P.pos = [W.gate.enter[0], 0, W.gate.enter[1]]; P.yaw = 0; GM.cam.yaw = 0;
     GM.companion.pos = [W.gate.thomas[0], 0, W.gate.thomas[1]];
+    if (GM.ally && GM.ally.on) GM.ally.pos = [-W.gate.thomas[0], 0, W.gate.thomas[1]];
     W.sealCol.off = false; W.gate.sealed = true; GM.inBoss = true;
     boss.reset(); boss.active = true; boss.state = 'roar'; boss.t = 0;
     $('bossname').textContent = boss.T.name; $('bossbar').classList.remove('hidden'); AU.bossMusic(true);
@@ -851,6 +864,7 @@ function step(dt, inp) {
     if (P.state === 'rest') P.setState('move', null);
     P.update(sdt, st === 'play' ? inp : { mx: 0, my: 0 });
     if (!GM.solo) GM.companion.update(sdt);
+    if (GM.ally && GM.ally.on) GM.ally.update(sdt);
     for (const e of GM.enemies) { if (A.dist2(e.pos, P.pos) < 55 || e.state === 'dead') e.update(sdt); }
     updateHazards(sdt);
     // echo pickup
@@ -880,6 +894,8 @@ function step(dt, inp) {
     // menus: keep world gently alive
     GM.player.ch.update(dt); GM.companion.ch.update(dt);
   }
+  if (LV && LV.npc && GM.state !== 'cutscene') { const n = LV.npc; n.ch.node.pos = n.pos; OE.Q.yaw(n.ch.node.rot, n.yaw); n.ch.update(dt); }
+  if (GM.ally && GM.ally.on && st !== 'play') GM.ally.sync(dt);
   // beacons pulse
   for (const b of W.beacons) if (b.lit) { b.light.intensity = 3.2 + Math.sin(time * 2.2) * 0.5; if (rnd() < 0.3) GM.parts.emit({ pos: [b.pos[0] + R(-0.15, 0.15), 1.8, b.pos[2] + R(-0.15, 0.15)], vel: [R(-0.2, 0.2), R(0.8, 1.6), R(-0.2, 0.2)], size: 0.04, life: 1.4, col: [0.8, 1.8, 3.5, 1], soft: 0.2 }); }
   if (W.gate.node.visible) { const gf = W.gate.fx; W.gate.node.mat.alpha = 0.28 + Math.sin(time * 1.7) * 0.06; if (rnd() < 0.5) GM.parts.emit({ pos: [R(gf[0], gf[1]), R(0.2, gf[2]), W.gate.z + R(-0.1, 0.1)], vel: [0, R(0.1, 0.4), 0], size: R(0.1, 0.25), life: 1.5, col: [1.2, 1.1, 0.9, 0.35], soft: 0 }); }
@@ -887,6 +903,8 @@ function step(dt, inp) {
   const cp = GM.cam.pos;
   if (W.ambience === 'rain') { // Channel rain, driven in off the sea
     if (GM.state !== 'title' && GM.state !== 'crawl' && GM.state !== 'birth') for (let i = 0; i < 9; i++) GM.parts.emit({ pos: [cp[0] + R(-12, 12), R(5, 9), cp[2] + R(-12, 12)], vel: [-2.2, -15, 0.4], stretch: 0.06, size: R(0.01, 0.018), life: 0.7, col: [0.7, 0.74, 0.8, 0.55], add: false, soft: 0.1, fade: 0, floor: 0.02 });
+  } else if (W.ambience === 'snow') { // snow falling through the firelight
+    if (GM.state !== 'title' && GM.state !== 'crawl' && GM.state !== 'birth') for (let i = 0; i < 5; i++) GM.parts.emit({ pos: [cp[0] + R(-13, 13), R(4, 9), cp[2] + R(-13, 13)], vel: [R(0.3, 0.9), R(-1.1, -0.7), R(-0.3, 0.3)], size: R(0.014, 0.03), life: 9, col: [0.86, 0.88, 0.94, 0.85], add: false, soft: 0.3, spin: 1 });
   } else if (W.ambience === 'summer') { // pollen and dandelion seed drifting in the sun
     if (rnd() < 0.6) GM.parts.emit({ pos: [cp[0] + R(-12, 12), R(0.5, 4), cp[2] + R(-12, 12)], vel: [R(0.1, 0.4), R(0.02, 0.2), R(-0.15, 0.15)], size: R(0.012, 0.022), life: 7, col: [1.6, 1.5, 1.2, 0.55], soft: 0.4, spin: 1 });
   } else for (let i = 0; i < 2; i++) GM.parts.emit({ pos: [cp[0] + R(-14, 14), R(4, 9), cp[2] + R(-14, 14)], vel: [R(0.2, 0.6), R(-0.5, -0.9), R(-0.2, 0.2)], size: R(0.012, 0.03), life: 8, col: [0.5, 0.48, 0.45, 0.8], add: false, soft: 0.3, spin: 1 });

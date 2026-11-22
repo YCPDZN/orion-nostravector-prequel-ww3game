@@ -63,6 +63,16 @@ const ENTRIES = [
     ],
     quote: 'The sea will take you.',
     combat: 'Swings its anchor in heavy arcs and slams the shingle to send out a shockwave — roll through it. Charges when you keep your distance. At half strength it calls the fleet\'s guns down on its own position: watch for the red markers and keep moving.' },
+  { id: 'hunter', sec: 'ADVERSARIES', name: 'The Hunter', role: 'Pact Pursuit Frame', enemy: 'hunter', h: 4.0, unlock: 'boss4a',
+    facts: [['Class', 'Pursuit frame'], ['Height', '3.9 m'], ['Armament', 'Twin forearm blades, orbital uplink'], ['Origin', 'Chinese drone works'], ['Voice', 'Mandarin Chinese']],
+    lore: ['Fast and patient, built to run down whatever the Pact\'s lines let slip. On the first night of the siege of Kaliningrad it was sent after a field hospital.'],
+    quote: 'I can hear two heartbeats in there.',
+    combat: 'Quicker than the other heavy frames, with a blade on each arm. It sweeps, slams and charges; roll through the shockwave, and keep moving when the red markers fall at half strength.' },
+  { id: 'bear', sec: 'ADVERSARIES', name: 'The Bear', role: 'Guardian of Königsberg', enemy: 'bear', h: 5.7, unlock: 'boss4',
+    facts: [['Class', 'Siege guardian'], ['Height', '5.6 m'], ['Armament', 'Twin breaching cleavers, artillery uplink'], ['Origin', 'Russian foundries, Kaliningrad'], ['Voice', 'Russian']],
+    lore: ['The Pact\'s soldiers named it after the Bear on their banner. It was built in Kaliningrad, to hold the square before the House of Soviets for as long as the city stood.'],
+    quote: 'Winter fights for us.',
+    combat: 'The heaviest machine in the war: a cleaver in each fist, wide sweeps, ground slams with a wide shockwave, and a charge across the square. At half strength it calls the guns down on itself. Its reach is long; fight at its flank.' },
   { id: 'trooper', sec: 'ADVERSARIES', name: 'Pact Revenant', role: 'Russian-built blade infantry', enemy: 'trooper', h: 2.1, unlock: 'alert_trooper',
     facts: [['Class', 'Assault automaton'], ['Height', '2.0 m'], ['Armament', 'Forearm blade'], ['Origin', 'Russian foundries']],
     lore: ['The Pact\'s foot soldiers: tireless, fearless, built by the tens of thousands to hold what the heavier machines conquer.'],
@@ -114,7 +124,7 @@ function build() {
   t.node.add(rf); C.models.thomas = { ch: t, node: t.node, rifle: rf };
   C.muzzle = { pos: [0, 0, 0], color: [1, 0.7, 0.3], intensity: 0, range: 6 };
   // war machines
-  for (const type of ['boss', 'tidebreaker', 'trooper', 'drone', 'brute']) {
+  for (const type of ['boss', 'tidebreaker', 'hunter', 'bear', 'trooper', 'drone', 'brute']) {
     const e = new A.Enemy(type, STAGE.slice(), 0); e.reset(); e.root.pos = STAGE.slice(); if (e.hover) e.root.pos = [STAGE[0], 1.5, STAGE[2]];
     e.light.intensity = 0; C.models[type] = { enemy: e, node: e.root };
   }

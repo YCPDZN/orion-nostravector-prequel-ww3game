@@ -465,6 +465,68 @@ A.Duelist = class {
   }
 };
 
+/* ---------------- ally: Inés Alvarez (Chapters IV-V, if Orion spared her at Normandy) ----------------
+   Two sabres, her sister's footwork. She keeps near Orion and goes after the nearest war machine; the Pact's machines ignore her. */
+A.SwordAlly = class {
+  constructor(asset, glow) {
+    if (!swordMesh) buildWeapons();
+    this.ch = new OE.Character(asset, { rim: 0.06 }); this.node = this.ch.node; this.glowC = glow; this.blades = [];
+    for (const b of ['R_Hand', 'L_Hand']) {
+      const sw = new OE.Node(swordMesh, metalMat()), gl = new OE.Node(swordGlow, { mode: 2, color: [0, 0, 0], emissive: glow.slice() }); gl.castShadow = false; sw.add(gl);
+      const m = M4.create(); sw.attach = () => this.ch.boneWorld(b, m); sw.pos = [0.0, -0.085, 0.02]; this.node.add(sw); this.blades.push(gl);
+    }
+    this.light = { pos: [0, 1, 0], color: [1, 0.15, 0.35], intensity: 0, range: 4 }; OE.R.lights.push(this.light);
+    this.reset([0, 0, 0]);
+  }
+  reset(pos) { this.pos = pos.slice(); this.yaw = 0; this.state = 'follow'; this.t = 0; this.cd = 0.5; this.target = null; this.spinA = 0; this.lit = 0; this.alive = true; this.ch.play('Idle', 0); }
+  set(s, clip, fade = 0.1) { this.state = s; this.t = 0; if (clip) this.ch.play(clip, fade, 1, true); }
+  pick() {
+    const P = GM.player; let best = null, bd = 1e9;
+    for (const e of GM.enemies) {
+      if (!e.alive || (e.boss && !e.active) || e.state === 'dead' || e.hover && e.pos[1] > 3.2) continue;
+      const d = dist2(this.pos, e.pos); if (d < 13 && dist2(P.pos, e.pos) < 16 && d < bd) { bd = d; best = e; }
+    }
+    return best;
+  }
+  update(dt) {
+    const P = GM.player; this.t += dt; this.cd -= dt;
+    if (!this.target || !this.target.alive || rnd() < dt * 0.5) this.target = this.pick();
+    const tg = this.target, S = this.state;
+    const face = (y, r) => { this.yaw += OE.angDiff(this.yaw, y) * Math.min(1, dt * r); };
+    const move = (y, v) => { this.pos[0] += Math.sin(y) * v * dt; this.pos[2] += Math.cos(y) * v * dt; };
+    if (S === 'attack') {
+      const a = DUEL[this.atk], t = this.ch.t; this.lit = t > a.hit[0] - 0.1 && t < a.hit[1] + 0.05 ? 1 : 0;
+      if (tg) { const ty = yawTo(this.pos, tg.pos); if (t < a.lunge[0]) face(ty, 8); if (t > a.lunge[0] && t < a.lunge[1] && dist2(this.pos, tg.pos) > 1.6 + tg.radius) move(this.yaw, a.lunge[2] / (a.lunge[1] - a.lunge[0]) * 0.6); }
+      if (!this.hitDone && t >= a.hit[0] && tg && tg.alive && dist2(this.pos, tg.pos) < a.range + tg.radius + 0.3) { this.hitDone = true; tg.damage(48 * a.dmg, this.pos, { from: 'ines', heavy: this.atk === 'Heavy' }); GM.audio.hit(false); }
+      if (this.ch.finished || t > this.ch.cur.dur - 0.04) { this.lit = 0; this.set('follow', null); this.cd = R(0.5, 1.1); }
+    } else if (S === 'spin') {
+      const u = Math.min(1, this.t / 1.3); this.spinA = u * Math.PI * 4; this.lit = 1;
+      const turn = Math.floor(u * 4);
+      if (turn > this.spinHits) { this.spinHits = turn; for (const e of GM.enemies) if (e.alive && !(e.boss && !e.active) && dist2(this.pos, e.pos) < 2.9 + e.radius) e.damage(32, this.pos, { from: 'ines' }); }
+      if (u >= 1) { this.spinA = 0; this.lit = 0; this.set('follow', null); this.cd = R(1.0, 1.6); }
+    } else if (tg) { // close in and cut
+      const d = dist2(this.pos, tg.pos), ty = yawTo(this.pos, tg.pos); face(ty, 9);
+      if (d > 2.0 + tg.radius) { const v = d > 5 ? 5.2 : 3.0; move(this.yaw, v); this.ch.play(d > 5 ? 'Run' : 'Walk', 0.2, d > 5 ? 1.05 : 1.1); }
+      else { this.ch.play('Idle', 0.25); if (this.cd <= 0) { if (rnd() < 0.25) { this.set('spin', 'SpinPose', 0.1); this.spinHits = 0; } else { this.atk = rnd() < 0.4 ? 'Attack1' : rnd() < 0.7 ? 'Attack2' : 'Heavy'; this.hitDone = false; this.set('attack', this.atk, 0.08); } } }
+    } else { // keep at Orion's left shoulder
+      const f = fwdOf(P.yaw), spot = [P.pos[0] - f[0] * 1.6 + f[2] * 1.8, 0, P.pos[2] - f[2] * 1.6 - f[0] * 1.8];
+      const d = dist2(this.pos, spot);
+      if (d > 0.8) { const y = yawTo(this.pos, spot); face(y, 8); const v = d > 6 ? 5.4 : d > 2.5 ? 3.6 : 1.8; move(y, v); this.ch.play(v > 4 ? 'Run' : 'Walk', 0.25, v > 4 ? 1.05 : 1.0); }
+      else { face(P.yaw, 3); this.ch.play('Idle', 0.3); }
+      if (dist2(this.pos, P.pos) > 24) this.pos = spot; // never left behind
+    }
+    W.collide(this.pos, 0.42);
+    if (GM.inBoss) { const A_ = W.arena, dx = this.pos[0] - A_.c[0], dz = this.pos[2] - A_.c[2], dd = Math.hypot(dx, dz); if (dd > A_.r - 1) { this.pos[0] = A_.c[0] + dx / dd * (A_.r - 1); this.pos[2] = A_.c[2] + dz / dd * (A_.r - 1); } }
+    this.sync(dt);
+  }
+  sync(dt) {
+    this.node.pos = this.pos; Q.yaw(this.node.rot, this.yaw + (this.spinA || 0)); this.ch.update(dt);
+    this.glowAmt = OE.lerp(this.glowAmt || 0, this.lit, Math.min(1, dt * 18));
+    for (const g of this.blades) g.mat.emissive = this.glowC.map((c) => c * (1 + 1.1 * this.glowAmt));
+    this.light.pos = [this.pos[0], 1.1, this.pos[2]]; this.light.intensity = 0.15 + this.glowAmt * 1.6;
+  }
+};
+
 /* ---------------- companion: Thomas Hawthorne ---------------- */
 A.Companion = class {
   constructor(asset) {
@@ -651,6 +713,11 @@ const TYPES = {
   drone: { s: 1.0, hp: 55, dmg: 28, speed: 3.5, run: 4.5, range: 9, wind: 0.7, strike: 0.1, rec: 1.6, poise: 30, scrap: 45, radius: 0.55, aggro: 17, name: 'Seeker Drone', hover: true },
   tidebreaker: { s: 2.55, hp: 2100, dmg: 90, speed: 2.2, run: 3.3, range: 5.3, wind: 0.95, strike: 0.3, rec: 1.0, poise: 9999, scrap: 3600, radius: 1.6, aggro: 40,
     name: 'TIDEBREAKER, Spearhead of the Pact Landing Fleet', boss: true, color: [0.5, 0.56, 0.62], color2: [0.6, 0.5, 0.5], weapon: 'anchor' },
+  // Chapter IV. The Hunter (Part I, at the field hospital) and the Bear (the House of Soviets)
+  hunter: { s: 1.95, hp: 1500, dmg: 70, speed: 2.8, run: 4.4, range: 4.2, wind: 0.8, strike: 0.25, rec: 0.9, poise: 9999, scrap: 3200, radius: 1.25, aggro: 40,
+    name: 'THE HUNTER, Pact Pursuit Frame', boss: true, color: [0.3, 0.32, 0.3], color2: [0.24, 0.26, 0.24], dual: true, glowCol: [3.2, 1.6, 0.15], lightCol: [1, 0.55, 0.05] },
+  bear: { s: 2.85, hp: 2800, dmg: 100, speed: 2.1, run: 3.2, range: 5.6, wind: 1.0, strike: 0.3, rec: 1.0, poise: 9999, scrap: 4200, radius: 1.8, aggro: 40,
+    name: 'THE BEAR, Guardian of Königsberg', boss: true, color: [0.82, 0.84, 0.86], color2: [0.6, 0.64, 0.68], weapon: 'cleaver', dual: true, glowCol: [0.35, 1.4, 3.6], lightCol: [0.2, 0.55, 1] },
   boss: { s: 2.3, color: [0.75, 0.62, 0.55], color2: [0.85, 0.5, 0.42], weapon: 'cleaver', hp: 1700, dmg: 85, speed: 2.4, run: 3.4, range: 5.0, wind: 0.9, strike: 0.3, rec: 1.0, poise: 9999, scrap: 3000, radius: 1.5, aggro: 40, name: 'IRON WARDEN, Last Sentinel of the Sino-Russian Pact', boss: true },
 };
 
@@ -659,12 +726,13 @@ A.Enemy = class {
     partMeshes(); const T = this.T = TYPES[type]; this.type = type; this.home = pos.slice(); this.homeYaw = yaw;
     this.radius = T.radius; this.boss = !!T.boss; this.hover = !!T.hover;
     this.mat = metalMat(); this.mat.triScale = 1.2 / T.s; this.mat.color = T.color ? T.color.slice() : type === 'brute' ? [0.62, 0.6, 0.55] : [0.72, 0.74, 0.8];
-    this.glowMat = { mode: 2, color: [0, 0, 0], emissive: [3.5, 0.25, 0.1] };
+    this.gc = T.glowCol || [3.5, 0.25, 0.1]; // glow colour: Pact red, or the Hunter's amber / the Bear's ice blue
+    this.glowMat = { mode: 2, color: [0, 0, 0], emissive: this.gc.slice() };
     this.root = new OE.Node(); OE.scene.add(this.root);
     this.root.scl = [T.s, T.s, T.s];
     this.n = {};
     if (this.hover) this.buildDrone(); else this.buildBiped(type);
-    this.light = { pos: [0, 0, 0], color: [1, 0.15, 0.05], intensity: 0.0, range: 3.5 * T.s }; OE.R.lights.push(this.light);
+    this.light = { pos: [0, 0, 0], color: T.lightCol || [1, 0.15, 0.05], intensity: 0.0, range: 3.5 * T.s }; OE.R.lights.push(this.light);
     this.reset();
   }
   part(mesh, parent, pos, mat) { const n = new OE.Node(mesh, mat || this.mat); n.pos = pos; (parent || this.root).add(n); return n; }
@@ -688,9 +756,10 @@ A.Enemy = class {
     } else if (this.T.weapon === 'cleaver') {
       const c = this.part(PARTS.cleaver, n.elR, [0, -0.36, 0.05]); this.part(PARTS.cleaverGlow, c, [0, 0, 0], this.glowMat); n.weapon = c;
       OE.Q.euler(c.rot, -90, 0, 0);
+      if (this.T.dual) { const c2 = this.part(PARTS.cleaver, n.elL, [0, -0.36, 0.05]); this.part(PARTS.cleaverGlow, c2, [0, 0, 0], this.glowMat); OE.Q.euler(c2.rot, -90, 0, 0); } // the Bear: a cleaver in each fist
     } else {
       this.part(PARTS.blade, n.elR, [0, 0, 0]); this.part(PARTS.bladeGlow, n.elR, [0, 0, 0], this.glowMat);
-      if (type === 'brute') { this.part(PARTS.blade, n.elL, [0, 0, 0]); this.part(PARTS.bladeGlow, n.elL, [0, 0, 0], this.glowMat); }
+      if (type === 'brute' || this.T.dual) { this.part(PARTS.blade, n.elL, [0, 0, 0]); this.part(PARTS.bladeGlow, n.elL, [0, 0, 0], this.glowMat); }
     }
   }
   buildDrone() {
@@ -700,7 +769,7 @@ A.Enemy = class {
     const T = this.T; this.pos = this.home.slice(); if (this.hover) this.pos[1] = 2.6; this.yaw = this.homeYaw;
     this.maxHp = T.hp; this.hp = T.hp; this.alive = true; this.state = 'idle'; this.t = 0; this.poiseDmg = 0; this.cd = R(0.5, 1.5);
     this.walkPh = 0; this.deadT = 0; this.root.visible = true; this.active = !this.boss; this.target = null; this.phase2 = false; this.showBar = 0;
-    this.root.pos = this.pos; this.mat.flash = 0; this.glowMat.emissive = [3.5, 0.25, 0.1];
+    this.root.pos = this.pos; this.mat.flash = 0; this.glowMat.emissive = this.gc.slice();
     this.pose({});
   }
   hitY() { return this.hover ? this.pos[1] : 1.3 * this.T.s; }
@@ -744,7 +813,7 @@ A.Enemy = class {
     const d = dist2(this.pos, tg.pos), ty = yawTo(this.pos, tg.pos);
     const spd = this.phase2 ? 1.3 : 1;
     if (this.hover) return this.updateDrone(dt, tg, d, ty);
-    const glow = (v) => { this.glowMat.emissive = [3.5 * v, 0.25 * v + 0.1 * (v > 1.2 ? v : 0), 0.1 * v]; this.light.intensity = (v - 0.8) * 2; };
+    const gc = this.gc, glow = (v) => { this.glowMat.emissive = [gc[0] * v, gc[1] * v + 0.1 * (v > 1.2 ? v : 0), gc[2] * v]; this.light.intensity = (v - 0.8) * 2; };
     const S = this.state;
     if (S === 'idle') {
       this.pose({ sRx: -25, eR: -55 }); glow(1);

@@ -7,6 +7,11 @@ const say = (...a) => GM.say(...a);
 const sayN = (n, who, text, dur) => GM.say(who, text, GM.voDur(n, dur), GM.vo(n));
 /* numbered Chapter III lines: voice/normandyNN.mp3 */
 const say3 = (n, who, text, dur) => GM.say(who, text, GM.voDur3(n, dur), GM.vo3(n));
+/* numbered Chapter IV lines: voice/kaliningradNN.mp3 */
+const say4 = (n, who, text, dur) => GM.say(who, text, GM.voDur4(n, dur), GM.vo4(n));
+const SNOW_NIGHT = { // Kaliningrad, a winter night: snow cloud lit by the fires below
+  sunDir: [-0.32, 0.55, -0.48], sunCol: [0.5, 0.58, 0.78], sky: [0.09, 0.1, 0.13], ground: [0.13, 0.13, 0.15], fogCol: [0.17, 0.19, 0.24], fogDen: 0.02, exposure: 1.3,
+  skyPal: { top: [0.02, 0.025, 0.04], hor: [0.24, 0.22, 0.24], glow: [0.26, 0.1, 0.03], clLo: [0.08, 0.085, 0.1], clHi: [0.32, 0.31, 0.34], stars: 0, moon: 0 } };
 
 const TALINA3 = { who: 'talina', lang: null, file: null, vo: 3, lines: {
   intro: [null, 'Orion. I see you kept my gift.', 11],
@@ -223,6 +228,74 @@ window.LEVELS = {
         command: 'Talina Alvarez went to British Command in chains. Normandy is free.', dead: 'Talina Alvarez died in the church square. Normandy is free, and Orion did not look back.',
         companion: 'Inés Alvarez will fight beside the man who killed her sister. Neither of them has said a word about it.',
         icommand: 'Inés Alvarez went to British Command in chains. She is still waiting.', idead: 'Both Alvarez sisters are gone now. Normandy is free.' })[S.talina === 'executed' ? (S.ines === 'companion' ? 'companion' : 'i' + (S.ines || 'command')) : (S.talina3 || 'command')];
+    },
+  },
+  /* ---------------- Chapter IV: Kaliningrad ---------------- */
+  /* Part I (only if Orion saved Talina at Normandy): she is in labour at the field hospital, and the Pact's Hunter is at its gates */
+  '4a': {
+    loading: 'Marching on Kaliningrad',
+    spawns: [['trooper', [2, 0, 20]], ['drone', [-3, 0, 31]], ['trooper', [-2, 0, 44]], ['trooper', [3, 0, 52]], ['brute', [0, 0, 60]],
+      ['drone', [5, 0, 70]], ['trooper', [-4, 0, 78]], ['trooper', [3, 0, 92]], ['drone', [-3, 0, 103]], ['brute', [2, 0, 110]], ['trooper', [-3, 0, 116]]],
+    boss: { type: 'hunter', pos: [0, 0, 158], seen: 'boss4a' },
+    npc: { asset: 'talinaP', clip: 'Kneel', yaw: Math.PI }, // Talina, under the awning at the hospital door
+    cutscene: 'birth',
+    ambience: 'snow',
+    env: SNOW_NIGHT,
+    voice: { who: 'hunter', lang: 'zh-CN', file: null, vo: 4, lines: {
+      intro: ['找到你了。医院里的人，一个也跑不掉。', 'Found you. No one in that hospital gets away.', 5],
+      taunts: [['你保护不了所有人。', 'You cannot protect them all.', 6], ['我听见里面有两个心跳。', 'I can hear two heartbeats in there.', 7]],
+      phase2: ['狩猎结束了。', 'The hunt is over.', 8],
+      kill: ['猎物倒下了。', 'The prey is down.', 9],
+      death: ['熊……会完成……', 'The Bear... will finish it...', 10],
+    } },
+    intro() {
+      say4(1, 'radio', 'Mascar, the field hospital is cut off. Pact hunters are at the gates. Get there first.', 6);
+      say4(2, 'thomas', 'She\'ll hold on, Commander. Let\'s go.', 3.5);
+    },
+    beacon(i) { if (i === 1) say4(3, 'thomas', 'Hospital\'s just past the barricade.', 3.5); },
+    bossIntro() { say4(4, 'orion', 'Not one step further.', 3); },
+    phase2() { },
+    victory() {
+      say4(11, 'thomas', 'It\'s down! Go to her, Commander!', 3.5);
+      return { banner: ['THE HUNTER DESTROYED', 'THE HOSPITAL IS SAFE'], endIn: 9 };
+    },
+    endings: { good: '', neutral: '', evil: '' },
+  },
+  /* Part II (or the whole chapter, if Talina is dead): the Bear holds the square before the House of Soviets */
+  '4b': {
+    loading: 'Entering Kaliningrad',
+    spawns: [['trooper', [2, 0, 22]], ['drone', [-4, 0, 30]], ['trooper', [3, 0, 36]], ['trooper', [-2, 0, 44]], ['brute', [2, 0, 56]],
+      ['drone', [0, 0, 70]], ['trooper', [-2, 0, 78]], ['trooper', [3, 0, 84]], ['brute', [-1, 0, 100]], ['drone', [4, 0, 106]],
+      ['trooper', [-4, 0, 112]], ['trooper', [3, 0, 116]], ['drone', [0, 0, 118]]],
+    boss: { type: 'bear', pos: [0, 0, 162], seen: 'boss4' },
+    ally: 'ines', // fights beside Orion if he spared her at Normandy
+    choice: 'rubble',
+    ambience: 'snow',
+    env: SNOW_NIGHT,
+    voice: { who: 'bear', lang: 'ru-RU', file: null, vo: 4, lines: {
+      intro: ['Кёнигсберг не падёт.', 'Königsberg will not fall.', 28],
+      taunts: [['Этот город был нашим ещё до ваших дедов.', 'This city was ours before your grandfathers were born.', 29], ['Зима воюет за нас.', 'Winter fights for us.', 30], ['Россия не сдаётся.', 'Russia does not surrender.', 31]],
+      phase2: ['Тогда сгорим вместе!', 'Then we burn together!', 32],
+      kill: ['Ложись в снег, мальчик.', 'Lie down in the snow, boy.', 33],
+      death: ['Медведь… засыпает…', 'The Bear... sleeps...', 34],
+    } },
+    intro() {
+      say4(16, 'radio', 'All units: the Bear holds the square at the House of Soviets. Break it, and Kaliningrad falls.', 6);
+      say4(17, 'orion', 'Then we break it.', 2.5);
+      if (GM.save.ines === 'companion') say4(18, 'ines', 'Stay out of my way, Mascar.', 3);
+    },
+    beacon(i) { if (i === 1) say4(19, 'thomas', 'The bridge is ours. The square\'s straight ahead.', 4); },
+    bossIntro() { say4(27, 'thomas', 'Commander... that\'s the Bear.', 3); },
+    phase2() { },
+    victory() {
+      say4(35, 'radio', 'Command to all units. The Bear is down. Kaliningrad is ours.', 5.5);
+      return { banner: ['THE BEAR DESTROYED', 'KALININGRAD IS OURS'], endIn: 9 };
+    },
+    ending(S) {
+      const t = GM.align.tier('o');
+      const city = { good: 'Kaliningrad is free, and Orion still remembers why he fights.', neutral: 'Kaliningrad is free. One more city off the list.', evil: 'Kaliningrad is free, and its people are afraid of the man who freed it.' }[t];
+      const who = S.child === 'born' ? ' Somewhere behind the line, Talina is holding their child.' : S.ines === 'companion' ? ' Inés Alvarez cleaned her blades and said nothing.' : '';
+      return city + who;
     },
   },
 };

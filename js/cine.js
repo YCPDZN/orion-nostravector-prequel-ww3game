@@ -40,8 +40,50 @@ const IMPACT = 15.9, BLACK_UNTIL = 17.8;
 
 function black(v, secs) { const b = $('cineBlack'); b.style.transition = secs ? `opacity ${secs}s` : 'none'; b.style.opacity = v; }
 
+/* 'birth': Chapter IV, Part I. The Hunter is down; Orion walks to the hospital door, where Talina is holding their newborn. */
+const BIRTH = [
+  [1.2, 'thomas', 'Commander. They\'re asking for you.', 3, 12],
+  [5.4, 'talina', 'Orion. Come here. Come and meet your child.', 4, 13],
+  [10.4, 'orion', '...Hello, little one.', 3, 14],
+  [14.2, 'talina', 'Born in a siege. God help us, it will be just like you.', 4.5, 15],
+];
+let bundle = null;
+function birthStart() {
+  const L = GM.level, n = L.npc, P = GM.player, Th = GM.companion;
+  C.lines = BIRTH; C.li = 0; C.end = 23; C.vox = 4; C.npc = n;
+  C.spot = n.pos.slice(); C.from = [0, 0, n.pos[2] - 8.5]; C.stand = [-0.95, 0, n.pos[2] - 1.05]; // beside her, so the camera sees them both
+  P.pos = C.from.slice(); P.yaw = 0; P.state = 'cine'; P.iframe = true; P.ch.play('Idle', 0);
+  Th.pos = [2.4, 0, n.pos[2] - 9.5]; Th.yaw = 0; Th.ch.play('Idle', 0); Th.sync && Th.sync();
+  if (GM.ally && GM.ally.on) GM.ally.node.visible = false;
+  if (!bundle) { const g = new OE.Geo(); for (const o of [-0.07, 0.03]) g.sphere([o, 0, 0], 0.12, 10, { col: [0.93, 0.91, 0.86, 1], sy: 0.8 }); g.sphere([0.15, 0.03, 0], 0.07, 8, { col: [0.86, 0.68, 0.58, 1] }); // swaddled, a small face
+    bundle = new OE.Node(g.build(), W.tri(W.textures().concrete, 3, 0.95, 0)); bundle.castShadow = false; }
+  L.root.add(bundle); const f = fwd(n.yaw); bundle.pos = [n.pos[0] + f[0] * 0.34, 0.82, n.pos[2] + f[2] * 0.34]; OE.Q.yaw(bundle.rot, n.yaw + Math.PI / 2);
+  black(1); setTimeout(() => black(0, 1.6), 50);
+}
+function birthUpdate(dt) {
+  const t = C.t, P = GM.player, n = C.npc, cam = GM.cam, F = C.flags;
+  if (t < 7.5) { const u = Math.min(1, Math.max(0, (t - 2.6) / 4.6)); if (t > 2.6) { P.pos = [OE.lerp(C.from[0], C.stand[0], u), 0, OE.lerp(C.from[2], C.stand[2], u)]; P.ch.play(u < 1 ? 'Walk' : 'Idle', 0.3, 0.8); } }
+  else P.ch.play('Idle', 0.4);
+  P.yaw = Math.atan2(n.pos[0] - P.pos[0], n.pos[2] - P.pos[2]);
+  n.ch.node.pos = n.pos; OE.Q.yaw(n.ch.node.rot, n.yaw); n.ch.update(dt);
+  P.ch.update(dt); P.syncNode();
+  let pos, tgt;
+  if (t < 7.5) { pos = [-3.2, 1.7, P.pos[2] - 3.4]; tgt = [0, 1.0, n.pos[2] - 0.5]; } // behind Orion as he walks up
+  else if (t < 13.8) { pos = [2.7, 1.35, n.pos[2] - 1.5]; tgt = [-0.45, 1.0, n.pos[2] - 0.5]; } // the two of them, side on
+  else { const k = Math.min(1, (t - 13.8) / 8); pos = [1.1 - k * 0.2, 1.15, n.pos[2] - 2.4 + k * 0.6]; tgt = [-0.1, 0.8, n.pos[2]]; } // slow push in on Talina and the child
+  cam.pos = pos; cam.target = tgt; cam.shadowCenter = [tgt[0], 0, tgt[2]]; cam.camPos = cam.pos;
+  if (t >= 19.6 && !F.down) { F.down = true; black(1, 2.2); }
+  if (t >= C.end) C.finish();
+}
+
 C.start = function (name) {
-  if (name !== 'eye') return;
+  if (name === 'birth') {
+    C.name = name; C.t = 0; C.real = 0; C.busy = 0; C.on = true; C.flags = {};
+    GM.state = 'cutscene'; GM.lock = null; GM.clearSubs(); if (document.pointerLockElement) document.exitPointerLock();
+    $('prompt').classList.add('hidden'); $('hud').classList.remove('hidden'); $('hud').classList.add('cine'); $('touch').classList.add('hidden');
+    $('cine').classList.remove('hidden'); $('banner').style.opacity = 0; birthStart(); return;
+  }
+  if (name !== 'eye') return; C.vox = 0;
   C.name = name; C.t = 0; C.real = 0; C.busy = 0; C.on = true; C.flags = {};
   C.br = GM.align.tier('o') === 'evil' ? BRANCH.execute : BRANCH.spare;
   C.lines = OPEN.concat(C.br.lines); C.li = 0; C.end = C.br.end;
@@ -57,6 +99,7 @@ C.start = function (name) {
 };
 C.skip = function () {
   if (!C.on) return;
+  if (C.name === 'birth') { C.t = Math.max(C.t, C.end); GM.clearSubs(); return; }
   if (C.t < IMPACT - 0.1) { C.t = IMPACT - 0.05; C.busy = 0; GM.clearSubs(); C.li = C.lines.findIndex((l) => l[0] >= IMPACT); }
   else C.t = C.end;
 };
@@ -76,9 +119,10 @@ C.update = function (dt) {
   C.real += dt; let step = dt; const nx = C.li >= 0 ? C.lines[C.li] : null;
   if (nx && C.t + dt >= nx[0]) {
     if (C.real < C.busy) { C.t = Math.max(C.t, nx[0] - 1e-4); step = 0; }
-    else { const D = GM.voDur(nx[4], nx[3]); GM.say(nx[1], nx[2], D, GM.vo(nx[4])); C.busy = C.real + D - 0.25; C.li++; }
+    else { const [vo, voDur] = GM.voSet(C.vox); const D = voDur(nx[4], nx[3]); GM.say(nx[1], nx[2], D, vo(nx[4])); C.busy = C.real + D - 0.25; C.li++; }
   }
   C.t += step;
+  if (C.name === 'birth') return birthUpdate(dt);
   const t = C.t, P = GM.player, T = GM.boss, cam = GM.cam, F = C.flags, d = C.dir, r = C.right, evil = C.br === BRANCH.execute;
 
   if (t < IMPACT) { // Orion walks up and stands over her
@@ -142,6 +186,7 @@ C.update = function (dt) {
 C.finish = function () {
   C.on = false;
   $('hud').classList.remove('cine'); $('cine').classList.add('hidden'); black(0); OE.R.hurt = 0;
+  if (C.name === 'birth') { if (bundle && bundle.parent) bundle.parent.remove(bundle); if (GM.ally) GM.ally.node.visible = true; GM.save.child = 'born'; GM.toPart2(); return; }
   if (C.name === 'eye') { GM.save.talina = C.br.fate; GM.boss.node.visible = false; GM.boss.sword.visible = true; GM.toPart2(); }
 };
 })();

@@ -3,10 +3,10 @@
 'use strict';
 const W = window.W = { builders: {}, levels: {} };
 /* each level keeps its own copy of these; W.use() swaps them in */
-const STATE = ['colliders', 'fires', 'beacons', 'gate', 'gateCol', 'sealCol', 'arena', 'bounds', 'carSpots', 'sea', 'ambience'];
+const STATE = ['colliders', 'fires', 'beacons', 'gate', 'gateCol', 'sealCol', 'arena', 'bounds', 'carSpots', 'sea', 'ambience', 'npcSpot'];
 function fresh() {
   Object.assign(W, { colliders: [], fires: [], beacons: [], gate: null, gateCol: null, sealCol: null, arena: { c: [0, 0, 150], r: 21 },
-    bounds: [-30, 30, -8.5, 180], carSpots: [], sea: null, ambience: 'ash' });
+    bounds: [-30, 30, -8.5, 180], carSpots: [], sea: null, ambience: 'ash', npcSpot: null });
 }
 fresh();
 W.textures = function () {

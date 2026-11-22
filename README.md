@@ -48,7 +48,11 @@ The game is split into chapters, each a self-contained mission. Pick one from **
   - Once you have reached Part II, **CHAPTERS** offers a button to start it directly.
 - **Chapter III — Iron Tide** *(Normandy, June 2091)*: eyepatch Orion and Thomas fight with American armour through the bocage (sunken hedgerow lanes, fields, an apple orchard, a Norman village) to the church square, where Talina Alvarez waits for a rematch. If Orion executed Talina at Dover, her twin sister **Inés Alvarez** is there instead, hunting him: two sabres, spinning cuts, and twice her sister's strength.
   - The chapter's choice is Orion's alone (it moves only his alignment). **Talina**: save her (good; she leaves Normandy at his side, which leads into Chapter IV), send her to British Command (neutral) or kill her (evil). **Inés**: spare her (good; she joins as a companion for Chapters IV and V, but Thomas is pushed the opposite way, towards evil), send her to Command (neutral) or kill her (evil).
-- **Chapter IV — Winter of the Bear** *(Kaliningrad, winter 2094)*: coming soon.
+- **Chapter IV — The Siege of Kaliningrad** *(Kaliningrad, winter 2094)*: a snowbound night in the old Königsberg. How many parts it has depends on Talina:
+  - **If Orion saved Talina at Normandy (2 parts).** *Part I, Born Under Siege*: Talina, pregnant with Orion's child, has gone into labour at a field hospital the Pact has cut off. Orion and Thomas fight through the outskirts (Soviet panel blocks, a burnt tram, tank traps) to the hospital courtyard and destroy **the Hunter**, a fast twin-bladed pursuit frame. A short scene follows: Talina, with their newborn. *Part II, The Bear* is the assault below.
+  - **If Talina is dead (executed at Dover or killed at Normandy), or in British custody (1 part)**: the chapter is the assault alone.
+  - *The assault*: down a tram avenue, past a collapsed apartment block (the chapter's choice, **Survivors in the Rubble**: talk to Thomas there), over the bridge on the frozen Pregel to the square before the House of Soviets, where **the Bear**, a huge winter-white machine with a cleaver in each fist, holds the city. If Orion spared Inés at Normandy, she fights beside him with her two sabres.
+  - Dialogue is kept short: 35 numbered lines in all. Record them as `voice/kaliningradNN.mp3` and list them in `js/voice_kaliningrad.js`; until then they are subtitles (the Hunter speaks Mandarin and the Bear Russian, through text-to-speech).
 - **Chapter V — Under One Banner** *(Harbin, 2095)*: coming soon.
 
 Chapter I begins with a first-person memory: Orion recalls his birth in London in 2069 AD, shown as a soft, out-of-focus dream with a heartbeat, narrated by Orion (voice/intro1-6.mp3). Each chapter then opens with its own title card and prologue and ends with a *Chapter Complete* screen showing your time, kills, deaths and rank. Replaying a chapter keeps Orion's rank and upgrades. Chapters are defined in `js/chapters.js`; each chapter's enemies, boss, dialogue and weather are in `js/levels.js`.
@@ -100,7 +104,9 @@ js/engine.js          WebGL2 renderer (skinning, PBR, shadows, bloom, particles)
 js/world.js           New London level: street, overpass, fog gate, cathedral arena
 js/world_castle.js    Dover Castle level (Chapter II, Part I): cliff road, gatehouse, baileys, Great Tower
 js/world_dover.js     Dover beach level (Chapter II, Part II): white cliffs, shingle, the Channel, landing ships
-js/cine.js            in-engine cutscenes (Talina and Orion's eye)
+js/world_normandy.js  Normandy level (Chapter III): the bocage, the village, the church square
+js/world_kaliningrad.js  Kaliningrad levels (Chapter IV): the road to the field hospital; the House of Soviets
+js/cine.js            in-engine cutscenes (Talina and Orion's eye; the birth at Kaliningrad)
 js/levels.js          per-level enemies, boss, playable hero, voice lines, sky and weather
 js/actors.js          Orion, Thomas, enemies, boss, weapons
 js/game.js            input (keyboard, touch, gamepad), camera, HUD, saves, story
@@ -118,7 +124,7 @@ tools/*.py            the rigging pipeline used to build them
 ```
 
 ## The rigged models
-`models/OrionMascar_rigged.glb`, `models/OrionEyepatch_rigged.glb`, `models/ThomasHawthorne_rigged.glb` and `models/TalinaAlvarez_rigged.glb` are standard skinned glTF 2.0 files that import into Unity, Blender, Godot or Unreal.
+`models/OrionMascar_rigged.glb`, `models/OrionEyepatch_rigged.glb`, `models/ThomasHawthorne_rigged.glb` `models/TalinaAlvarez_rigged.glb`, `models/TalinaPregnant_rigged.glb` (Chapter IV) and `models/InesAlvarez_rigged.glb` are standard skinned glTF 2.0 files that import into Unity, Blender, Godot or Unreal.
 - **Skeleton:** 21 bones (Hips, Spine, Chest, Neck, Head, Shoulder/UpperArm/ForeArm/Hand ×2, UpLeg/Leg/Foot/Toe ×2).
 - **Scale:** real-world metres, about 1.82 m tall.
 - **Mesh:** optimised for mobile from about 1.9M to about 50k triangles, with the original 1024² colour, normal and metal/roughness textures kept.

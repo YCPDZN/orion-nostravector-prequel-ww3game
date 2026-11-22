@@ -1,5 +1,14 @@
 /* Chapters — each entry is one mission of ORION: The Third World War.
    To add a chapter: append an entry with available: true and give it a level / spawns in a later update. */
+const CH4_PARTS = [
+  { numeral: 'I', title: 'Born Under Siege', place: 'Kaliningrad Outskirts',
+    prologue: ['Winter, 2094.',
+      'Three years after Normandy, the war has moved east, to the Pact\'s last foothold on the Baltic: Kaliningrad, the old Königsberg.',
+      'Talina Alvarez never went back to the Pact. In the spring, she told Orion she was carrying his child.',
+      'Tonight the siege began, and Talina went into labour at a field hospital that is now cut off. The Pact\'s hunters are already at its gates.'] },
+  { numeral: 'II', title: 'The Bear', place: 'House of Soviets',
+    prologue: ['Talina and the child are safe behind the line.', 'Orion goes back to the front. In the heart of the city, the Bear is waiting.'] },
+];
 window.CHAPTERS = [
   {
     id: 1, numeral: 'I', title: 'The Siege of New London', place: 'New London', date: 'November 2090',
@@ -56,8 +65,16 @@ window.CHAPTERS = [
       S && S.talina === 'executed'
         ? 'Inland, in the hedgerows of the bocage, the Pact has dug in its war machines. And someone is hunting the man who killed Talina Alvarez.'
         : 'Inland, in the hedgerows of the bocage, the Pact has dug in its war machines. And British Command has word of a sabre in the dark: Talina Alvarez is in Normandy.'] },
-  { id: 4, numeral: 'IV', title: 'Winter of the Bear', place: 'Kaliningrad', date: 'Winter 2094', available: false,
-    summary: 'The front pushes east into the frozen Russian enclave. In a city of snow and ruins, the Pact makes its stand — and the people caught between the armies pay for it.' },
+  { id: 4, numeral: 'IV', title: 'The Siege of Kaliningrad', place: 'Kaliningrad', date: 'Winter 2094', available: true,
+    summary: 'The front pushes east into the frozen Russian enclave. In the old Königsberg, under snow and fire, the Pact makes its stand around the House of Soviets, guarded by the war machine its soldiers call the Bear.',
+    objective: 'Destroy the Bear',
+    /* two parts only if Talina is alive and at Orion's side (saved at Normandy): Part I is the night their child is born */
+    get parts() { const S = window.GM && GM.save && GM.save.started ? GM.save : window.GM && GM.baseSave ? GM.baseSave() : null; return GM.labour && GM.labour(S) ? CH4_PARTS : null; },
+    prologue: (S) => ['Winter, 2094.',
+      'Three years after Normandy, the war has moved east. The Allies have driven the Pact back across Europe, to its last foothold on the Baltic: Kaliningrad, the old Königsberg.',
+      S && S.ines === 'companion' ? 'Inés Alvarez marches with Orion and Thomas now. She has still not said a word about her sister.'
+        : S && S.talina3 === 'command' ? 'Talina Alvarez is in a British cell. Orion has not visited her.' : 'Orion Mascar is twenty-five. Thomas Hawthorne is twenty. Neither of them remembers peace.',
+      'In the heart of the city, before the House of Soviets, the Pact\'s last war machine holds the square.'] },
   { id: 5, numeral: 'V', title: 'Under One Banner', place: 'Harbin', date: '2095', available: false,
     summary: 'Where the Red Sun and the Bear first united, the Sino-Russian Pact holds its last fortress. Ten years of war come down to one decision.' },
 ];
