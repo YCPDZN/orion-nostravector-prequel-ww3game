@@ -41,7 +41,7 @@ const IMPACT = 15.9, BLACK_UNTIL = 17.8;
 function black(v, secs) { const b = $('cineBlack'); b.style.transition = secs ? `opacity ${secs}s` : 'none'; b.style.opacity = v; }
 
 /* 'birth': Chapter IV, Part I. The Hunter is down; Orion goes to Talina at the hospital door. She is in labour, and the child is born:
-   the contraction, a cut to black, a newborn's cry, and Talina holding their child. */
+   the contraction, a silent cut to black, and Talina holding their child. */
 const BIRTH = [
   [1.2, 'thomas', 'Commander. She\'s asking for you.', 3, 4],
   [4.6, 'talina', 'Orion... it\'s coming. It\'s coming now.', 3.4, 5],
@@ -84,7 +84,6 @@ function birthUpdate(dt) {
   if (t >= BORN && !F.born) { // the child is born
     F.born = true; n.ch.node.visible = false; L.after.node.visible = true;
     L.root.add(bundle); const f = fwd(n.yaw); bundle.pos = [n.pos[0] + f[0] * 0.34, 0.82, n.pos[2] + f[2] * 0.34]; OE.Q.yaw(bundle.rot, n.yaw + Math.PI / 2);
-    AU.babyCry(0.4);
   }
   if (t >= 20.6 && !F.up) { F.up = true; black(0, 1.8); }
   P.ch.update(dt); P.syncNode();
