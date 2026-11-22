@@ -153,7 +153,13 @@ body.touchmode #bossbar{width:min(52vw,600px);left:44%}
 .chap .sum{font-size:15px;line-height:1.5;color:#c8d4dc;margin:8px 0}
 .chap .st{font-size:12px;letter-spacing:.2em;color:#8394a0}.chap .st.done{color:#8fd29b}
 .chap .bt{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.chap .bt .btn{width:auto;margin:0;padding:8px 16px;font-size:15px}
-.chap.locked{opacity:.55;border-style:dashed}
+.chap.locked{opacity:.72;border-style:dashed}
+.chap .cov{position:relative;height:clamp(90px,14vw,150px);margin:-14px -18px 12px;background-size:cover;background-position:center;border-bottom:1px solid color-mix(in srgb,var(--acc) 35%,transparent)}
+.chap .cov.lk{filter:grayscale(1) brightness(.45)}
+.chap .cov span{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;letter-spacing:.5em;color:#dfe8ee;text-align:center}
+.chap .cov small{display:block;margin-top:6px;font-size:10px;letter-spacing:.4em;color:#8394a0}
+@media (max-height:500px){.chap .cov{height:64px}}
+.chap .cov.soon{background:repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 12px,transparent 12px 24px),linear-gradient(160deg,#0c1218,#05080b)}
 #crawl .txt p.first small{display:block;font-size:.42em;letter-spacing:.5em;color:var(--gold);margin-bottom:.5em}
 /* ---------- codex ---------- */
 #codex{position:fixed;inset:0;pointer-events:none}
@@ -386,9 +392,9 @@ body.touchmode #sub{top:31%;width:min(58vw,600px)}
   <div id="cmpTitle2" style="font-size:clamp(26px,4vw,40px);margin:8px 0 14px;color:#f1e6cf"></div>
   <div id="cmpStats" style="text-align:left"></div>
   <div class="small" id="cmpNext" style="margin:14px 0 6px;font-style:italic"></div>
-  <button class="btn" id="cmpNextCh">NEXT CHAPTER</button>
   <button class="btn" id="cmpSave">SAVE GAME</button>
   <button class="btn" id="cmpContinue">CONTINUE EXPLORING</button>
+  <button class="btn" id="cmpNextCh">NEXT CHAPTER</button>
   <button class="btn" id="cmpChapters">CHAPTER SELECT</button>
   <button class="btn" id="cmpTitle">RETURN TO TITLE</button>
 </div></div>
@@ -412,7 +418,7 @@ body.touchmode #sub{top:31%;width:min(58vw,600px)}
 <script src="js/audio.js?v=31"></script>
 <script src="js/chapters.js?v=31"></script>
 <script src="js/levels.js?v=31"></script>
-<script src="js/game.js?v=31"></script>
+<script src="js/game.js?v=32"></script>
 <script src="js/codex.js?v=31"></script>
 <script src="js/alignment.js?v=31"></script>
 <script src="js/menu.js?v=31"></script>

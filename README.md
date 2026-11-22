@@ -52,6 +52,8 @@ The game is split into chapters, each a self-contained mission. Pick one from **
 
 Chapter I begins with a first-person memory: Orion recalls his birth in London in 2069 AD, shown as a soft, out-of-focus dream with a heartbeat, narrated by Orion (voice/intro1-6.mp3). Each chapter then opens with its own title card and prologue and ends with a *Chapter Complete* screen showing your time, kills, deaths and rank. Replaying a chapter keeps Orion's rank and upgrades. Chapters are defined in `js/chapters.js`; each chapter's enemies, boss, dialogue and weather are in `js/levels.js`.
 
+Chapters unlock in order: each one opens once the chapter before it has been completed (in the current game or any save slot). The Chapter Complete screen has a button straight into the next chapter, and the chapter select shows a cover image for each chapter (`assets/chapters/`).
+
 Alignment carries from one chapter to the next: finishing Chapter I takes Orion's and Thomas's alignment into Dover (use the **NEXT CHAPTER** button on the Chapter Complete screen). Replaying a chapter rewinds alignment to how it stood when that chapter began.
 
 ## Alignment

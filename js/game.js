@@ -434,18 +434,29 @@ function startChapter(n, opts = {}) {
   const ch = chapterDef(n);
   if (ch.opening) { GM.state = 'birth'; show(null); hudVisible(false); AU.musicDuck(0.1); GM.birth.start(ch.opening, startCrawl); } else startCrawl();
 }
+/* progression: a chapter opens once the one before it has been completed (in this game or any saved one) */
+GM.completed = function () {
+  const d = Object.assign({}, GM.save.done || {});
+  for (const sl of readSlots()) if (sl && sl.save && sl.save.done) Object.assign(d, sl.save.done);
+  return d;
+};
+GM.unlocked = (id) => id <= 1 || !!GM.completed()[id - 1];
+const COVERS = { 1: 'assets/chapters/ch1.jpg', 2: 'assets/chapters/ch2.jpg' };
 function openChapters(ret) {
   chapterReturn = ret; const S = GM.save;
   $('chList').innerHTML = CHAPTERS.map((c) => {
     const done = S.done && S.done[c.id]; const inProg = S.started && S.chapter === c.id && !S.bossDead;
-    let status = !c.available ? 'COMING SOON' : done ? `COMPLETED · ${fmtTime(done.time)} · ${done.deaths} deaths` : inProg ? 'IN PROGRESS' : 'NOT STARTED';
+    const here = S.started && S.chapter === c.id; const open = c.available && (GM.unlocked(c.id) || here);
+    const prev = CHAPTERS.find((x) => x.id === c.id - 1);
+    let status = !c.available ? 'COMING LATER' : !open ? `LOCKED · COMPLETE CHAPTER ${prev.numeral} TO UNLOCK` : done ? `COMPLETED · ${fmtTime(done.time)} · ${done.deaths} deaths` : inProg ? 'IN PROGRESS' : 'NOT STARTED';
     let btns = '';
-    if (c.available) {
+    const cover = COVERS[c.id] && c.available ? `<div class="cov${open ? '' : ' lk'}" style="background-image:url('${COVERS[c.id]}')">${open ? '' : '<span>LOCKED</span>'}</div>` : `<div class="cov soon"><span>CLASSIFIED<small>COMING LATER</small></span></div>`;
+    if (open) {
       if (S.started && S.chapter === c.id) btns += `<button class="btn" data-ch="cont" data-id="${c.id}">CONTINUE</button>`;
       btns += `<button class="btn" data-ch="start" data-id="${c.id}">${done || (S.started && S.chapter === c.id) ? 'REPLAY CHAPTER' : 'START CHAPTER'}</button>`;
       if (c.parts && S.reached && S.reached[c.id + 'b']) btns += `<button class="btn" data-ch="part2" data-id="${c.id}">PART II: ${c.parts[1].title.toUpperCase()}</button>`;
     }
-    return `<div class="chap ${c.available ? '' : 'locked'}"><div class="num">CHAPTER ${c.numeral}</div><div class="ttl">${c.title}</div>
+    return `<div class="chap ${open ? '' : 'locked'}">${cover}<div class="num">CHAPTER ${c.numeral}</div><div class="ttl">${c.title}</div>
       ${c.place ? `<div class="meta">${c.place} · ${c.date}</div>` : ''}<div class="sum">${c.summary}</div>
       ${(() => { const ch = GM.align.forChapter(c.id); if (!ch) return ''; const made = S.choices && S.choices[ch.id]; return `<div class="meta">Dialogue choice: <b style="color:#efe4cc">${ch.title}</b>${made ? ` — <span style="color:${GM.align.TIERS[made].css}">${GM.align.label('o', made)}</span>` : ''}</div>`; })()}<div class="st ${done ? 'done' : ''}">${status}</div><div class="bt">${btns}</div></div>`;
   }).join('');
@@ -469,7 +480,7 @@ function chapterComplete() {
   S.done[c.id].align = GM.align.tier('o');
   S.alignAt = S.alignAt || {}; S.alignAt[c.id + 1] = clone(S.align); // the next chapter starts from how this one ended
   const next = CHAPTERS.find((x) => x.id === c.id + 1);
-  $('cmpNext').textContent = next ? (next.available ? `Next: Chapter ${next.numeral} — ${next.title}` : `Chapter ${next.numeral}: ${next.summary}`) : '';
+  $('cmpNext').textContent = next ? (next.available ? `Chapter ${next.numeral} — ${next.title} is now unlocked.` : `Chapter ${next.numeral}: ${next.summary} (Coming later.)`) : '';
   const nb = $('cmpNextCh'); nb.style.display = next && next.available ? '' : 'none'; if (next) nb.textContent = `CHAPTER ${next.numeral}: ${next.title.toUpperCase()}`;
   nb.onclick = () => { AU.ui(); startChapter(next.id); };
   $('banner').style.opacity = 0; show('complete'); AU.beacon();
