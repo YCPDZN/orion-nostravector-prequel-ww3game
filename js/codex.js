@@ -23,7 +23,7 @@ const ENTRIES = [
       'Too young for the front line, he was assigned to British Command\'s youngest commander as an apprentice — Orion Mascar\'s shadow and student, and, though neither would ever say it, the closest thing either of them has to family.',
       'He calls Orion "Commander" in front of others and "Orion" when it matters. Everything he knows about fighting, Orion taught him — and he never lets him forget it.',
     ],
-    combat: 'Fights at range with a service rifle, firing aimed three-round bursts at whatever Orion is fighting or locked on to. Anything that gets too close gets the rifle stock. If he falls, give him time — he always gets back up.',
+    combat: 'Fights at range with a service rifle, firing aimed three-round bursts at whatever Orion is fighting or locked on to. Anything that gets too close gets the rifle stock. He is built to take punishment — three times what a normal soldier can — and against the Iron Warden he digs in even harder, shrugging off half of every blow. If he falls, give him time: he always gets back up.',
     quote: 'You didn\'t think I\'d let you finish this alone, did you?',
     show: ['Idle', 'Aim', 'Shoot', 'Shoot', 'Idle'] },
   { id: 'boss', sec: 'ADVERSARIES', name: 'The Iron Warden', role: 'Last Sentinel of the Sino-Russian Pact', enemy: 'boss', h: 4.7, unlock: 'boss',

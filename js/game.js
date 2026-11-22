@@ -517,14 +517,14 @@ function updateHazards(dt) {
     if (m.t < 0.5 && rnd() < 0.5) GM.parts.emit({ pos: [m.pos[0], 6 - (0.5 - m.t) * 12, m.pos[2]], vel: [0, -12, 0], stretch: 0.8, size: 0.08, life: 0.06, col: [4, 1.5, 0.5, 1], soft: 0.2, fade: 0 });
     if (m.t <= 0) {
       GM.fx.explode([m.pos[0], 0.4, m.pos[2]], 1.3);
-      for (const t of [P, C]) if (t.alive && Math.hypot(t.pos[0] - m.pos[0], t.pos[2] - m.pos[2]) < m.r) t.damage(m.dmg, m.pos, { unblockable: false });
+      for (const t of [P, C]) if (t.alive && Math.hypot(t.pos[0] - m.pos[0], t.pos[2] - m.pos[2]) < m.r) t.damage(m.dmg, m.pos, { unblockable: false, boss: true });
       GM.markers.splice(i, 1);
     }
   }
   for (let i = GM.shocks.length - 1; i >= 0; i--) {
     const s = GM.shocks[i]; s.r += dt * 9;
     const n = Math.floor(s.r * 3); for (let k = 0; k < n; k++) { const a = rnd() * Math.PI * 2; GM.parts.emit({ pos: [s.pos[0] + Math.cos(a) * s.r, 0.15, s.pos[2] + Math.sin(a) * s.r], vel: [Math.cos(a) * 1.5, R(0.5, 1.5), Math.sin(a) * 1.5], size: R(0.2, 0.35), grow: 0.5, life: 0.5, col: [0.3, 0.24, 0.18, 0.45], add: false, soft: 0 }); }
-    for (const t of [P, C]) { if (!t.alive || s.hit.has(t)) continue; const d = Math.hypot(t.pos[0] - s.pos[0], t.pos[2] - s.pos[2]); if (Math.abs(d - s.r) < 0.6) { s.hit.add(t); t.damage(s.dmg, s.pos, { unblockable: true }); } }
+    for (const t of [P, C]) { if (!t.alive || s.hit.has(t)) continue; const d = Math.hypot(t.pos[0] - s.pos[0], t.pos[2] - s.pos[2]); if (Math.abs(d - s.r) < 0.6) { s.hit.add(t); t.damage(s.dmg, s.pos, { unblockable: true, boss: true }); } }
     if (s.r > s.max) GM.shocks.splice(i, 1);
   }
   for (const f of flashPool) { if (f.t > 0) { f.t -= dt; f.light.intensity = f.peak * Math.max(0, f.t / f.dur); } else f.light.intensity = 0; }

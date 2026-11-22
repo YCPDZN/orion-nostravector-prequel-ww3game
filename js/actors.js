@@ -235,7 +235,7 @@ A.Player = class {
 A.Companion = class {
   constructor(asset) {
     this.ch = new OE.Character(asset, { rim: 0.06 }); this.node = this.ch.node; OE.scene.add(this.node);
-    this.pos = [1.5, 0, -1.5]; this.yaw = 0; this.state = 'follow'; this.t = 0; this.cool = 1; this.maxHp = 260; this.hp = 260; this.alive = true; this.radius = 0.42;
+    this.pos = [1.5, 0, -1.5]; this.yaw = 0; this.state = 'follow'; this.t = 0; this.cool = 1; this.maxHp = 780; this.hp = 780; // 3x durability this.alive = true; this.radius = 0.42;
     const rf = new OE.Node(rifleMesh, metalMat()); rf.mat.color = [0.7, 0.7, 0.72];
     const rg = new OE.Node(rifleGlow, { mode: 2, color: [0, 0, 0], emissive: [3, 0.6, 0.2] }); rg.castShadow = false; rf.add(rg);
     // the rifle is aimed procedurally: grip sits in the right hand, barrel points along the aim direction
@@ -364,10 +364,13 @@ A.Companion = class {
     const melee = this.state === 'melee' ? Math.sin(Math.min(1, this.ch.progress) * Math.PI) : 0;
     A.rifleRig(this.ch, { aim: Math.max(this.aimBlend, melee), dir: this.state === 'melee' ? [0, -0.1, 1] : dir, recoil: this.recoil, thrust: melee }, this.rifleModel);
   }
-  damage(amount, fromPos) {
+  damage(amount, fromPos, opts = {}) {
     if (!this.alive) return false;
+    // extra hardened against the Iron Warden: its blows, shockwaves and barrage do half damage to him
+    if (opts.boss || GM.inBoss) amount *= 0.5;
     this.hp -= amount; GM.fx.blood([this.pos[0], 1.3, this.pos[2]]);
-    if (this.hp <= 0) { this.alive = false; this.downT = 20; this.ch.play('Death', 0.1, 1, true); GM.say('thomas', 'I\'m down! Commander — keep fighting, I\'ll patch myself up!', 4.8, 9); return true; }
+    if (this.hp <= 0) { this.alive = false; this.downT = GM.inBoss ? 10 : 20; this.ch.play('Death', 0.1, 1, true); GM.say('thomas', 'I\'m down! Commander — keep fighting, I\'ll patch myself up!', 4.8, 9); return true; }
+    if (opts.boss || GM.inBoss) return true; // shrugs off the Warden's hits without flinching
     this.state = 'hit'; this.t = 0; this.ch.play('Hit', 0.05, 1, true); return true;
   }
 };
@@ -564,7 +567,7 @@ A.Enemy = class {
       else if (this.atk === 'sweep') hit = u > 0.25 && u < 0.9 && d < 6.2 && ang < 1.9;
       else if (this.atk === 'slam') { const ip = [this.pos[0] + Math.sin(this.yaw) * 4.2, 0, this.pos[2] + Math.cos(this.yaw) * 4.2]; if (u > 0.6 && !this.slamFx) { this.slamFx = true; this.impact(4, ip); } hit = u > 0.6 && dist2(ip, tg.pos) < 2.6; dmg = T.dmg * 1.25; }
       else if (this.atk === 'charge') { hit = d < this.radius + 0.9; dmg = T.dmg * 0.9; }
-      if (hit) { this.hitDone.add(tg); tg.damage(dmg * (this.phase2 ? 1.15 : 1), this.pos, opts); }
+      if (hit) { this.hitDone.add(tg); tg.damage(dmg * (this.phase2 ? 1.15 : 1), this.pos, Object.assign({ boss: this.boss }, opts)); }
     }
     if (u >= 1) this.slamFx = false;
   }
