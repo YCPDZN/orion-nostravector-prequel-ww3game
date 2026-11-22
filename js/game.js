@@ -426,7 +426,7 @@ function startChapter(n, opts = {}) {
   const choices = {}; for (let i = 1; i < n; i++) { const c = GM.align.forChapter(i); if (c && S0.choices && S0.choices[c.id]) choices[c.id] = S0.choices[c.id]; }
   const seen = clone(S0.seen || {});
   for (const id of Object.keys(LEVELS)) if (String(id)[0] === String(n)) { delete seen[introKey(isNaN(id) ? id : +id)]; delete seen['talk_' + LEVELS[id].boss.seen]; }
-  const keep = { vig: S0.vig, end: S0.end, str: S0.str, rank: S0.rank, maxStims: S0.maxStims, done: S0.done || {}, align, alignAt, choices, seen, eye: !!S0.eye, reached: S0.reached || {} };
+  const keep = { vig: S0.vig, end: S0.end, str: S0.str, rank: S0.rank, maxStims: S0.maxStims, done: S0.done || {}, align, alignAt, choices, seen, eye: !!S0.eye, reached: S0.reached || {}, talina: S0.talina };
   GM.save = Object.assign(clone(NEW_SAVE), keep, { started: true, chapter: n, part: opts.part || 1 });
   GM.save.stats = { time: 0, deaths: 0, kills: 0 };
   if (opts.part === 2) { GM.save.eyeLost = true; GM.save.eye = true; }

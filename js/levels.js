@@ -132,7 +132,8 @@ window.LEVELS = {
     intro() {
       say('radio', 'Command to Hawthorne. Commander Mascar is being flown out. He\'s alive, Tom — but he\'s out of this fight.', 7);
       say('thomas', '...What happened up there?', 3);
-      say('radio', 'Alvarez. She got away. The beachhead still has to fall, and you\'re all we\'ve got left on the shingle. It\'s down to you.', 7.5);
+      if (GM.save.talina === 'executed') say('radio', 'Alvarez is dead. He... did it himself. Hawthorne, the beachhead still has to fall, and you\'re all we\'ve got left on the shingle.', 8);
+      else say('radio', 'Alvarez. She got away. The beachhead still has to fall, and you\'re all we\'ve got left on the shingle. It\'s down to you.', 7.5);
       say('thomas', 'Understood. I won\'t let him down. Beacon first — then the Tidebreaker.', 5.5);
     },
     beacon(i) {

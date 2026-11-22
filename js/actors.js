@@ -346,6 +346,7 @@ A.Duelist = class {
     this.pos = this.home.slice(); this.yaw = this.homeYaw; this.maxHp = this.T.hp; this.hp = this.T.hp; this.alive = true; this.active = false;
     this.state = 'idle'; this.t = 0; this.cd = 1; this.phase2 = false; this.showBar = 0; this.poiseDmg = 0; this.combo = []; this.circ = 1; this.iframe = false;
     this.node.visible = true; this.ch.play('Idle', 0); this.lit = 0; this.deadT = 0;
+    this.T = this.T0 || (this.T0 = this.T); if (this.sword) this.sword.visible = true; // undo any cutscene changes
   }
   hitY() { return 1.15; }
   get spd() { return this.phase2 ? 1.22 : 1; }

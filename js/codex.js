@@ -33,6 +33,7 @@ const ENTRIES = [
       'When London fell, she was ordered to hold the line underground while the city burned above her. She never forgave Command for it. Within the year she had crossed to the Pact, and the Pact gave her Dover Castle.',
       'At Dover she met Orion Mascar, and took his left eye.',
     ],
+    fate: { fled: 'She walked out of Dover Castle alive. What Orion told her before she went, only the two of them know.', executed: 'She died in the inner bailey of Dover Castle, at Orion\'s hand.' },
     quote: 'Then let me leave you something to remember me by.',
     combat: 'A duelist, not a machine. She circles out of reach, parries quick strikes and answers with a riposte, and rolls clear of anything she sees coming. Heavy attacks break through her guard. At half strength she drops the act: she gets faster and finishes her combos with an unblockable lunge.',
     show: ['Idle', 'Attack1', 'Attack2', 'Heavy', 'Block', 'Idle'] },
@@ -132,7 +133,7 @@ function select(id) {
   else {
     b.innerHTML = `<h1>${e.name}</h1><div class="cx-role">${e.role}</div>
       <dl class="cx-facts">${e.facts.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}${e.id === 'orion' || e.id === 'thomas' ? `<dt>Alignment</dt><dd>${GM.align.chip('', e.id === 'orion' ? 'o' : 't')}</dd>` : ''}</dl>
-      ${e.lore.map((p) => `<p>${p}</p>`).join('')}
+      ${e.lore.concat(e.fate && GM.save.talina && e.fate[GM.save.talina] ? [e.fate[GM.save.talina]] : []).map((p) => `<p>${p}</p>`).join('')}
       <h3>IN COMBAT</h3><p>${e.combat}</p>${e.quote ? `<p class="cx-quote">“${e.quote}”</p>` : ''}`;
   }
   b.scrollTop = 0; renderTabs();
