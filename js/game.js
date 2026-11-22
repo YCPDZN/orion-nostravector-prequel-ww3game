@@ -574,8 +574,9 @@ GM.warden = (key, story = true) => {
   if (story && ['intro', 'phase2', 'death', 'kill'].includes(key)) { subQ.length = 0; subT = 0; try { if (voiceEl) voiceEl.pause(); } catch (e) { } } // boss moments cut in
   const [zh, en, file, secs] = line;
   if (V.vo) { // numbered Chapter II line: its recording if there is one, else text-to-speech (if any)
-    const f = GM.vo(file), base = Math.max(3.2, en.length * 0.06 + 1.4, zh ? zh.length * (V.lang === 'zh-CN' ? 0.34 : 0.075) + 1.2 : 0);
-    GM.say(V.who, en, GM.voDur(file, base), { zh: f ? null : zh, lang: V.lang, file: f || null }); return;
+    const vo = V.vo === 3 ? GM.vo3 : GM.vo, voDur = V.vo === 3 ? GM.voDur3 : GM.voDur;
+    const f = vo(file), base = Math.max(3.2, en.length * 0.06 + 1.4, zh ? zh.length * (V.lang === 'zh-CN' ? 0.34 : 0.075) + 1.2 : 0);
+    GM.say(V.who, en, voDur(file, base), { zh: f ? null : zh, lang: V.lang, file: f || null }); return;
   }
   const dur = file && V.file ? Math.max(2.6, secs + 1.0) : Math.max(3.2, en.length * 0.06 + 1.4, zh ? zh.length * (V.lang === 'zh-CN' ? 0.34 : 0.075) + 1.2 : 0);
   GM.say(V.who, en, dur, { zh, lang: V.lang, file: file && V.file ? V.file(file) : null });
@@ -871,6 +872,9 @@ function step(dt, inp) {
   } else if (st === 'cutscene') {
     GM.cine.update(dt);
     for (const e of GM.enemies) if (e.boss) e.update(dt);
+    updateHud(dt);
+  } else if (st === 'choice') { // the choice panel: keep the voiced lines playing
+    GM.player.ch.update(dt); GM.companion.ch.update(dt);
     updateHud(dt);
   } else {
     // menus: keep world gently alive

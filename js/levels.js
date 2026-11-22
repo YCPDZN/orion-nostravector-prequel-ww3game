@@ -5,22 +5,24 @@
 const say = (...a) => GM.say(...a);
 /* numbered Chapter II lines: plays voice/doverNN.mp3 when that recording exists, and keeps the subtitle up for as long as it plays */
 const sayN = (n, who, text, dur) => GM.say(who, text, GM.voDur(n, dur), GM.vo(n));
+/* numbered Chapter III lines: voice/normandyNN.mp3 */
+const say3 = (n, who, text, dur) => GM.say(who, text, GM.voDur3(n, dur), GM.vo3(n));
 
-const TALINA3 = { who: 'talina', lang: null, file: null, lines: {
-  intro: [null, 'Orion. I see you kept my gift.'],
-  taunts: [[null, 'One eye, Orion. You will not see the next one coming.'], [null, '¡Otra vez, niño!'], [null, 'Did you think I would stay away?'],
-    [null, 'The Red Sun and the Bear sent me back for you.'], [null, 'You told me something at Dover. Did you mean it?']],
-  phase2: [null, 'Ya basta. Now I fight for real.'],
-  kill: [null, 'Adiós, Orion. This time, for good.'],
-  death: [null, 'Again... you beat me again...'],
+const TALINA3 = { who: 'talina', lang: null, file: null, vo: 3, lines: {
+  intro: [null, 'Orion. I see you kept my gift.', 11],
+  taunts: [[null, 'One eye, Orion. You will not see the next one coming.', 12], [null, '¡Otra vez, niño!', 13], [null, 'Did you think I would stay away?', 14],
+    [null, 'The Red Sun and the Bear sent me back for you.', 15], [null, 'You told me something at Dover. Did you mean it?', 16]],
+  phase2: [null, 'Ya basta. Now I fight for real.', 17],
+  kill: [null, 'Adiós, Orion. This time, for good.', 18],
+  death: [null, 'Again... you beat me again...', 19],
 } };
-const INES = { who: 'ines', lang: null, file: null, lines: {
-  intro: [null, 'So you are the one. You have the face she wrote about in her letters.'],
-  taunts: [[null, 'She taught me everything. Every cut.'], [null, 'Look at me. Do you see her?'], [null, '¡Por Talina!'],
-    [null, 'You took everything I had left.'], [null, 'The Red Sun and the Bear gave me this blade. You will give me your life.']],
-  phase2: [null, '¡Por mi hermana! For my sister!'],
-  kill: [null, 'It is done, Talina. It is done.'],
-  death: [null, 'Talina... lo siento...'],
+const INES = { who: 'ines', lang: null, file: null, vo: 3, lines: {
+  intro: [null, 'So you are the one. You have the face she wrote about in her letters.', 29],
+  taunts: [[null, 'She taught me everything. Every cut.', 30], [null, 'Look at me. Do you see her?', 31], [null, '¡Por Talina!', 32],
+    [null, 'You took everything I had left.', 33], [null, 'The Red Sun and the Bear gave me this blade. You will give me your life.', 34]],
+  phase2: [null, '¡Por mi hermana! For my sister!', 35],
+  kill: [null, 'It is done, Talina. It is done.', 36],
+  death: [null, 'Talina... lo siento...', 37],
 } };
 window.LEVELS = {
   /* ---------------- Chapter I: New London ---------------- */
@@ -191,29 +193,29 @@ window.LEVELS = {
     // Talina (or her sister) speaks English with some Spanish; subtitles only until recorded
     get voice() { return GM.save.talina === 'executed' ? INES : TALINA3; },
     intro() {
-      say('radio', 'Command to Mascar. The Americans are pinned at the hedgerows. There\'s a Pact machine in every field between here and the village. Clear the lanes and take the church square.', 8.5);
-      say('thomas', 'Good to have you back, Commander. How\'s the eye?', 3.5);
-      say('orion', 'Gone, Tom. The rest of me works fine. Light the beacon.', 4);
+      say3(1, 'radio', 'Command to Mascar. The Americans are pinned at the hedgerows. There\'s a Pact machine in every field between here and the village. Clear the lanes and take the church square.', 8.5);
+      say3(2, 'thomas', 'Good to have you back, Commander. How\'s the eye?', 3.5);
+      say3(3, 'orion', 'Gone, Tom. The rest of me works fine. Light the beacon.', 4);
     },
     beacon(i) {
-      if (i === 0) say('thomas', 'Beacon\'s lit. The Yanks can see us now.', 3.5);
-      else say('thomas', 'Orchard\'s clear. The church is just past those houses, Commander.', 4.5);
+      if (i === 0) say3(4, 'thomas', 'Beacon\'s lit. The Yanks can see us now.', 3.5);
+      else say3(5, 'thomas', 'Orchard\'s clear. The church is just past those houses, Commander.', 4.5);
     },
     bossIntro() {
       if (GM.save.talina === 'executed') {
         GM.save.seen.boss3i = 1;
-        say('orion', 'Who are you?', 2.5);
-        say('ines', 'Inés Alvarez. You left my sister on her knees in the mud at Dover. I came to return the favour.', 6.5);
+        say3(27, 'orion', 'Who are you?', 2.5);
+        say3(28, 'ines', 'Inés Alvarez. You left my sister on her knees in the mud at Dover. I came to return the favour.', 6.5);
       } else {
-        say('orion', 'You should have stayed gone, Talina.', 3.5);
-        say('talina', 'And miss this? Draw, Comandante. Let us finish the lesson.', 4.5);
+        say3(9, 'orion', 'You should have stayed gone, Talina.', 3.5);
+        say3(10, 'talina', 'And miss this? Draw, Comandante. Let us finish the lesson.', 4.5);
       }
     },
-    phase2() { say('thomas', 'She\'s getting faster, Commander — stay on her!', 3.5); },
+    phase2() { say3(6, 'thomas', 'She\'s getting faster, Commander — stay on her!', 3.5); },
     victory() {
       const ines = GM.save.talina === 'executed';
-      say('thomas', 'She\'s down! Commander, she\'s down!', 3);
-      say('radio', 'Command to Mascar. The square is ours. The Americans are moving up — Normandy is open.', 6);
+      say3(7, 'thomas', 'She\'s down! Commander, she\'s down!', 3);
+      say3(8, 'radio', 'Command to Mascar. The square is ours. The Americans are moving up — Normandy is open.', 6);
       return { banner: [ines ? 'INÉS ALVAREZ DEFEATED' : 'TALINA ALVAREZ DEFEATED', 'THE BOCAGE IS OURS'], endIn: 10 };
     },
     ending(S) {

@@ -44,19 +44,19 @@ const CHOICES = [
   // Chapter III: what Orion does with the woman he has just beaten. Only Orion's alignment moves.
   { id: 'talina3', chapter: 3, title: 'The Second Time', auto: true, only: 'o', asker: 'talina', when: () => GM.save.talina !== 'executed',
     scene: 'Talina is on her knees on the cobbles of the church square, her sabre out of reach. For the second time, she looks up at the man whose eye she took.',
-    thomas: 'Well, Comandante? You have beaten me twice now. Finish it, or don\'t.',
+    thomas: 'Well, Comandante? You have beaten me twice now. Finish it, or don\'t.', vo: 20, vox: 3,
     options: [
-      { align: 'good', say: 'Get up, Talina. You\'re coming with me. Not as a prisoner.', reply: '...You are a fool, Orion Mascar. ...Bien. I will come.', result: 'Orion holds out his hand. After a long moment, Talina takes it.', set: { talina3: 'saved' } },
-      { align: 'neutral', say: 'British Command will decide what you\'re owed.', reply: 'Command. Of course. It was always Command.', result: 'Thomas binds her wrists. She does not look back as the Americans lead her away.', set: { talina3: 'command' }, reward: { scrap: 150 } },
-      { align: 'evil', say: 'You should have killed me at Dover.', reply: 'I know.', result: 'The church bell is still ringing when Orion sheathes his sword.', set: { talina3: 'dead' }, reward: { scrap: 300 } },
+      { align: 'good', say: 'Get up, Talina. You\'re coming with me. Not as a prisoner.', reply: '...You are a fool, Orion Mascar. ...Bien. I will come.', result: 'Orion holds out his hand. After a long moment, Talina takes it.', set: { talina3: 'saved' }, vo: [21, 22] },
+      { align: 'neutral', say: 'British Command will decide what you\'re owed.', reply: 'Command. Of course. It was always Command.', result: 'Thomas binds her wrists. She does not look back as the Americans lead her away.', set: { talina3: 'command' }, vo: [23, 24], reward: { scrap: 150 } },
+      { align: 'evil', say: 'You should have killed me at Dover.', reply: 'I know.', result: 'The church bell is still ringing when Orion sheathes his sword.', set: { talina3: 'dead' }, vo: [25, 26], reward: { scrap: 300 } },
     ] },
   { id: 'ines', chapter: 3, title: 'The Other Sister', auto: true, only: 'o', asker: 'ines', when: () => GM.save.talina === 'executed',
     scene: 'Inés Alvarez is on her knees in the church square, both blades on the cobbles beside her. Her eyes never leave Orion.',
-    thomas: 'Go on. You did it to her. Do it to me.',
+    thomas: 'Go on. You did it to her. Do it to me.', vo: 38, vox: 3,
     options: [
-      { align: 'good', say: 'No. Enough Alvarez blood has been spilled. Fight with us instead.', reply: '...You do not get to decide what she would want. ...But I will hear you out.', result: 'Inés picks up her blades and, after a long moment, falls in beside Thomas. Thomas looks at Orion as if he has never seen him before.', set: { ines: 'companion' }, thomasOpposite: true },
-      { align: 'neutral', say: 'Command will decide what happens to you.', reply: 'Then I will wait. I am good at waiting.', result: 'The Americans take her away in chains. She watches Orion until the truck turns the corner.', set: { ines: 'command' }, reward: { scrap: 150 } },
-      { align: 'evil', say: 'Then go and find her.', reply: 'Talina —', result: 'Inés falls beside her blades in the church square, and the bell tower goes quiet.', set: { ines: 'dead' }, reward: { scrap: 300 } },
+      { align: 'good', say: 'No. Enough Alvarez blood has been spilled. Fight with us instead.', reply: '...You do not get to decide what she would want. ...But I will hear you out.', result: 'Inés picks up her blades and, after a long moment, falls in beside Thomas. Thomas looks at Orion as if he has never seen him before.', set: { ines: 'companion' }, vo: [39, 40], thomasOpposite: true },
+      { align: 'neutral', say: 'Command will decide what happens to you.', reply: 'Then I will wait. I am good at waiting.', result: 'The Americans take her away in chains. She watches Orion until the truck turns the corner.', set: { ines: 'command' }, vo: [41, 42], reward: { scrap: 150 } },
+      { align: 'evil', say: 'Then go and find her.', reply: 'Talina —', result: 'Inés falls beside her blades in the church square, and the bell tower goes quiet.', set: { ines: 'dead' }, vo: [43, 44], reward: { scrap: 300 } },
     ] },
   { id: 'rubble', chapter: 4, title: 'Survivors in the Rubble',
     scene: 'A collapsed apartment block. Somewhere under the concrete, someone is knocking.',
@@ -107,7 +107,8 @@ AL.open = function (id, after) {
   $('chResult').textContent = ''; $('chResult').style.display = 'none';
   $('chOpts').innerHTML = `<div class="orionsay">${chN}</div>` + c.options.map((o, i) => `<button class="btn chopt" data-i="${i}" style="border-color:${AL.TIERS[o.align].css}"><span class="dot" style="background:${AL.TIERS[o.align].css}"></span>“${o.say}”</button>`).join('');
   $('chOpts').querySelectorAll('.chopt').forEach((b) => b.onclick = () => choose(+b.dataset.i));
-  if (c.vo) GM.say(c.asker || 'thomas', c.thomas, GM.voDur(c.vo, Math.max(4, c.thomas.length * 0.06)), GM.vo(c.vo));
+  const VO = c.vox === 3 ? GM.vo3 : GM.vo, VD = c.vox === 3 ? GM.voDur3 : GM.voDur;
+  if (c.vo) GM.say(c.asker || 'thomas', c.thomas, VD(c.vo, Math.max(4, c.thomas.length * 0.06)), VO(c.vo));
   else GM.say(c.asker || 'thomas', c.thomas, Math.max(4, c.thomas.length * 0.06));
   $('chLeave').style.display = c.auto ? 'none' : ''; $('chLeave').textContent = 'STEP AWAY';
   $('choice').classList.remove('hidden');
@@ -135,7 +136,7 @@ function choose(i) {
   $('chLeave').style.display = ''; $('chLeave').textContent = 'CONTINUE';
   subQ_clear();
   if (o.voice) { GM.say('orion', o.say, o.voice[1] + 0.6, o.voice[0]); GM.say('thomas', o.reply, o.voice[3] + 0.8, o.voice[2]); } // recorded lines
-  else { const v = o.vo || []; GM.say(c.chooser === 't' ? 'thomas' : 'orion', o.say, GM.voDur(v[0], Math.max(3, o.say.length * 0.055)), GM.vo(v[0])); GM.say(c.asker || 'thomas', o.reply, GM.voDur(v[1], Math.max(3, o.reply.length * 0.065)), GM.vo(v[1])); }
+  else { const v = o.vo || [], VO = c.vox === 3 ? GM.vo3 : GM.vo, VD = c.vox === 3 ? GM.voDur3 : GM.voDur; GM.say(c.chooser === 't' ? 'thomas' : 'orion', o.say, VD(v[0], Math.max(3, o.say.length * 0.055)), VO(v[0])); GM.say(c.asker || 'thomas', o.reply, VD(v[1], Math.max(3, o.reply.length * 0.065)), VO(v[1])); }
   const after = [AL.tier('o'), AL.tier('t')];
   if (after[0] !== before[0]) GM.pendingAlignBanner = 'o';
   else if (after[1] !== before[1]) GM.pendingAlignBanner = 't';
