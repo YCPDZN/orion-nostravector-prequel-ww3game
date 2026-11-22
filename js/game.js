@@ -425,13 +425,24 @@ const NAMES = { thomas: 'Thomas', orion: 'Orion', radio: 'British Command', ward
 const WARDEN = {
   intro: ['入侵者。伦敦现在属于中俄同盟。', 'Intruder. London belongs to the Sino-Russian Pact now.'],
   children: ['你们的指挥官把孩子送来送死。', 'Your commanders send children to die.'],
-  taunts: [['跪下！', 'Kneel!'], ['无处可逃。', 'There is nowhere to run.'], ['为了同盟！', 'For the Pact!'], ['你的剑救不了伦敦。', 'Your sword will not save London.']],
+  // five separate taunts, one at a time; the Red Sun and the Bear always comes first in a fight
+  taunts: [
+    ['红日与巨熊，已在同一面旗帜下联合。', 'The Red Sun and the Bear have united under one banner.'],
+    ['跪下！', 'Kneel!'],
+    ['无处可逃。', 'There is nowhere to run.'],
+    ['你的剑救不了伦敦。', 'Your sword will not save London.'],
+    ['为了同盟！', 'For the Pact!'],
+  ],
   barrage: ['轨道打击，锁定目标。', 'Orbital strike. Target locked.'],
   phase2: ['核心过载……我不会倒下！', 'Core overloading… I will not fall!'],
   kill: ['又一个英国人倒下了。', 'Another Briton falls.'],
   death: ['不可能……同盟……是永恒的……', 'Impossible… the Pact… is eternal…'],
 };
-let zhVoice = null, tauntT = 0;
+let zhVoice = null, tauntT = 0, tauntBag = [];
+function nextTaunt() { // shuffle bag: every taunt is heard once before any repeats
+  if (!tauntBag.length) { tauntBag = WARDEN.taunts.slice(1).sort(() => Math.random() - 0.5); tauntBag.unshift(WARDEN.taunts[0]); if (GM._tauntsStarted) tauntBag = WARDEN.taunts.slice().sort(() => Math.random() - 0.5); GM._tauntsStarted = true; }
+  return tauntBag.shift();
+}
 function pickZhVoice() {
   try { const vs = speechSynthesis.getVoices(); zhVoice = vs.find((v) => /zh[-_]CN/i.test(v.lang)) || vs.find((v) => /^zh/i.test(v.lang)) || null; } catch (e) { }
 }
@@ -446,8 +457,8 @@ function speakZh(text) {
 }
 GM.warden = (key, story = true) => {
   let line = WARDEN[key]; if (!line) return;
-  if (key === 'taunts') line = line[Math.floor(Math.random() * line.length)];
   if (!story && (subQ.length || subT > 0.3)) return; // taunts never interrupt dialogue
+  if (key === 'taunts') line = nextTaunt();
   if (story && ['intro', 'phase2', 'death', 'kill'].includes(key)) { subQ.length = 0; subT = 0; try { if (voiceEl) voiceEl.pause(); } catch (e) { } } // boss moments cut in
   const [zh, en] = line; const dur = Math.max(3.2, en.length * 0.06 + 1.4, zh.length * 0.34 + 1.2);
   GM.say('warden', en, dur, { zh });
@@ -629,7 +640,7 @@ function doInteract(it) {
     W.sealCol.off = false; W.gate.sealed = true; GM.inBoss = true;
     boss.reset(); boss.active = true; boss.state = 'roar'; boss.t = 0;
     $('bossname').textContent = boss.T.name; $('bossbar').classList.remove('hidden'); AU.bossMusic(true);
-    GM.warden('intro'); GM.wardenChildren = true; tauntT = time;
+    GM.warden('intro'); GM.wardenChildren = true; tauntT = time; tauntBag = []; GM._tauntsStarted = false;
     if (!GM.save.seen.boss) { GM.save.seen.boss = 1; GM.say('orion', 'Iron Warden. Ten years of war, and you\'re all that stands between London and the dawn. Not for long.', 7.8, 11); GM.say('thomas', 'Watch the slam — it sends out a shockwave. Roll through it, just like training!', 5.8, 12); }
   }
 }
