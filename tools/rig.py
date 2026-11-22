@@ -9,8 +9,7 @@ PARENT = {'Hips': None, 'Spine': 'Hips', 'Chest': 'Spine', 'Neck': 'Chest', 'Hea
           'L_Shoulder': 'Chest', 'L_UpperArm': 'L_Shoulder', 'L_ForeArm': 'L_UpperArm', 'L_Hand': 'L_ForeArm',
           'R_Shoulder': 'Chest', 'R_UpperArm': 'R_Shoulder', 'R_ForeArm': 'R_UpperArm', 'R_Hand': 'R_ForeArm',
           'L_UpLeg': 'Hips', 'L_Leg': 'L_UpLeg', 'L_Foot': 'L_Leg', 'L_Toe': 'L_Foot',
-          'R_UpLeg': 'Hips', 'R_Leg': 'R_UpLeg', 'R_Foot': 'R_Leg', 'R_Toe': 'R_Foot',
-          'Cape1': 'Chest', 'Cape2': 'Cape1', 'Cape3': 'Cape2'}
+          'R_UpLeg': 'Hips', 'R_Leg': 'R_UpLeg', 'R_Foot': 'R_Leg', 'R_Toe': 'R_Foot'}
 BONES = anims.BONES
 
 def mirror(j):
@@ -25,8 +24,7 @@ CHARS = {
  'ThomasHawthorne': dict(
    joints=mirror({'Hips': (0, .50, -.01), 'Spine': (0, .60, -.01), 'Chest': (0, .70, -.01), 'Neck': (0, .83, -.005), 'Head': (0, .875, 0),
           'L_Shoulder': (.04, .80, -.02), 'L_UpperArm': (.16, .77, -.02), 'L_ForeArm': (.19, .605, -.02), 'L_Hand': (.20, .475, 0),
-          'L_UpLeg': (.075, .49, -.01), 'L_Leg': (.09, .27, 0), 'L_Foot': (.10, .065, -.02), 'L_Toe': (.10, .02, .07),
-          'Cape1': (0, .74, -.11), 'Cape2': (0, .52, -.13), 'Cape3': (0, .32, -.14)}),
+          'L_UpLeg': (.075, .49, -.01), 'L_Leg': (.09, .27, 0), 'L_Foot': (.10, .065, -.02), 'L_Toe': (.10, .02, .07)}),
    ends=mirror({'Head': (0, .98, 0), 'L_Hand': (.205, .40, .01), 'L_Toe': (.10, .02, .12), 'Hips': (0, .44, -.01)}),
    radius=mirror({'Hips': .11, 'Spine': .11, 'Chest': .12, 'Neck': .05, 'Head': .075, 'L_Shoulder': .05,
           'L_UpperArm': .062, 'L_ForeArm': .056, 'L_Hand': .04, 'L_UpLeg': .072, 'L_Leg': .058, 'L_Foot': .05, 'L_Toe': .04}),
@@ -34,8 +32,7 @@ CHARS = {
  'OrionMascar': dict(
    joints=mirror({'Hips': (0, .49, 0), 'Spine': (0, .60, 0), 'Chest': (0, .70, -.01), 'Neck': (0, .835, -.01), 'Head': (0, .88, 0),
           'L_Shoulder': (.04, .80, -.02), 'L_UpperArm': (.135, .78, -.02), 'L_ForeArm': (.15, .625, -.02), 'L_Hand': (.16, .48, 0),
-          'L_UpLeg': (.065, .48, 0), 'L_Leg': (.07, .27, 0), 'L_Foot': (.08, .065, -.02), 'L_Toe': (.08, .02, .07),
-          'Cape1': (0, .74, -.11), 'Cape2': (0, .52, -.13), 'Cape3': (0, .32, -.14)}),
+          'L_UpLeg': (.065, .48, 0), 'L_Leg': (.07, .27, 0), 'L_Foot': (.08, .065, -.02), 'L_Toe': (.08, .02, .07)}),
    ends=mirror({'Head': (0, .98, 0), 'L_Hand': (.165, .42, .01), 'L_Toe': (.08, .02, .12), 'Hips': (0, .43, 0)}),
    radius=mirror({'Hips': .10, 'Spine': .10, 'Chest': .11, 'Neck': .05, 'Head': .075, 'L_Shoulder': .045,
           'L_UpperArm': .05, 'L_ForeArm': .046, 'L_Hand': .038, 'L_UpLeg': .068, 'L_Leg': .055, 'L_Foot': .05, 'L_Toe': .04}),
@@ -62,8 +59,6 @@ def dist_matrix(P, cfg):
     E = {k: np.array(v, float) for k, v in cfg['ends'].items()}
     D = np.zeros((len(P), len(BONES)))
     for i, b in enumerate(BONES):
-        if b.startswith('Cape'):
-            D[:, i] = 1e6; continue
         a = J[b]; c = CHILD_FOR_SEG[b]
         if b == 'Hips':
             a, e = E['Hips'], J['Spine']
@@ -92,10 +87,6 @@ def regions(P, cfg, N=None):
             isarm = (reg == 1) | (reg == 2)
             cloak |= th & isarm & (y < 0.76) & (arm > 0.55)
             cloak &= ~(isarm & ~th & (arm < 1.6))
-            # thin cloth hanging from the torso (back panel, side panels) is cape too
-            cloak |= th & (reg == 0) & (y < 0.79) & (y > 0.1) & ((tor > 0.9) | (z < -0.06))
-            # anything well outside the body and legs below the shoulders
-            cloak |= (reg == 0) & (y < 0.7) & (tor > 1.35) & (leg > 1.2) & (arm > 1.2)
             print('  thin verts', int(th.sum()), 'of', len(P))
         reg[cloak] = 5
     return reg, D
@@ -140,32 +131,16 @@ def compute_weights(P, Fp, cfg, reg):
     W /= W.sum(1, keepdims=True)
     c = reg == 5
     if c.any():
-        # cape: a smooth function of height along the cape chain, blended towards the torso for the side panels.
-        # No leg influence at all — that is what used to tear the hem into strips.
-        y, z, x = P[c, 1], P[c, 2], P[c, 0]
-        n = c.sum(); Wc = np.zeros((n, len(BONES)))
-        chain = [('Chest', 0.80), ('Cape1', 0.74), ('Cape2', 0.52), ('Cape3', 0.32)]
-        for (b0, h0), (b1, h1) in zip(chain[:-1], chain[1:]):
-            m = (y <= h0) & (y > h1); t = (h0 - y[m]) / (h0 - h1)
-            Wc[np.where(m)[0], bi[b0]] += 1 - t; Wc[np.where(m)[0], bi[b1]] += t
-        Wc[y > 0.80, bi['Chest']] = 1; Wc[y <= 0.32, bi['Cape3']] = 1
-        Wt = np.zeros((n, len(BONES)))  # torso-by-height for the side/front panels
-        th = np.clip((y - 0.5) / 0.2, 0, 1); Wt[:, bi['Spine']] = th * 0.6; Wt[:, bi['Chest']] = th * 0.4; Wt[:, bi['Hips']] = 1 - th
-        back = np.clip((-z + 0.1) / 0.14, 0.4, 1)  # side/front panels ride the cape chain too, just less
-        Wcape = Wc * back[:, None] + Wt * (1 - back[:, None])
-        # side panels drape over the arms: let them be pushed by the upper arm / forearm, strongest at the
-        # shoulder and fading out towards the hem, so the cloth lifts with the arm instead of splitting
-        Dc = D[c]
-        for side in ('L', 'R'):
-            ua, fa = bi[side + '_UpperArm'], bi[side + '_ForeArm']
-            near = np.clip(1 - (np.minimum(Dc[:, ua], Dc[:, fa]) - 1.0) / 1.6, 0, 1)
-            sidew = np.clip((x * (1 if side == 'L' else -1) - 0.06) / 0.08, 0, 1)
-            hgt = np.clip((y - 0.36) / 0.38, 0, 1)
-            hgt = np.clip((y - 0.45) / 0.3, 0, 1)
-            wa = (0.4 * near * sidew * hgt)[:, None]
-            Wa = np.zeros_like(Wcape); Wa[:, ua] = 1.0
-            Wcape = Wcape * (1 - wa) + Wa * wa
-        W[c] = Wcape
+        y = P[c, 1]
+        tgt = np.zeros((c.sum(), len(BONES)))
+        tgt[:, bi['Hips']] = np.clip((0.66 - y) / 0.12, 0, 1)
+        tgt[:, bi['Spine']] = 1 - tgt[:, bi['Hips']]
+        upper = np.clip((y - 0.66) / 0.08, 0, 1)
+        tgt[:, bi['Chest']] = upper; tgt[:, bi['Spine']] *= (1 - upper)
+        Wl = W[c].copy(); Wl[:, [bi[b] for b in BONES if b not in ('L_UpLeg', 'R_UpLeg', 'L_Leg', 'R_Leg')]] = 0
+        Wl /= Wl.sum(1, keepdims=True) + 1e-9
+        hem = (np.clip((0.5 - y) / 0.3, 0, 1) * 0.4)[:, None]
+        W[c] = tgt * (1 - hem) + Wl * hem
     import scipy.sparse as sp
     r = np.concatenate([Fp[:, 0], Fp[:, 1], Fp[:, 2]]); cc = np.concatenate([Fp[:, 1], Fp[:, 2], Fp[:, 0]])
     same = reg[r] == reg[cc]
@@ -179,42 +154,10 @@ def compute_weights(P, Fp, cfg, reg):
     w4 = np.take_along_axis(W, idx, 1)
     w4[w4 < 0.02] = 0
     ss = w4.sum(1, keepdims=True); badw = (~np.isfinite(ss[:, 0])) | (ss[:, 0] <= 0)
-    if badw.any():
-        print('  fixing', int(badw.sum()), 'bad weight rows; regions', np.bincount(reg[badw], minlength=6), 'y range', P[badw, 1].min().round(2), P[badw, 1].max().round(2))
-        # give each orphan vertex the weights of its nearest properly-weighted neighbour in the same region
-        from scipy.spatial import cKDTree
-        good = np.where(~badw)[0]
-        for rg in np.unique(reg[badw]):
-            g = good[reg[good] == rg] if (reg[good] == rg).any() else good
-            bad_i = np.where(badw & (reg == rg))[0]
-            _, nn = cKDTree(P[g]).query(P[bad_i])
-            idx[bad_i] = idx[g[nn]]; w4[bad_i] = w4[g[nn]]
-        ss = w4.sum(1, keepdims=True); badw = np.zeros(len(w4), bool)
+    if badw.any(): print('  fixing', int(badw.sum()), 'bad weight rows')
     w4[badw] = [1, 0, 0, 0]; idx[badw, 0] = BONES.index('Hips'); ss[badw] = 1
     w4 /= ss
     return idx.astype(np.uint8), w4.astype(np.float32)
-
-def uv_coverage(uv, idx, S):
-    from PIL import Image, ImageDraw
-    m = Image.new('L', (S, S), 0); dr = ImageDraw.Draw(m); P = uv * S
-    for f in idx:
-        dr.polygon([tuple(P[f[0]]), tuple(P[f[1]]), tuple(P[f[2]])], fill=255)
-    from scipy import ndimage
-    cov = np.asarray(m) > 0
-    return ndimage.binary_erosion(cov, iterations=1) | (ndimage.binary_erosion(cov, iterations=0) & False) if False else cov
-
-def pad_texture(path, cov):
-    from PIL import Image
-    from scipy import ndimage
-    import io
-    img = np.asarray(Image.open(path).convert('RGB'))
-    if img.shape[:2] != cov.shape:
-        from PIL import Image as I2
-        cov = np.asarray(I2.fromarray(cov.astype(np.uint8) * 255).resize((img.shape[1], img.shape[0]), I2.NEAREST)) > 0
-    inner = ndimage.binary_erosion(cov, iterations=1)  # trust only texels safely inside an island
-    _, (iy, ix) = ndimage.distance_transform_edt(~inner, return_indices=True)
-    out = img[iy, ix]
-    b = io.BytesIO(); Image.fromarray(out).save(b, 'JPEG', quality=93); return b.getvalue()
 
 def tangents(V, N, UV, F):
     v0, v1, v2 = V[F[:, 0]], V[F[:, 1]], V[F[:, 2]]
@@ -290,12 +233,7 @@ def build(name, dec_path, tex_prefix, out_path, scale, clipset):
     has_arm = isarm.any(1); omax = other.max(1)
     cy = P[Fp].mean(1)[:, 1]
     mixed_arms = ((R3 == 1).any(1) & (R3 == 2).any(1))
-    # cut fused arm<->leg and arm<->hip bridges; arm<->cape triangles stay connected (the cape side panels
-    # follow the arm partially, so the cloth stretches a little instead of leaving a hole)
-    omax_nc = np.where(R3 == 5, -1, other).max(1)
-    elbow_y = cfg['joints']['L_ForeArm'][1]
-    cape_low = (R3 == 5).any(1) & (cy < elbow_y + 0.03)   # forearm/hand touching the cape: separate them
-    bad = has_arm & ((omax_nc >= 3) | ((omax_nc == 0) & (cy < cfg['joints']['L_UpperArm'][1] - 0.09)) | cape_low) | mixed_arms
+    bad = has_arm & ((omax >= 3) | ((omax == 0) & (cy < cfg['joints']['L_UpperArm'][1] - 0.09))) | mixed_arms
     F = F[~bad]; Fp = prep[F]
     print('  regions', np.bincount(reg, minlength=6), 'cut', int(bad.sum()))
     ji, jw = compute_weights(P, Fp, cfg, reg)
@@ -314,13 +252,10 @@ def build(name, dec_path, tex_prefix, out_path, scale, clipset):
     for b in BONES:
         ch = [bone_node[c] for c in BONES if PARENT[c] == b]
         if ch: nodes[bone_node[b]]['children'] = ch
-    # images: pad every UV island outwards into the empty atlas space (nearest-island colour), so that
-    # mipmapping and the slightly-shifted UVs of the simplified mesh never pull in gutter colour
-    # (which showed up as dark seams crawling over the model as it moved)
-    cov = uv_coverage(raw['uv'], raw['idx'], 1024)
+    # images
     imgs = []
     for k in ('base', 'normal', 'mr'):
-        data = pad_texture(f'{tex_prefix}_{k}.jpg', cov)
+        data = open(f'{tex_prefix}_{k}.jpg', 'rb').read()
         imgs.append({'bufferView': g.view(data), 'mimeType': 'image/jpeg', 'name': k})
     j['images'] = imgs
     j['samplers'] = [{'magFilter': 9729, 'minFilter': 9987, 'wrapS': 33071, 'wrapT': 33071}]

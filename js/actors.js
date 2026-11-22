@@ -176,7 +176,6 @@ A.Player = class {
       if (this.t > 0.42) this.setState('move', null);
     }
     W.collide(this.pos, this.radius);
-    this.capeSim(dt);
     this.ch.update(dt);
     this.syncNode();
     // sword glow light and trail
@@ -188,28 +187,6 @@ A.Player = class {
     if (this.glowAmt > 0.3) {
       for (let i = 0; i < 4; i++) { const u = rnd(); GM.parts.emit({ pos: [OE.lerp(this.baseW[0], this.tipW[0], u), OE.lerp(this.baseW[1], this.tipW[1], u), OE.lerp(this.baseW[2], this.tipW[2], u)], vel: [0, 0, 0], life: 0.14, size: 0.03, col: [0.35, 1.1, 2.0, 0.55], soft: 0.0, fade: 1 }); }
     }
-  }
-  /* cape cloth: damped springs on the 3 cape bones, driven by Orion's movement, turning and a little wind */
-  capeSim(dt) {
-    const C = this.cape || (this.cape = { p: 0, vp: 0, z: 0, vz: 0, last: this.pos.slice(), lastYaw: this.yaw, fs: 0, t: 0, q: [Q.create(), Q.create(), Q.create()] });
-    if (dt <= 0) return; C.t += dt;
-    const vx = (this.pos[0] - C.last[0]) / dt, vz = (this.pos[2] - C.last[2]) / dt; C.last = this.pos.slice();
-    const f = fwdOf(this.yaw); const fwd = vx * f[0] + vz * f[2]; const lat = vx * f[2] - vz * f[0];
-    const yawRate = OE.angDiff(C.lastYaw, this.yaw) / dt; C.lastYaw = this.yaw;
-    const acc = (fwd - C.fs) / dt; C.fs += (fwd - C.fs) * Math.min(1, dt * 10);
-    const speed = Math.hypot(vx, vz);
-    let tp = OE.clamp(fwd * 5.5, -6, 34) + (speed > 0.3 ? 5 : 0) + OE.clamp(-acc * 0.6, -8, 8);
-    let tz = OE.clamp(-lat * 5 + yawRate * 7, -25, 25);
-    if (this.state === 'roll') { tp = 0; tz = 0; }
-    const k = 70, c = 10;
-    C.vp += ((tp - C.p) * k - C.vp * c) * dt; C.p += C.vp * dt;
-    C.vz += ((tz - C.z) * k - C.vz * c) * dt; C.z += C.vz * dt;
-    const fl = Math.sin(C.t * 6.3) * Math.min(1, speed / 3) * 3.5 + Math.sin(C.t * 1.6) * 1.4 + Math.sin(C.t * 2.9) * 0.6;
-    const share = [[0.45, 0, 0.4], [0.33, 1, 0.35], [0.28, 1.5, 0.3]];
-    ['Cape1', 'Cape2', 'Cape3'].forEach((b, i) => {
-      const [sp, sf, sz] = share[i];
-      Q.euler(C.q[i], C.p * sp + fl * sf, 0, C.z * sz + fl * sf * 0.35); this.ch.override[b] = C.q[i];
-    });
   }
   stepSound(dt, speed) {
     if (speed <= 0) { this.stepT = 0; return; }

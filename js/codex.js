@@ -148,10 +148,6 @@ C.update = function (dt, inp) {
         for (const k of kt) if (tt >= k && (C.lastShot === undefined || C.lastShot < k || C.lastShot > tt)) { C.recoil = 1; C.muzzle.intensity = 6; if (m.rifle.world) M4.point(C.muzzle.pos, m.rifle.world, [0, 0.04, 0.8]); GM.audio.gun(4); }
         C.lastShot = tt;
       }
-      if (e.id === 'orion') { // gentle wind on the cape
-        C.capeQ = C.capeQ || [Q.create(), Q.create(), Q.create()]; const w = Math.sin(C.t * 1.6 + C.yaw) * 2 + Math.sin(C.t * 2.7) * 1.2;
-        ['Cape1', 'Cape2', 'Cape3'].forEach((b, i) => { Q.euler(C.capeQ[i], 3 + w * (0.5 + i * 0.6), 0, w * 0.3 * i); ch.override[b] = C.capeQ[i]; });
-      }
       if (e.id === 'thomas') A.rifleRig(ch, { aim: C.aim, dir: [0, 0, 1], recoil: C.recoil }, C.rifleModel);
       Q.yaw(m.node.rot, C.yaw); m.node.pos = STAGE.slice();
     } else {
