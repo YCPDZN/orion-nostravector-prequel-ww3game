@@ -105,6 +105,13 @@ MN.update = function (dt) {
   const shift = asp > 1.1 ? 0.95 : 0.5;
   cam.pos = [STAGE[0] + 0.5 - shift + Math.sin(t * 0.15) * 0.08, 1.22, STAGE[2] + 4.1]; cam.target = [STAGE[0] + 0.5 - shift, 0.98, STAGE[2]];
   cam.shadowCenter = STAGE;
+  document.documentElement.style.setProperty('--acc', info.css);
+  // HUD tags that track the characters
+  const proj = (p) => { const v = R.vp; const x = v[0] * p[0] + v[4] * p[1] + v[8] * p[2] + v[12], y = v[1] * p[0] + v[5] * p[1] + v[9] * p[2] + v[13], w = v[3] * p[0] + v[7] * p[1] + v[11] * p[2] + v[15];
+    return [(x / w * 0.5 + 0.5) * innerWidth, (1 - (y / w * 0.5 + 0.5)) * innerHeight]; };
+  const place = (id, p) => { const el = document.getElementById(id); if (!el) return; const s = proj(p); const w = el.offsetWidth || 150;
+    el.style.left = Math.max(8, Math.min(innerWidth - w - 8, s[0] - w / 2)) + 'px'; el.style.top = (s[1] - el.offsetHeight - 14) + 'px'; };
+  place('tagO', [O.node.pos[0], 1.98, O.node.pos[2]]); place('tagT', [T.node.pos[0], 1.94, T.node.pos[2]]);
   const cap = document.getElementById('menuAlign');
   if (cap) { const key = tier; if (cap.dataset.k !== key) { cap.dataset.k = key; cap.innerHTML = `<i style="background:${info.css};box-shadow:0 0 10px ${info.css}"></i>${info.name}`; cap.style.color = info.css; } }
 };

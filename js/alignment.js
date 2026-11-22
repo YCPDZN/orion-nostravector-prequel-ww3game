@@ -134,6 +134,7 @@ let last = '';
 AL.hud = function (force) {
   const key = AL.tier('o') + AL.tier('t');
   if (!force && key === last) return; last = key;
+  document.documentElement.style.setProperty('--acc', AL.info('o').css); // menus take Orion's alignment colour
   $('alHud').innerHTML = chip('ORION', 'o') + chip('THOMAS', 't');
 };
 })();

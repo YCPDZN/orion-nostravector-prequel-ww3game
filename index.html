@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#050403">
 <title>ORION — The Third World War</title>
 <style>
-:root{--gold:#c9a86a;--gold2:#e8d3a0;--red:#8e1b12;--ink:#0b0908;--serif:"Cormorant Garamond","Garamond","EB Garamond","Palatino Linotype","Book Antiqua",Georgia,"Times New Roman",serif}
+:root{--acc:#f2c94c;--sci:"Bahnschrift","DIN Alternate","DIN Next","Avenir Next Condensed","Roboto Condensed","Arial Narrow","Segoe UI",system-ui,sans-serif;--gold:#c9a86a;--gold2:#e8d3a0;--red:#8e1b12;--ink:#0b0908;--serif:"Cormorant Garamond","Garamond","EB Garamond","Palatino Linotype","Book Antiqua",Georgia,"Times New Roman",serif}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 html,body{margin:0;height:100%;background:#000;overflow:hidden;color:#e9e2d4;font-family:var(--serif);touch-action:none;overscroll-behavior:none}
 #c{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;display:block}
@@ -47,26 +47,54 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;color:#e9e2d4;fon
 #banner.red h1{color:#a8160c;text-shadow:0 0 30px rgba(150,0,0,.5)} #banner.gold h1{color:var(--gold2);text-shadow:0 0 30px rgba(255,210,120,.35)}
 /* ---------- menus ---------- */
 .screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;pointer-events:auto;background:radial-gradient(ellipse at center,rgba(0,0,0,.25),rgba(0,0,0,.85))}
-.panel{min-width:min(92vw,420px);max-width:92vw;max-height:88vh;overflow:auto;padding:22px 30px;background:linear-gradient(rgba(14,11,9,.94),rgba(6,5,4,.94));border:1px solid rgba(201,168,106,.5);box-shadow:0 0 60px #000}
-.panel h2{margin:0 0 12px;font-weight:400;letter-spacing:.2em;color:var(--gold2);font-size:22px;text-align:center}
-.btn{display:block;width:100%;margin:8px 0;padding:11px 16px;background:transparent;color:#e9e2d4;border:1px solid rgba(201,168,106,.35);font-family:var(--serif);font-size:18px;letter-spacing:.14em;cursor:pointer;pointer-events:auto}
-.btn:hover,.btn:focus{background:rgba(201,168,106,.12);border-color:var(--gold);outline:none}
-.btn:disabled{opacity:.35}
+.panel{position:relative;min-width:min(92vw,420px);max-width:92vw;max-height:88vh;overflow:auto;padding:24px 30px;
+  background:linear-gradient(160deg,rgba(10,14,18,.95),rgba(4,6,8,.95));border:1px solid color-mix(in srgb,var(--acc) 35%,transparent);
+  clip-path:polygon(0 14px,14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%);box-shadow:0 0 60px #000;font-family:var(--sci)}
+.panel::before{content:"";position:absolute;left:0;top:0;width:60px;height:2px;background:var(--acc);box-shadow:0 0 10px var(--acc)}
+.panel h2{margin:0 0 14px;font-family:var(--sci);font-weight:600;letter-spacing:.32em;color:#e6f0f6;font-size:20px;text-align:center;text-transform:uppercase}
+.panel h2::after{content:"";display:block;width:44px;height:1px;margin:10px auto 0;background:var(--acc);box-shadow:0 0 8px var(--acc)}
+.btn{position:relative;display:block;width:100%;margin:8px 0;padding:11px 18px;color:#dfe8ee;cursor:pointer;pointer-events:auto;
+  background:linear-gradient(90deg,color-mix(in srgb,var(--acc) 10%,transparent),rgba(255,255,255,.02) 60%,transparent);
+  border:1px solid rgba(190,215,230,.16);border-left:2px solid color-mix(in srgb,var(--acc) 70%,transparent);
+  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));
+  font-family:var(--sci);font-size:15px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;transition:background .18s,color .18s,padding .18s,box-shadow .18s}
+.btn:hover,.btn:focus{outline:none;color:#fff;background:linear-gradient(90deg,color-mix(in srgb,var(--acc) 30%,transparent),color-mix(in srgb,var(--acc) 6%,transparent) 70%,transparent);
+  border-color:color-mix(in srgb,var(--acc) 55%,transparent);border-left-color:var(--acc);box-shadow:inset 0 0 18px color-mix(in srgb,var(--acc) 18%,transparent)}
+.btn:disabled{opacity:.3}
+.row{font-family:var(--sci);letter-spacing:.04em}
 .row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:6px 0;border-bottom:1px solid rgba(201,168,106,.15);font-size:17px}
 .row .v{color:var(--gold2);min-width:3ch;text-align:right}
 .row .btn{display:inline-block;width:auto;margin:0 0 0 8px;padding:2px 12px;font-size:16px}
 .row .v{display:inline-block}
 .small{font-size:13px;color:#b9ad97;letter-spacing:.05em;line-height:1.5}
-#title{align-items:flex-start;justify-content:center;padding-left:max(6vw,calc(env(safe-area-inset-left) + 24px));
-  background:linear-gradient(90deg,rgba(0,0,0,.94) 0%,rgba(0,0,0,.7) 30%,rgba(0,0,0,0) 52%)}
-#title h1{margin:0;font-weight:300;font-size:clamp(40px,7vw,104px);letter-spacing:.26em;color:#efe4cc;text-shadow:0 0 40px rgba(255,170,90,.25);line-height:1}
-#title .tag{letter-spacing:.48em;color:var(--gold);font-size:clamp(11px,1.5vw,16px);margin:8px 0 10px}
-#title .malign{display:flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.32em;margin:0 0 4.5vh}
-#title .malign i{width:9px;height:9px;border-radius:50%;display:inline-block}
-#title .menu{width:min(42vw,300px)}
-#title .menu .btn{text-align:left;padding-left:18px}
-#title .foot{position:absolute;bottom:max(14px,env(safe-area-inset-bottom));left:max(6vw,calc(env(safe-area-inset-left) + 24px));font-size:12px;letter-spacing:.2em;color:#8d826f}
-@media (max-height:500px){#title h1{font-size:clamp(32px,11vh,64px)}#title .menu .btn{margin:5px 0;padding:7px 14px;font-size:15px}#title .malign{margin-bottom:2.5vh}}
+#title{align-items:flex-start;justify-content:center;padding-left:max(6vw,calc(env(safe-area-inset-left) + 24px));font-family:var(--sci);
+  background:linear-gradient(90deg,rgba(0,0,0,.94) 0%,rgba(0,0,0,.72) 30%,rgba(0,0,0,0) 52%)}
+#title::before{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(255,255,255,.028) 0 1px,transparent 1px 3px);mix-blend-mode:screen}
+#title::after{content:"";position:absolute;left:0;right:0;height:22vh;top:-22vh;pointer-events:none;background:linear-gradient(transparent,color-mix(in srgb,var(--acc) 7%,transparent),transparent);animation:scan 7s linear infinite}
+@keyframes scan{to{transform:translateY(130vh)}}
+#title .sysbar{position:absolute;top:max(14px,env(safe-area-inset-top));left:max(6vw,calc(env(safe-area-inset-left) + 24px));right:max(4vw,calc(env(safe-area-inset-right) + 24px));
+  display:flex;justify-content:space-between;font-size:11px;letter-spacing:.28em;color:rgba(200,220,230,.55);border-bottom:1px solid rgba(200,220,230,.12);padding-bottom:8px}
+#title .sysbar b{color:var(--acc);font-weight:500}
+#title .kicker{font-size:11px;letter-spacing:.42em;color:var(--acc);margin-bottom:10px;opacity:.9}
+#title h1{margin:0;font-family:var(--sci);font-weight:700;font-size:clamp(42px,7.4vw,108px);letter-spacing:.3em;color:#eef6fb;line-height:.95;
+  text-shadow:0 0 28px color-mix(in srgb,var(--acc) 35%,transparent),0 0 2px rgba(255,255,255,.6)}
+#title .tag{font-family:var(--sci);letter-spacing:.62em;color:#b8c7d0;font-size:clamp(11px,1.45vw,15px);margin:12px 0 12px;font-weight:500}
+#title .malign{display:flex;align-items:center;gap:10px;font-size:11px;letter-spacing:.34em;margin:0 0 4vh;padding:5px 12px 5px 10px;
+  border:1px solid color-mix(in srgb,var(--acc) 45%,transparent);background:color-mix(in srgb,var(--acc) 8%,transparent);clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,0 100%)}
+#title .malign::before{content:"ALIGNMENT //";color:rgba(200,220,230,.55)}
+#title .malign i{width:8px;height:8px;border-radius:50%;display:inline-block}
+#title .menu{width:min(40vw,320px);counter-reset:mi;position:relative;padding-left:14px;border-left:1px solid rgba(200,220,230,.12)}
+#title .menu .btn{text-align:left;padding-left:52px;margin:7px 0}
+#title .menu .btn::before{counter-increment:mi;content:counter(mi,decimal-leading-zero);position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:11px;letter-spacing:.1em;color:var(--acc);opacity:.85}
+#title .menu .btn:hover{padding-left:58px}
+#title .menu .btn[style*="display: none"]{counter-increment:none}
+#title .foot{position:absolute;bottom:max(14px,env(safe-area-inset-bottom));left:max(6vw,calc(env(safe-area-inset-left) + 24px));right:max(4vw,calc(env(safe-area-inset-right) + 24px));
+  display:flex;justify-content:space-between;font-size:10.5px;letter-spacing:.3em;color:rgba(200,220,230,.45);border-top:1px solid rgba(200,220,230,.1);padding-top:8px}
+.ctag{position:absolute;pointer-events:none;font-family:var(--sci);font-size:10.5px;letter-spacing:.25em;color:#dfe8ee;white-space:nowrap;transition:opacity .4s}
+.ctag{text-align:center;padding:4px 10px;border:1px solid color-mix(in srgb,var(--acc) 40%,transparent);background:rgba(0,0,0,.45)}
+.ctag::after{content:"";position:absolute;left:50%;bottom:-11px;width:1px;height:10px;background:var(--acc);box-shadow:0 0 6px var(--acc)}
+.ctag small{display:block;color:var(--acc);font-size:9.5px;letter-spacing:.3em;margin-top:2px}
+@media (max-height:500px){#title h1{font-size:clamp(30px,11vh,64px)}#title .menu .btn{margin:4px 0;padding-top:7px;padding-bottom:7px;font-size:13px}#title .malign{margin-bottom:2.4vh}#title .kicker{display:none}.ctag{display:none}}}
 #crawl{background:#000;cursor:pointer}
 #crawl .txt{position:relative;width:min(86vw,780px);height:60vh;text-align:center;color:#d8ccb3}
 #crawl .txt p{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);margin:0;opacity:0;transition:opacity 1.2s;font-size:clamp(17px,min(3vw,5.2vh),30px);line-height:1.55}
@@ -185,6 +213,8 @@ body.touchmode #bossbar{width:min(52vw,600px);left:44%}
 <div id="loading" class="screen"><div class="lt">LOADING</div><div class="lb"><i id="lbar"></i></div><div class="small" id="lmsg" style="margin-top:12px"></div></div>
 
 <div id="title" class="screen hidden">
+  <div class="sysbar"><span>BRITISH COMMAND <b>//</b> SECURE CHANNEL</span><span>NEW LONDON · 51.50N 0.12W</span></div>
+  <div class="kicker">OPERATION — SIEGE OF NEW LONDON</div>
   <h1>ORION</h1>
   <div class="tag">THE THIRD WORLD WAR</div>
   <div class="malign" id="menuAlign"></div>
@@ -197,7 +227,9 @@ body.touchmode #bossbar{width:min(52vw,600px);left:44%}
     <button class="btn" id="bSettings">SETTINGS</button>
     <button class="btn" id="bControls">CONTROLS</button>
   </div>
-  <div class="foot">NEW LONDON · NOVEMBER 2090</div>
+  <div class="ctag" id="tagO">CMDR. O. MASCAR<small>BRITISH COMMAND</small></div>
+  <div class="ctag" id="tagT">APPR. T. HAWTHORNE<small>BRITISH COMMAND</small></div>
+  <div class="foot"><span>SYS 2090.11 · NODE 07</span><span>LINK STABLE</span></div>
 </div>
 
 <div id="birth" class="hidden">
@@ -311,16 +343,16 @@ body.touchmode #bossbar{width:min(52vw,600px);left:44%}
 
 <div id="rotate" class="screen hidden"><div>For the best experience,<br>turn your device to landscape.<br><br><button class="btn" id="rotOk" style="width:auto;display:inline-block">PLAY ANYWAY</button></div></div>
 
-<script src="js/engine.js?v=22"></script>
-<script src="js/world.js?v=22"></script>
-<script src="js/actors.js?v=22"></script>
-<script src="js/audio.js?v=22"></script>
-<script src="js/chapters.js?v=22"></script>
-<script src="js/game.js?v=22"></script>
-<script src="js/codex.js?v=22"></script>
-<script src="js/alignment.js?v=22"></script>
-<script src="js/menu.js?v=22"></script>
-<script src="js/opening.js?v=22"></script>
+<script src="js/engine.js?v=23"></script>
+<script src="js/world.js?v=23"></script>
+<script src="js/actors.js?v=23"></script>
+<script src="js/audio.js?v=23"></script>
+<script src="js/chapters.js?v=23"></script>
+<script src="js/game.js?v=23"></script>
+<script src="js/codex.js?v=23"></script>
+<script src="js/alignment.js?v=23"></script>
+<script src="js/menu.js?v=25"></script>
+<script src="js/opening.js?v=23"></script>
 <script>
 // models are loaded after the page shows the loading screen
 (function () {
