@@ -504,7 +504,7 @@ A.Gunner = class {
   fire(P) { // one aimed bolt, led slightly and spread, travelling fast enough to roll through on reaction
     const m = this.muzzlePos(), tp = [P.pos[0] + P.vel[0] * 0.25 + R(-0.5, 0.5), 1.1 + R(-0.2, 0.3), P.pos[2] + P.vel[2] * 0.25 + R(-0.5, 0.5)];
     const d = [tp[0] - m[0], tp[1] - m[1], tp[2] - m[2]], l = Math.hypot(...d) || 1, sp = 24;
-    GM.projectiles.push({ pos: m.slice(), vel: [d[0] / l * sp, d[1] / l * sp, d[2] / l * sp], dmg: this.T.dmg * 0.38, life: 2.2, r: 0.35 });
+    GM.projectiles.push({ pos: m.slice(), vel: [d[0] / l * sp, d[1] / l * sp, d[2] / l * sp], dmg: this.T.dmg * 0.3, life: 2.2, r: 0.35 });
     GM.parts.emit({ pos: m.slice(), vel: [0, 0, 0], life: 0.07, size: 0.22, col: [5, 2.4, 1.0, 1], soft: 0, fade: 0, rot: R(0, 6) });
     this.muzzle.pos = m; this.muzzle.intensity = 6; this.recoil = 1; GM.audio.gun(dist2(this.pos, P.pos) * 0.5);
   }
@@ -522,10 +522,10 @@ A.Gunner = class {
     else if (S === 'move') { // keep a firing distance, circling
       face(7); aim = 0.6;
       if (rnd() < dt * 0.4) this.circ = -this.circ;
-      const want = this.phase2 ? 7 : 9;
+      const want = this.phase2 ? 5 : 6.5; // close enough that a sword can reach him after each burst
       if (d > want + 3) { move(ty, 3.6 * sp); this.ch.play('Run', 0.2, 1.0); aim = 0; }
-      else { move(ty + Math.PI / 2 * this.circ, 1.9 * sp); if (d < want - 2.5) move(ty + Math.PI, 2.2 * sp); this.ch.play('WalkAim', 0.25, 0.9); }
-      if (P.state === 'attack' && d < 3.4 && P.ch.t < 0.25 && rnd() < dt * 6) { this.rollDir = ty + Math.PI + (rnd() < 0.5 ? 1 : -1) * R(0.6, 1.2); this.set('roll', 'Roll', 0.06, 1.05); }
+      else { move(ty + Math.PI / 2 * this.circ, 1.3 * sp); if (d < want - 2.5) move(ty + Math.PI, 1.3 * sp); this.ch.play('WalkAim', 0.25, 0.9); }
+      if (P.state === 'attack' && d < 3.4 && P.ch.t < 0.25 && rnd() < dt * 2.5) { this.rollDir = ty + Math.PI + (rnd() < 0.5 ? 1 : -1) * R(0.6, 1.2); this.set('roll', 'Roll', 0.06, 1.05); }
       else if (d < 2.4 && this.cd <= 0.4) { this.hitDone = false; this.set('bash', 'Attack1', 0.08, 1.1); }
       else if (this.phase2 && this.nadeCd <= 0 && d > 4) { this.set('nade', 'Block', 0.12); this.nadeCd = R(5, 7); }
       else if (this.cd <= 0) { this.set('aim', 'Aim', 0.12); this.shots = this.phase2 ? 5 : 4; if (rnd() < 0.5) GM.wardenTaunt(); }
@@ -535,14 +535,17 @@ A.Gunner = class {
     } else if (S === 'fire') {
       face(4); aim = 1; this.next -= dt;
       if (this.next <= 0 && this.shots > 0) { this.fire(P); this.shots--; this.next = 0.14; }
-      if (this.shots <= 0 && this.t > 0.5) { this.set('move', null); this.cd = R(1.2, 2.0) / sp; }
+      if (this.shots <= 0 && this.t > 0.5) { this.set('reload', 'Block', 0.15); } // then a reload: the opening to close in and punish
+    } else if (S === 'reload') { // stands and reloads: no dodging, no backing off
+      face(3); aim = 0.2;
+      if (this.t > (this.phase2 ? 0.9 : 1.3)) { this.set('move', null); this.cd = R(0.9, 1.6) / sp; }
     } else if (S === 'bash') {
       face(8); aim = Math.sin(Math.min(1, this.ch.progress) * Math.PI);
-      if (!this.hitDone && this.ch.t > 0.24 && d < 2.6 + P.radius) { this.hitDone = true; P.damage(this.T.dmg * 0.9, this.pos, { boss: true }); }
-      if (this.ch.finished) { this.set('move', null); this.cd = 0.8; }
+      if (!this.hitDone && this.ch.t > 0.24 && d < 2.6 + P.radius) { this.hitDone = true; P.damage(this.T.dmg * 0.6, this.pos, { boss: true }); }
+      if (this.ch.finished) { this.set('move', null); this.cd = 1.2; }
     } else if (S === 'nade') { // lobs grenades around the player: red markers, then the blasts
       face(8);
-      if (this.t > 0.35 && !this.thrown) { this.thrown = true; for (let i = 0; i < (this.phase2 ? 3 : 2); i++) GM.addMarker([P.pos[0] + R(-2.5, 2.5), 0, P.pos[2] + R(-2.5, 2.5)], 1.3 + i * 0.25, 2.2, this.T.dmg * 0.9); GM.audio.charge(); }
+      if (this.t > 0.35 && !this.thrown) { this.thrown = true; for (let i = 0; i < (this.phase2 ? 3 : 2); i++) GM.addMarker([P.pos[0] + R(-2.5, 2.5), 0, P.pos[2] + R(-2.5, 2.5)], 1.3 + i * 0.25, 2.2, this.T.dmg * 0.7); GM.audio.charge(); }
       if (this.t > 0.8) { this.thrown = false; this.set('move', null); this.cd = Math.max(this.cd, 0.6); }
     } else if (S === 'roll') {
       const u = this.ch.t / this.ch.cur.dur; this.iframe = u > 0.05 && u < 0.6;

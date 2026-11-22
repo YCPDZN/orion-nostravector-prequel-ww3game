@@ -15,6 +15,11 @@ const ENTRIES = [
     ],
     combat: 'Fights with a thermal sabre whose edge burns with the colour of his conscience — blue, gold or red. Light attacks chain into combos; the heavy overhead trades speed for raw damage. Rolling, blocking and stims keep him standing — but stamina decides every exchange.',
     quote: 'Ten years of war won\'t end tonight, Tom. But tonight, London breathes.',
+    // who he has become: the entry follows his alignment
+    byTier: {
+      good: { role: 'Commander · Chaotic Good', lore: 'The war has not hardened him the way it hardens most men. He still digs people out of the rubble, still lets the beaten walk away, and still believes the war can end with something worth keeping.', quote: 'We don\'t win by becoming them, Tom.' },
+      neutral: { role: 'Commander · Chaotic Neutral', lore: 'He follows the orders that make sense and quietly ignores the ones that don\'t. Command calls him reliable. Thomas calls him tired.', quote: 'Command gives the orders. I decide how they get done.' },
+      evil: { role: 'Commander · Chaotic Evil', lore: 'Somewhere between New London and the east, the war stopped being something he fought and became something he is. His blade burns red now, and the men who serve under him have learned not to ask questions.', quote: 'Mercy is for people who can afford to lose.' } },
     show: ['Idle', 'Attack1', 'Attack2', 'Heavy', 'Block'] },
   { id: 'thomas', sec: 'CHARACTERS', name: 'Thomas Hawthorne', role: 'Apprentice · British Command', model: 'thomas', h: 1.82,
     facts: [['Born', '2074'], ['Age', '16'], ['Rank', 'Apprentice to Commander Mascar'], ['Allegiance', 'United Kingdom, allied with the United States'], ['Weapon', 'Service rifle']],
@@ -25,6 +30,10 @@ const ENTRIES = [
     ],
     combat: 'Fights at range with a service rifle, firing aimed three-round bursts at whatever Orion is fighting or locked on to. Anything that gets too close gets the rifle stock. He is built to take punishment — three times what a normal soldier can — and against the Iron Warden he digs in even harder, shrugging off half of every blow. If he falls, give him time: he always gets back up.',
     quote: 'You didn\'t think I\'d let you finish this alone, did you?',
+    byTier: {
+      good: { role: 'Apprentice · Lawful Good', lore: 'He still believes in the rules: protect the people who can\'t protect themselves, and never shoot a man with his hands up. He is the conscience Orion forgets he has.', quote: 'That\'s why we fight. Not for Command — for them.' },
+      neutral: { role: 'Apprentice · Lawful Neutral', lore: 'He does what he is told, exactly as he is told. It keeps him alive. He has stopped asking whether it keeps him human.', quote: 'By the book, then. Like you taught me.' },
+      evil: { role: 'Apprentice · Lawful Evil', lore: 'He learned everything from Orion, including the parts Orion never meant to teach. The rules are still there; he just decides who they apply to now.', quote: 'Every lesson you ever gave me, I\'m giving back. One bullet at a time.' } },
     show: ['Idle', 'Aim', 'Shoot', 'Shoot', 'Idle'] },
   { id: 'talina', sec: 'ADVERSARIES', name: 'Talina Alvarez', role: 'Traitor of British Command', model: 'talina', h: 1.72, unlock: 'boss2a',
     facts: [['Born', 'Seville, Spain'], ['Raised', 'London'], ['Former rank', 'Commander, British Command'], ['Allegiance', 'Sino-Russian Pact'], ['Weapon', 'Thermal sabre']],
@@ -121,14 +130,14 @@ function build() {
   const o = new OE.Character(GM.assets.orion, { rim: 0.06 }); root.add(o.node);
   const sw = new OE.Node(Wp.swordMesh, Wp.metalMat()); const sg = new OE.Node(Wp.swordGlow, { mode: 2, color: [0, 0, 0], emissive: [1.2, 3.6, 5] }); sw.add(sg); sg.castShadow = false;
   const hm = M4.create(); sw.attach = () => o.boneWorld('R_Hand', hm); sw.pos = [0, -0.085, 0.02]; o.node.add(sw);
-  C.models.orion = { ch: o, node: o.node };
+  C.models.orion = { ch: o, node: o.node, glows: [sg] };
   const swordChar = (asset, glow, dual) => { // another sword-bearer: eyepatch Orion, Talina, Ines (two blades)
     const c = new OE.Character(asset, { rim: 0.06 }); root.add(c.node);
     for (const hand of dual ? ['R_Hand', 'L_Hand'] : ['R_Hand']) {
       const s2 = new OE.Node(Wp.swordMesh, Wp.metalMat()); const g2 = new OE.Node(Wp.swordGlow, { mode: 2, color: [0, 0, 0], emissive: glow }); s2.add(g2); g2.castShadow = false;
       const m2 = M4.create(); s2.attach = () => c.boneWorld(hand, m2); s2.pos = [0, -0.085, 0.02]; c.node.add(s2);
     }
-    return { ch: c, node: c.node };
+    return { ch: c, node: c.node, glows: c.node.children.map((n) => n.children && n.children[0]).filter(Boolean) };
   };
   C.models.orionEye = swordChar(GM.assets.orionEye, [1.2, 3.6, 5]);
   C.models.talina = swordChar(GM.assets.talina, [2.2, 0.35, 2.8]);
@@ -139,7 +148,7 @@ function build() {
   const rg = new OE.Node(Wp.rifleGlow, { mode: 2, color: [0, 0, 0], emissive: [3, 0.6, 0.2] }); rg.castShadow = false; rf.add(rg);
   C.rifleModel = M4.create(); const rw = M4.create();
   rf.attach = () => M4.mul(rw, t.node.world, C.rifleModel);
-  t.node.add(rf); C.models.thomas = { ch: t, node: t.node, rifle: rf };
+  t.node.add(rf); C.models.thomas = { ch: t, node: t.node, rifle: rf, glows: [rg] };
   C.muzzle = { pos: [0, 0, 0], color: [1, 0.7, 0.3], intensity: 0, range: 6 };
   const gunChar = (asset, glow) => { // Chapter V's leaders, rifles aimed the same way as Thomas's
     const c = new OE.Character(asset, { rim: 0.06 }); root.add(c.node);
@@ -177,14 +186,16 @@ function select(id) {
   const locked = e.unlock && !GM.save.seen[e.unlock];
   for (const k in C.models) C.models[k].node.visible = false;
   const m = C.models[mkey(e)];
+  if (m && m.glows && (e.id === 'orion' || e.id === 'thomas')) for (const g of m.glows) if (g && g.mat) g.mat.emissive = GM.align.info(e.id === 'thomas' ? 't' : 'o').glow.slice(); // his alignment's colour
   if (m && !locked) { m.node.visible = true; if (m.ch) m.ch.play((e.show || ['Idle'])[0], 0, 1, true); }
   const b = $('cxBody');
   if (locked) { b.innerHTML = `<h1>???</h1><div class="cx-role">Unknown</div><p class="cx-lockedmsg">Not yet encountered. Venture further into New London to learn more.</p>`; }
   else {
-    b.innerHTML = `<h1>${e.name}</h1><div class="cx-role">${e.role}</div>
+    const tw = e.byTier ? (e.id === 'thomas' ? 't' : 'o') : null, tv = tw && e.byTier[GM.align.tier(tw)]; // Orion and Thomas: as they are now
+    b.innerHTML = `<h1>${e.name}</h1><div class="cx-role" style="${tv ? 'color:' + GM.align.TIERS[GM.align.tier(tw)].css : ''}">${tv ? tv.role : e.role}</div>
       <dl class="cx-facts">${e.facts.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}${e.id === 'orion' || e.id === 'thomas' ? `<dt>Alignment</dt><dd>${GM.align.chip('', e.id === 'orion' ? 'o' : 't')}</dd>` : ''}</dl>
-      ${e.lore.concat(e.fate && GM.save[e.fateKey || 'talina'] && e.fate[GM.save[e.fateKey || 'talina']] ? [e.fate[GM.save[e.fateKey || 'talina']]] : []).concat(e.fate3 && GM.save.talina3 && e.fate3[GM.save.talina3] ? [e.fate3[GM.save.talina3]] : []).map((p) => `<p>${p}</p>`).join('')}
-      <h3>IN COMBAT</h3><p>${e.combat}</p>${e.quote ? `<p class="cx-quote">“${e.quote}”</p>` : ''}`;
+      ${e.lore.concat(tv ? [tv.lore] : []).concat(e.fate && GM.save[e.fateKey || 'talina'] && e.fate[GM.save[e.fateKey || 'talina']] ? [e.fate[GM.save[e.fateKey || 'talina']]] : []).concat(e.fate3 && GM.save.talina3 && e.fate3[GM.save.talina3] ? [e.fate3[GM.save.talina3]] : []).map((p) => `<p>${p}</p>`).join('')}
+      <h3>IN COMBAT</h3><p>${e.combat}</p>${(tv ? tv.quote : e.quote) ? `<p class="cx-quote">“${tv ? tv.quote : e.quote}”</p>` : ''}`;
   }
   b.scrollTop = 0; renderTabs();
 }

@@ -15,7 +15,7 @@ const asThomas = () => part5().hero === 'thomas';
 const GEN = (name, hp, dmg, glow, extra) => Object.assign({ name, hp, dmg, scrap: 6000, glow, gunCol: [0.36, 0.36, 0.38] }, extra || {});
 const BOSS5 = {
   yi: { gunner: 'yi', pos: [0, 0, 162], seen: 'boss5y', T: GEN('MARSHAL YI LIANG, Supreme Commander of the Pact', 2600, 62, [3.2, 0.35, 0.2]) },
-  orlov: { gunner: 'orlov', pos: [0, 0, 162], seen: 'boss5o', T: GEN('GENERAL VLADIMIR ORLOV, Defender of Moscow', 3000, 66, [0.4, 1.2, 3.4]) },
+  orlov: { gunner: 'orlov', pos: [0, 0, 162], seen: 'boss5o', T: GEN('GENERAL VLADIMIR ORLOV, Defender of Moscow', 3000, 58, [0.4, 1.2, 3.4]) },
   thomas: { gunner: 'thomas', pos: [0, 0, 160], seen: 'boss5t', T: GEN('THOMAS HAWTHORNE, Lawful Evil', 2500, 56, [3.4, 0.35, 0.25], { down: 'Death', gunCol: [0.7, 0.7, 0.72] }) },
   orion: { duelist: 'orionEye', pos: [0, 0, 160], seen: 'boss5m', T: { name: 'ORION MASCAR, Chaotic Evil', hp: 3200, dmg: 80, scrap: 6000, s: 1, glow: [3.4, 0.35, 0.25], light: [1, 0.15, 0.1], down: 'Death' } },
   josiah: { gunner: 'josiah', pos: [0, 0, 160], seen: 'boss5j', T: GEN('JOSIAH WILLIAMS I, Head of British Command', 2400, 58, [2.6, 2.0, 0.5], { gunCol: [0.3, 0.32, 0.28] }) },
