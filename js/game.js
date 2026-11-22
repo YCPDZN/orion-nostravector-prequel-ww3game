@@ -489,7 +489,7 @@ function updateHud(dt) {
   if (GM.inBoss && boss) { $('bossbar').querySelector('i').style.transform = `scaleX(${Math.max(0, boss.hp / boss.maxHp)})`; $('bossbar').querySelector('b').style.transform = `scaleX(${Math.max(0, boss.hp / boss.maxHp)})`; }
   // subtitles
   subT -= dt; const sub = $('sub');
-  if (subT <= 0) { if (subQ.length) { const s = subQ.shift(); sub.innerHTML = `<b>${NAMES[s.who] || s.who}:</b> ${s.text}` + (s.voice && s.voice.zh ? `<div class="zh">${s.voice.zh}</div>` : ''); sub.style.opacity = 1; subT = s.dur; if (s.voice && s.voice.file) playVoice(s.voice.file); else if (s.voice && s.voice.zh) speakZh(s.voice.zh); else if (s.voice) playVoice(s.voice); } else sub.style.opacity = 0; }
+  if (subT <= 0) { if (subQ.length) { const s = subQ.shift(); sub.innerHTML = `<b>${NAMES[s.who] || s.who}:</b> ${s.text}`; /* English subtitles only */ sub.style.opacity = 1; subT = s.dur; if (s.voice && s.voice.file) playVoice(s.voice.file); else if (s.voice && s.voice.zh) speakZh(s.voice.zh); else if (s.voice) playVoice(s.voice); } else sub.style.opacity = 0; }
   toastT -= dt; if (toastT <= 0) $('toast').style.opacity = 0;
   bannerT -= dt; if (bannerT <= 0) $('banner').style.opacity = 0;
   // lock-on marker & enemy health bars

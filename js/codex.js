@@ -31,7 +31,7 @@ const ENTRIES = [
     lore: [
       'The war machine that took London in a single night. The Pact left it standing guard in the ruined cathedral at the heart of New London — a monument to their victory, and a warning to anyone who would try to take the city back.',
     ],
-    quote: '红日与巨熊，已在同一面旗帜下联合。 — The Red Sun and the Bear have united under one banner.',
+    quote: 'The Red Sun and the Bear have united under one banner.',
     combat: 'Sweeps its cleaver in wide arcs, slams the ground hard enough to send out a shockwave — roll through it — and charges across the plaza. At half strength its core goes critical: it grows faster and calls down an orbital barrage. Watch for the red markers.' },
   { id: 'trooper', sec: 'ADVERSARIES', name: 'Pact Revenant', role: 'Russian-built blade infantry', enemy: 'trooper', h: 2.1, unlock: 'alert_trooper',
     facts: [['Class', 'Assault automaton'], ['Height', '2.0 m'], ['Armament', 'Forearm blade'], ['Origin', 'Russian foundries']],
