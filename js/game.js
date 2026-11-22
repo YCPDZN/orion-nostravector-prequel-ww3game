@@ -132,7 +132,9 @@ GM.boot = async function () {
     msg('Loading Talina Alvarez', 0.8); await tick();
     const orionEye = await OE.loadGLB(dec(ORION_MODELS.orionEye)), talina = await OE.loadGLB(dec(ORION_MODELS.talina)), ines = await OE.loadGLB(dec(ORION_MODELS.ines));
     const talinaP = await OE.loadGLB(dec(ORION_MODELS.talinaP));
-    GM.assets = { orion, thomas, orionEye, talina, ines, talinaP };
+    msg('Loading the Pact\'s leaders', 0.85); await tick();
+    const orlov = await OE.loadGLB(dec(ORION_MODELS.orlov)), yi = await OE.loadGLB(dec(ORION_MODELS.yi)), josiah = await OE.loadGLB(dec(ORION_MODELS.josiah));
+    GM.assets = { orion, thomas, orionEye, talina, ines, talinaP, orlov, yi, josiah };
     GM.heroes.orion = GM.player = new A.Player(orion); GM.companion = new A.Companion(thomas);
     msg('Building New London', 0.95); await tick();
     GM.loadLevel(1);
@@ -508,8 +510,9 @@ function openChapters(ret) {
   });
   show('chapters');
 }
-function chapterComplete() {
+function chapterComplete(afterEpilogue) {
   const S = GM.save; const c = chapterDef(S.chapter);
+  if (c.epilogue && afterEpilogue !== true) { hudVisible(false); if (document.pointerLockElement) document.exitPointerLock(); startNarration('AFTER KALININGRAD', 'Spring 2095', c.epilogue(S), () => chapterComplete(true)); return; }
   S.done = S.done || {}; S.done[c.id] = { time: S.stats.time, deaths: S.stats.deaths, kills: S.stats.kills, rank: S.rank }; GM.persist();
   GM.state = 'complete'; hudVisible(false); if (document.pointerLockElement) document.exitPointerLock();
   $('cmpNum').textContent = `CHAPTER ${c.numeral} COMPLETE`; $('cmpTitle2').textContent = c.title;
@@ -531,7 +534,15 @@ GM.toPart2 = function () {
   S.reached = S.reached || {}; S.reached[S.chapter + 'b'] = 1; GM.chapterEndT = 0; GM.inBoss = false;
   GM.loadLevel(levelId(S)); respawnAll(); hudVisible(false); startCrawl(2);
 };
+/* a narration between chapters (the war record after Kaliningrad), then on to whatever comes next */
+function startNarration(kicker, title, lines, done) {
+  GM.state = 'crawl'; show('crawl'); GM.crawlPart = null; GM.crawlDone = done;
+  $('crawlTxt').innerHTML = `<p class="first"><small>${kicker}</small>${title}</p>` + lines.map((t) => `<p>${t}</p>`).join('');
+  crawlIdx = -1; $('crawl').onclick = endCrawl; AU.musicDuck(0.4); nextCrawl();
+}
+GM.startNarration = startNarration;
 function startCrawl(part) {
+  GM.crawlDone = null;
   GM.state = 'crawl'; show('crawl'); const box = $('crawlTxt');
   const ch = chapterDef(GM.save.chapter); const pt = ch.parts ? ch.parts[(part || GM.save.part || 1) - 1] : null;
   GM.crawlPart = pt;
@@ -545,6 +556,7 @@ function nextCrawl() {
   const ps = $('crawlTxt').querySelectorAll('p'); clearTimeout(crawlTimer); clearTimeout(GM._crawlFade);
   ps.forEach((p) => p.style.opacity = 0);
   crawlIdx++;
+  if (crawlIdx >= ps.length && GM.crawlDone) { const d = GM.crawlDone; GM.crawlDone = null; AU.musicDuck(0.28); d(); return; }
   if (crawlIdx >= ps.length) { AU.musicDuck(0.28); startPlay(); const ch = chapterDef(GM.save.chapter), pt = GM.crawlPart;
     if (pt) banner(pt.title.toUpperCase(), `CHAPTER ${ch.numeral} · PART ${pt.numeral} · ${pt.place.toUpperCase()}`, 'gold', 4.5);
     else banner(ch.title.toUpperCase(), `CHAPTER ${ch.numeral} · ${ch.place.toUpperCase()}, ${ch.date.toUpperCase()}`, 'gold', 4.5); return; }

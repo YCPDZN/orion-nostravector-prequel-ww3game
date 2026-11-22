@@ -279,7 +279,7 @@ window.LEVELS = {
     ending(S) {
       const t = GM.align.tier('o');
       const city = { good: 'Kaliningrad is free, and Orion still remembers why he fights.', neutral: 'Kaliningrad is free. One more city off the list.', evil: 'Kaliningrad is free, and its people are afraid of the man who freed it.' }[t];
-      const who = S.child === 'born' ? ' Somewhere behind the line, Talina is holding their child.' : S.ines === 'companion' ? ' Inés Alvarez cleaned her blades and said nothing.' : '';
+      const who = S.child === 'born' ? ' Somewhere behind the line, Talina is holding their son, Croxian Mascar.' : S.ines === 'companion' ? ' Inés Alvarez cleaned her blades and said nothing.' : '';
       return city + who;
     },
   },

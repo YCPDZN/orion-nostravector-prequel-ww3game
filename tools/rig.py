@@ -51,6 +51,36 @@ CHARS['TalinaAlvarez'] = dict(joints=_t, ends=_te,
 CHARS['OrionEyepatch'] = CHARS['OrionMascar']  # same body, new face
 CHARS['InesAlvarez'] = CHARS['TalinaAlvarez']  # Talina's twin: same build and stance
 CHARS['TalinaPregnant'] = CHARS['TalinaAlvarez']  # Chapter IV: same body, carrying Orion's child
+# Chapter V: Vladimir Orlov (Russia), Yi Liang (China), Josiah Williams I (British Command). Measured from front/side views.
+def _cfg(j, e, r, extra=None, ends_extra=None):
+    J = mirror(j); E = mirror(e)
+    if extra: J.update(extra)
+    if ends_extra: E.update(ends_extra)
+    return dict(joints=J, ends=E, radius=mirror(r), cloak=False)
+_rad = {'Hips': .11, 'Spine': .115, 'Chest': .125, 'Neck': .055, 'Head': .072, 'L_Shoulder': .055,
+        'L_UpperArm': .062, 'L_ForeArm': .058, 'L_Hand': .044, 'L_UpLeg': .074, 'L_Leg': .06, 'L_Foot': .055, 'L_Toe': .044}
+CHARS['VladimirOrlov'] = _cfg(  # armoured; left forearm bent across the front, right arm hanging
+  {'Hips': (0, .49, -.02), 'Spine': (0, .60, -.02), 'Chest': (0, .70, -.02), 'Neck': (0, .84, -.02), 'Head': (0, .885, 0),
+   'L_Shoulder': (.04, .80, -.03), 'L_UpperArm': (.15, .77, -.03), 'L_ForeArm': (.195, .61, -.03), 'L_Hand': (.12, .57, .10),
+   'L_UpLeg': (.075, .47, -.025), 'L_Leg': (.09, .27, -.04), 'L_Foot': (.115, .07, -.06), 'L_Toe': (.115, .02, .0)},
+  {'Head': (0, .98, 0), 'L_Hand': (.06, .565, .15), 'L_Toe': (.115, .02, .05), 'Hips': (0, .43, -.02)}, _rad,
+  {'R_UpperArm': (-.15, .77, -.03), 'R_ForeArm': (-.18, .60, -.03), 'R_Hand': (-.19, .48, 0), 'R_Leg': (-.08, .27, -.04), 'R_Foot': (-.11, .07, -.06), 'R_Toe': (-.11, .02, 0)},
+  {'R_Hand': (-.19, .41, .01), 'R_Toe': (-.11, .02, .05)})
+CHARS['YiLiang'] = _cfg(  # armoured; both arms down
+  {'Hips': (0, .49, .01), 'Spine': (0, .60, .0), 'Chest': (0, .70, -.01), 'Neck': (0, .835, -.01), 'Head': (0, .88, 0),
+   'L_Shoulder': (.04, .80, -.02), 'L_UpperArm': (.14, .775, -.02), 'L_ForeArm': (.16, .61, -.02), 'L_Hand': (.15, .49, .0),
+   'L_UpLeg': (.075, .47, .02), 'L_Leg': (.07, .27, -.005), 'L_Foot': (.10, .07, -.04), 'L_Toe': (.10, .02, .04)},
+  {'Head': (0, .98, 0), 'L_Hand': (.145, .43, .01), 'L_Toe': (.10, .02, .09), 'Hips': (0, .43, .01)}, _rad,
+  {'R_Leg': (-.082, .27, -.012), 'R_Foot': (-.11, .07, -.05), 'R_Toe': (-.11, .02, .03)}, {'R_Toe': (-.11, .02, .075)})
+CHARS['JosiahWilliams'] = _cfg(  # field uniform; left hand raised holding a tablet, right arm hanging; right foot back
+  {'Hips': (0, .49, -.03), 'Spine': (0, .60, -.03), 'Chest': (0, .70, -.03), 'Neck': (0, .835, -.03), 'Head': (0, .88, -.01),
+   'L_Shoulder': (.04, .80, -.04), 'L_UpperArm': (.15, .77, -.04), 'L_ForeArm': (.17, .61, -.03), 'L_Hand': (.10, .60, .10),
+   'L_UpLeg': (.075, .47, -.035), 'L_Leg': (.085, .27, .003), 'L_Foot': (.11, .07, -.01), 'L_Toe': (.11, .02, .06)},
+  {'Head': (0, .98, 0), 'L_Hand': (.07, .60, .15), 'L_Toe': (.11, .02, .105), 'Hips': (0, .43, -.03)},
+  dict(_rad, Hips=.10, Spine=.11, Chest=.12, L_UpperArm=.058, L_ForeArm=.052, L_Hand=.04, L_UpLeg=.07, L_Leg=.056),
+  {'R_UpperArm': (-.15, .77, -.04), 'R_ForeArm': (-.16, .60, -.04), 'R_Hand': (-.16, .47, -.02), 'R_Leg': (-.053, .27, -.087), 'R_Foot': (-.078, .07, -.15), 'R_Toe': (-.078, .02, -.08)},
+  {'R_Hand': (-.16, .40, -.01), 'R_Toe': (-.078, .02, -.035)})
+
 CHILD_FOR_SEG = {'Hips': None, 'Spine': 'Chest', 'Chest': 'Neck', 'Neck': 'Head', 'Head': None,
                  'L_Shoulder': 'L_UpperArm', 'L_UpperArm': 'L_ForeArm', 'L_ForeArm': 'L_Hand', 'L_Hand': None,
                  'R_Shoulder': 'R_UpperArm', 'R_UpperArm': 'R_ForeArm', 'R_ForeArm': 'R_Hand', 'R_Hand': None,
@@ -319,7 +349,7 @@ if __name__ == '__main__':
     names = sys.argv[2].split(',') if len(sys.argv) > 2 else ['OrionMascar', 'ThomasHawthorne']
     HT = {'TalinaAlvarez': 1.72, 'InesAlvarez': 1.72, 'TalinaPregnant': 1.72}
     for name in names:
-        cs = anims.rifle_set() if name == 'ThomasHawthorne' else anims.duelist_set() if name in ('TalinaAlvarez', 'TalinaPregnant') else anims.ines_set() if name == 'InesAlvarez' else anims.sword_set()
+        cs = anims.rifle_set() if name == 'ThomasHawthorne' else anims.duelist_set() if name in ('TalinaAlvarez', 'TalinaPregnant', 'VladimirOrlov', 'YiLiang', 'JosiahWilliams') else anims.ines_set() if name == 'InesAlvarez' else anims.sword_set()
         sc = HT.get(name, H) / 0.98
         nv, nf = build(name, f'/home/claude/work/{name}_raw.npz', f'/home/claude/work/{name}', f'{out}/{name}_rigged.glb', sc, cs)
         print(name, nv, nf, os.path.getsize(f'{out}/{name}_rigged.glb') // 1024, 'KB')

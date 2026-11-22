@@ -53,7 +53,20 @@ The game is split into chapters, each a self-contained mission. Pick one from **
   - **If Talina is dead (executed at Dover or killed at Normandy), or in British custody (1 part)**: the chapter is the assault alone.
   - *The assault*: down a tram avenue, past a collapsed apartment block (the chapter's choice, **Survivors in the Rubble**: talk to Thomas there), over the bridge on the frozen Pregel to the square before the House of Soviets, where **the Bear**, a huge winter-white machine with a cleaver in each fist, holds the city. If Orion spared Inés at Normandy, she fights beside him with her two sabres.
   - Dialogue is kept to a minimum: 22 numbered lines in all (no boss taunts, no call-outs). Record them as `voice/kaliningradNN.mp3` and list them in `js/voice_kaliningrad.js`; until then they are subtitles (the Hunter speaks Mandarin and the Bear Russian, through text-to-speech).
-- **Chapter V — Under One Banner** *(Harbin, 2095)*: coming soon.
+- **After Kaliningrad.** When the Bear falls, a narration plays before the Chapter Complete screen. It reads back your war record (every choice Orion and Thomas made, from the Warden's core to the rubble), names **Croxian Mascar**, Orion and Talina's son, if he was born, and tells you where the war will end.
+- **Chapter V — Under One Banner** *(spring 2095)*: levels coming soon. Where it is fought, and against whom, depends on the alignments Orion and Thomas end Chapter IV with (9 outcomes):
+
+  | Orion | Thomas | Part I | Part II |
+  |---|---|---|---|
+  | Good | Good or Neutral | Harbin, vs Marshal Yi Liang | — |
+  | Good | Evil | Harbin, vs Yi Liang | New London, vs Thomas Hawthorne |
+  | Neutral | Neutral or Good | Moscow, vs General Vladimir Orlov | — |
+  | Neutral | Evil | Moscow, vs Orlov | New London, vs Thomas Hawthorne |
+  | Evil | Good | New London, vs Orion Mascar (you play Thomas) | Harbin, vs Yi Liang (as Thomas) |
+  | Evil | Neutral | New London, vs Orion Mascar (you play Thomas) | Moscow, vs Orlov (as Thomas) |
+  | Evil | Evil | New London, vs Josiah Williams I, head of British Command (Orion, with Thomas) | — |
+
+  The routes and narration are in `js/chapters.js` (`CH5`). The three leaders are rigged (`models/VladimirOrlov_rigged.glb`, `YiLiang_rigged.glb`, `JosiahWilliams_rigged.glb`, embedded in `assets/models_ch5.js`).
 
 Chapter I begins with a first-person memory: Orion recalls his birth in London in 2069 AD, shown as a soft, out-of-focus dream with a heartbeat, narrated by Orion (voice/intro1-6.mp3). Each chapter then opens with its own title card and prologue and ends with a *Chapter Complete* screen showing your time, kills, deaths and rank. Replaying a chapter keeps Orion's rank and upgrades. Chapters are defined in `js/chapters.js`; each chapter's enemies, boss, dialogue and weather are in `js/levels.js`.
 

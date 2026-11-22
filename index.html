@@ -420,9 +420,9 @@ body.touchmode #sub{top:31%;width:min(58vw,600px)}
 <script src="js/world_castle.js?v=40"></script>
 <script src="js/actors.js?v=44"></script>
 <script src="js/audio.js?v=48"></script>
-<script src="js/chapters.js?v=44"></script>
-<script src="js/levels.js?v=47"></script>
-<script src="js/game.js?v=45"></script>
+<script src="js/chapters.js?v=50"></script>
+<script src="js/levels.js?v=50"></script>
+<script src="js/game.js?v=50"></script>
 <script src="js/voice_dover.js?v=40"></script>
 <script src="js/voice_normandy.js?v=42"></script>
 <script src="js/voice_kaliningrad.js?v=49"></script>
@@ -434,10 +434,10 @@ body.touchmode #sub{top:31%;width:min(58vw,600px)}
 <script>
 // models are loaded after the page shows the loading screen
 (function () {
-  const s = document.createElement('script'); s.src = 'assets/models.js?v=44';
-  s.onload = () => window.GM && GM.boot();
-  s.onerror = () => { document.getElementById('lmsg').textContent = 'Could not load assets/models.js'; };
-  document.body.appendChild(s);
+  const load = (src, next) => { const s = document.createElement('script'); s.src = src;
+    s.onload = next; s.onerror = () => { document.getElementById('lmsg').textContent = 'Could not load ' + src.split('?')[0]; };
+    document.body.appendChild(s); };
+  load('assets/models.js?v=50', () => load('assets/models_ch5.js?v=50', () => window.GM && GM.boot()));
 })();
 </script>
 </body>

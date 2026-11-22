@@ -9,6 +9,77 @@ const CH4_PARTS = [
   { numeral: 'II', title: 'The Bear', place: 'House of Soviets',
     prologue: ['Talina and the child are safe behind the line.', 'Orion goes back to the front. In the heart of the city, the Bear is waiting.'] },
 ];
+/* ---------------- Chapter V: where the war ends ----------------
+   Every choice in the game moves Orion's and Thomas's alignment; after Kaliningrad the two tiers decide the final battle.
+   9 outcomes. Each part: where it is fought, the boss, and who you play. */
+const CH5_PLACE = { harbin: 'Harbin', moscow: 'Moscow', london: 'New London' };
+const CH5_BOSS = { yi: 'Marshal Yi Liang', orlov: 'General Vladimir Orlov', thomas: 'Thomas Hawthorne', orion: 'Orion Mascar', josiah: 'Josiah Williams I' };
+const P5 = (place, boss, hero) => ({ place, boss, hero });
+const CH5_ROUTES = {
+  'good/good': [P5('harbin', 'yi', 'orion')],
+  'good/neutral': [P5('harbin', 'yi', 'orion')],
+  'good/evil': [P5('harbin', 'yi', 'orion'), P5('london', 'thomas', 'orion')],
+  'neutral/neutral': [P5('moscow', 'orlov', 'orion')],
+  'neutral/good': [P5('moscow', 'orlov', 'orion')],
+  'neutral/evil': [P5('moscow', 'orlov', 'orion'), P5('london', 'thomas', 'orion')],
+  'evil/good': [P5('london', 'orion', 'thomas'), P5('harbin', 'yi', 'thomas')],
+  'evil/neutral': [P5('london', 'orion', 'thomas'), P5('moscow', 'orlov', 'thomas')],
+  'evil/evil': [P5('london', 'josiah', 'orion')],
+};
+const tierFor = (S, who) => { const a = (S && S.align) || { o: 0, t: 0 }, v = who === 't' ? a.t : a.o; return v >= 30 ? 'good' : v <= -30 ? 'evil' : 'neutral'; };
+/* the route the war takes, from a save (defaults to the game in play) */
+window.CH5 = {
+  PLACE: CH5_PLACE, BOSS: CH5_BOSS, ROUTES: CH5_ROUTES,
+  route(S) { const key = tierFor(S, 'o') + '/' + tierFor(S, 't'); return { key, o: tierFor(S, 'o'), t: tierFor(S, 't'), parts: CH5_ROUTES[key] }; },
+  summary(S) { const r = this.route(S); return r.parts.map((p, i) => (r.parts.length > 1 ? 'Part ' + (i ? 'II' : 'I') + ': ' : '') + CH5_PLACE[p.place] + ', against ' + CH5_BOSS[p.boss] + (p.hero === 'thomas' ? ' (as Thomas)' : '')).join(' · '); },
+};
+/* the war record: every choice made so far, as Orion's and Thomas's histories */
+const REC = {
+  core: { good: 'destroyed the Iron Warden\'s core in New London', neutral: 'handed the Iron Warden\'s core to British Command', evil: 'kept the Iron Warden\'s core for himself' },
+  pilot: { good: 'let a Pact pilot go free on Dover beach', neutral: 'took the pilot on Dover beach prisoner', evil: 'left the pilot on Dover beach to the drones' },
+  talina3: { good: 'saved her at Normandy', neutral: 'gave her to British Command at Normandy', evil: 'killed her in the church square at Normandy' },
+  ines: { good: 'spared her sister Inés at Normandy', neutral: 'sent her sister Inés to British Command', evil: 'killed her sister Inés at Normandy' },
+  rubble: { good: 'dug a mother and her daughter out of the rubble of Kaliningrad', neutral: 'left a mother and her daughter under the rubble for the rescue teams', evil: 'took the supplies of a mother and her daughter trapped in the rubble' },
+};
+const list = (a) => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + (a.length > 2 ? ',' : '') + ' and ' + a[a.length - 1];
+const LABEL = { o: { good: 'Chaotic Good', neutral: 'Chaotic Neutral', evil: 'Chaotic Evil' }, t: { good: 'Lawful Good', neutral: 'Lawful Neutral', evil: 'Lawful Evil' } };
+const ROUTE_TEXT = {
+  'good/good': ['Together, Orion and Thomas lead the Allied advance east, to Harbin, the city where the Red Sun and the Bear first swore their alliance.',
+    'Marshal Yi Liang holds it with the last of the Pact. The war will end where it began.'],
+  'good/neutral': ['Orion leads the advance east, to Harbin, where the Pact was born. Thomas follows his orders, as he always has.',
+    'Marshal Yi Liang holds the city with the last of the Pact. The war will end where it began.'],
+  'good/evil': ['Orion leads the advance east, to Harbin, to end the war against Marshal Yi Liang.',
+    'Thomas Hawthorne does not go with him. He has gone home to New London, with plans of his own. When Harbin falls, Orion will have to follow him there.'],
+  'neutral/neutral': ['British Command gives the order, and Orion and Thomas carry it out: Moscow.',
+    'General Vladimir Orlov holds the Kremlin with what is left of the Russian army. Command wants it taken. They do not ask why.'],
+  'neutral/good': ['Command sends them to Moscow. Orion goes because he is ordered to. Thomas goes because the people of Moscow will need someone on their side when it falls.',
+    'General Vladimir Orlov holds the Kremlin with what is left of the Russian army.'],
+  'neutral/evil': ['Orion takes the road to Moscow on Command\'s orders, to break General Vladimir Orlov and the Russian army.',
+    'Behind him, Thomas Hawthorne has stopped taking orders from anyone. When Moscow falls, Orion will have to go home to New London, and face him.'],
+  'evil/good': ['Orion Mascar has turned on his own side. With the war all but won, he has taken New London for himself.',
+    'Thomas Hawthorne goes home alone, to stop the man who taught him everything. Then the war still has to be ended, in Harbin, against Marshal Yi Liang.'],
+  'evil/neutral': ['Orion Mascar has turned on his own side. With the war all but won, he has taken New London for himself.',
+    'British Command sends Thomas Hawthorne to bring him down. He does not argue. Then the war still has to be ended, in Moscow, against General Vladimir Orlov.'],
+  'evil/evil': ['Orion and Thomas have no more use for British Command, or for the war it made of their lives.',
+    'They are going home to New London, for Josiah Williams I: the head of British Command, the man who has given them every order they ever followed.'],
+};
+/* the narration after Kaliningrad (and Chapter V's prologue): the war record, Croxian, and where it ends */
+window.CH5.narration = function (S) {
+  S = S || {}; const C = S.choices || {}, r = CH5.route(S), out = ['Spring, 2095.',
+    'Kaliningrad has fallen. The war that began in 2080 is ending, and how it ends has been decided by two men.'];
+  if (S.child === 'born') out.push('Behind the lines, Talina Alvarez is raising their son, Croxian Mascar, born on the first night of the siege. His father has held him twice.');
+  else if (S.ines === 'companion') out.push('Inés Alvarez still marches with them. She has never said a word about her sister.');
+  const o = [];
+  if (C.core) o.push(REC.core[C.core]);
+  if (S.talina === 'executed') o.push('executed Talina Alvarez at Dover'); else if (S.talina === 'fled') o.push('let Talina Alvarez walk away at Dover');
+  if (C.talina3) o.push(REC.talina3[C.talina3]); if (C.ines) o.push(REC.ines[C.ines]);
+  if (C.rubble) o.push(REC.rubble[C.rubble]);
+  if (o.length) out.push('Since the night New London burned, Orion Mascar ' + list(o) + '.');
+  if (C.pilot) out.push('Thomas Hawthorne ' + REC.pilot[C.pilot] + ', and followed Orion everywhere else.');
+  out.push('The war has made Orion ' + LABEL.o[r.o] + ', and Thomas ' + LABEL.t[r.t] + '.');
+  return out.concat(ROUTE_TEXT[r.key]);
+};
+
 window.CHAPTERS = [
   {
     id: 1, numeral: 'I', title: 'The Siege of New London', place: 'New London', date: 'November 2090',
@@ -70,11 +141,15 @@ window.CHAPTERS = [
     objective: 'Destroy the Bear',
     /* two parts only if Talina is alive and at Orion's side (saved at Normandy): Part I is the night their child is born */
     get parts() { const S = window.GM && GM.save && GM.save.started ? GM.save : window.GM && GM.baseSave ? GM.baseSave() : null; return GM.labour && GM.labour(S) ? CH4_PARTS : null; },
+    epilogue: (S) => CH5.narration(S), // after the Bear falls: the war record, and where it ends
     prologue: (S) => ['Winter, 2094.',
       'Three years after Normandy, the war has moved east. The Allies have driven the Pact back across Europe, to its last foothold on the Baltic: Kaliningrad, the old Königsberg.',
       S && S.ines === 'companion' ? 'Inés Alvarez marches with Orion and Thomas now. She has still not said a word about her sister.'
         : S && S.talina3 === 'command' ? 'Talina Alvarez is in a British cell. Orion has not visited her.' : 'Orion Mascar is twenty-five. Thomas Hawthorne is twenty. Neither of them remembers peace.',
       'In the heart of the city, before the House of Soviets, the Pact\'s last war machine holds the square.'] },
-  { id: 5, numeral: 'V', title: 'Under One Banner', place: 'Harbin', date: '2095', available: false,
-    summary: 'Where the Red Sun and the Bear first united, the Sino-Russian Pact holds its last fortress. Ten years of war come down to one decision.' },
+  /* Chapter V: the place, the bosses and who you play depend on Orion's and Thomas's alignment after Kaliningrad (see CH5 above) */
+  { id: 5, numeral: 'V', title: 'Under One Banner', date: 'Spring 2095', available: false,
+    get place() { const S = window.GM && GM.baseSave ? GM.baseSave() : null; return CH5.route(S).parts.map((p) => CH5.PLACE[p.place]).join(' · '); },
+    get summary() { const S = window.GM && GM.baseSave ? GM.baseSave() : null; return 'Fifteen years of war come down to one battle, and your choices decide where it is fought. ' + CH5.summary(S) + '.'; },
+    prologue: (S) => CH5.narration(S) },
 ];
