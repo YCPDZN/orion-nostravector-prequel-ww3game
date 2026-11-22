@@ -709,6 +709,7 @@ function updateHazards(dt) {
 GM.alert = (e) => {
   const seen = GM.save.seen; const k = 'alert_' + e.type;
   if (seen[k] || e.boss) return; seen[k] = 1;
+  if (GM.save.chapter === 4) return; // Kaliningrad is kept quiet: no call-outs
   const lines = { trooper: 'Contact! Pact Revenants — Russian-built. They hit hard but they\'re slow to recover. Punish the swing, like you taught me!', drone: 'Seeker drone — Chinese tech! Roll through the bolts, don\'t try to outrun them.',
     brute: 'Juggernaut! Don\'t trade blows with that thing, Commander. Dodge the slam, then hit it from behind.' };
   if (GM.solo) { // nobody to warn you: the hero talks it through alone (text only)

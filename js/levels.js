@@ -242,21 +242,14 @@ window.LEVELS = {
     ambience: 'snow',
     env: SNOW_NIGHT,
     voice: { who: 'hunter', lang: 'zh-CN', file: null, vo: 4, lines: {
-      intro: ['找到你了。医院里的人，一个也跑不掉。', 'Found you. No one in that hospital gets away.', 5],
-      taunts: [['你保护不了所有人。', 'You cannot protect them all.', 6], ['我听见里面有两个心跳。', 'I can hear two heartbeats in there.', 7]],
-      phase2: ['狩猎结束了。', 'The hunt is over.', 8],
-      kill: ['猎物倒下了。', 'The prey is down.', 9],
-      death: ['熊……会完成……', 'The Bear... will finish it...', 10],
+      intro: ['找到你了。医院里的人，一个也跑不掉。', 'Found you. No one in that hospital gets away.', 2],
+      death: ['熊……会完成……', 'The Bear... will finish it...', 3],
     } },
-    intro() {
-      say4(1, 'radio', 'Mascar, the field hospital is cut off. Pact hunters are at the gates. Get there first.', 6);
-      say4(2, 'thomas', 'She\'ll hold on, Commander. Let\'s go.', 3.5);
-    },
-    beacon(i) { if (i === 1) say4(3, 'thomas', 'Hospital\'s just past the barricade.', 3.5); },
-    bossIntro() { say4(4, 'orion', 'Not one step further.', 3); },
+    intro() { say4(1, 'radio', 'Mascar, the field hospital is cut off. Pact hunters are at the gates. Get there first.', 6); },
+    beacon() { },
+    bossIntro() { },
     phase2() { },
     victory() {
-      say4(11, 'thomas', 'It\'s down! Go to her, Commander!', 3.5);
       return { banner: ['THE HUNTER DESTROYED', 'THE HOSPITAL IS SAFE'], endIn: 9 };
     },
     endings: { good: '', neutral: '', evil: '' },
@@ -273,22 +266,14 @@ window.LEVELS = {
     ambience: 'snow',
     env: SNOW_NIGHT,
     voice: { who: 'bear', lang: 'ru-RU', file: null, vo: 4, lines: {
-      intro: ['Кёнигсберг не падёт.', 'Königsberg will not fall.', 28],
-      taunts: [['Этот город был нашим ещё до ваших дедов.', 'This city was ours before your grandfathers were born.', 29], ['Зима воюет за нас.', 'Winter fights for us.', 30], ['Россия не сдаётся.', 'Russia does not surrender.', 31]],
-      phase2: ['Тогда сгорим вместе!', 'Then we burn together!', 32],
-      kill: ['Ложись в снег, мальчик.', 'Lie down in the snow, boy.', 33],
-      death: ['Медведь… засыпает…', 'The Bear... sleeps...', 34],
+      intro: ['Кёнигсберг не падёт.', 'Königsberg will not fall.', 14],
+      death: ['Медведь… засыпает…', 'The Bear... sleeps...', 15],
     } },
-    intro() {
-      say4(16, 'radio', 'All units: the Bear holds the square at the House of Soviets. Break it, and Kaliningrad falls.', 6);
-      say4(17, 'orion', 'Then we break it.', 2.5);
-      if (GM.save.ines === 'companion') say4(18, 'ines', 'Stay out of my way, Mascar.', 3);
-    },
-    beacon(i) { if (i === 1) say4(19, 'thomas', 'The bridge is ours. The square\'s straight ahead.', 4); },
-    bossIntro() { say4(27, 'thomas', 'Commander... that\'s the Bear.', 3); },
+    intro() { say4(6, 'radio', 'All units: the Bear holds the square at the House of Soviets. Break it, and Kaliningrad falls.', 6); },
+    beacon() { },
+    bossIntro() { },
     phase2() { },
     victory() {
-      say4(35, 'radio', 'Command to all units. The Bear is down. Kaliningrad is ours.', 5.5);
       return { banner: ['THE BEAR DESTROYED', 'KALININGRAD IS OURS'], endIn: 9 };
     },
     ending(S) {
