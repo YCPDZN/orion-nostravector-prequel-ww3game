@@ -49,7 +49,10 @@ const ENV_KEYS = ['sunDir', 'sunCol', 'sky', 'ground', 'fogCol', 'fogDen', 'expo
 /* Chapter IV has two parts only if Talina is alive and with Orion (saved at Normandy): Part I is her labour, '4a'; Part II (or the whole chapter) is '4b' */
 const labour = (S) => !!S && S.talina !== 'executed' && S.talina3 === 'saved';
 GM.labour = labour;
-const levelId = (S) => S.chapter === 2 ? (S.part === 2 ? '2b' : '2a') : S.chapter === 4 ? (labour(S) && S.part !== 2 ? '4a' : '4b') : (S.chapter || 1);
+/* Chapter V: the route (from Orion's and Thomas's alignment after Kaliningrad) decides where each part is fought */
+const L5 = { harbin: '5h', moscow: '5m', london: '5l' };
+const part5Of = (S) => { const r = CH5.route(S); return r.parts[Math.min(r.parts.length, S.part || 1) - 1]; };
+const levelId = (S) => S.chapter === 2 ? (S.part === 2 ? '2b' : '2a') : S.chapter === 4 ? (labour(S) && S.part !== 2 ? '4a' : '4b') : S.chapter === 5 ? L5[part5Of(S).place] : (S.chapter || 1);
 GM.levelId = levelId;
 /* who you play: Orion (sword; eyepatch once he has lost the eye, except in Chapter I) or Thomas (rifle) */
 GM.heroes = {};
@@ -86,14 +89,21 @@ GM.loadLevel = function (id) {
     const before = new Set(OE.R.lights), prevScene = OE.scene, root = new OE.Node(); OE.scene = root;
     const st = W.make(id), def = LEVELS[id];
     const enemies = def.spawns.map(([t, p]) => new A.Enemy(t, p, Math.PI));
-    const mk = (bd) => bd.duelist ? new A.Duelist(GM.assets[bd.duelist], bd.pos, Math.PI, bd.T) : new A.Enemy(bd.type, bd.pos, Math.PI);
-    const b = mk(def.boss), alt = def.bossAlt ? mk(def.bossAlt) : null; // bossAlt: a different boss when its condition holds (Ines for Talina)
+    const mk = (bd) => bd.duelist ? new A.Duelist(GM.assets[bd.duelist], bd.pos, Math.PI, bd.T) : bd.gunner ? new A.Gunner(GM.assets[bd.gunner], bd.pos, Math.PI, bd.T) : new A.Enemy(bd.type, bd.pos, Math.PI);
+    let bossMap = null; if (def.bosses) { bossMap = {}; for (const k in def.bosses) bossMap[k] = mk(def.bosses[k]); } // Chapter V: one of several bosses waits, by route
+    const b = bossMap ? bossMap[def.pickBoss()] : mk(def.boss), alt = def.bossAlt ? mk(def.bossAlt) : null; // bossAlt: a different boss when its condition holds (Ines for Talina)
     const env = clone(GM.baseEnv); if (def.env) Object.assign(env, clone(def.env));
     let npc = null; // a character standing in the level (Talina at the field hospital)
     if (def.npc && st.npcSpot) { const ch = new OE.Character(GM.assets[def.npc.asset], { rim: 0.06 }); root.add(ch.node); ch.play(def.npc.clip, 0, 1, true);
       npc = { ch, pos: st.npcSpot.slice(), yaw: def.npc.yaw || 0 }; }
-    L = GM.levels[id] = { id, def, root, st, npc, base: enemies, enemies: enemies.concat([b]), boss: b, main: b, alt, env, lights: OE.R.lights.filter((l) => !before.has(l)) };
+    L = GM.levels[id] = { id, def, root, st, npc, bossMap, base: enemies, enemies: enemies.concat([b]), boss: b, main: b, alt, env, lights: OE.R.lights.filter((l) => !before.has(l)) };
     OE.scene = prevScene;
+  }
+  if (L.bossMap) { // Chapter V: the route's boss; the others are put away
+    const on = L.bossMap[L.def.pickBoss()];
+    for (const k in L.bossMap) { const e = L.bossMap[k]; if (e !== on) { e.node.visible = false; e.alive = false; e.state = 'dead'; if (e.light) e.light.intensity = 0; if (e.muzzle) e.muzzle.intensity = 0; } }
+    if (L.boss !== on) { on.node.visible = true; on.reset(); }
+    L.boss = on; L.main = on; L.enemies = L.base.concat([on]); if (LV === L) { GM.enemies = L.enemies; boss = GM.boss = on; }
   }
   if (L.alt) { // which of the level's bosses waits at the end of it this time
     const useAlt = !!L.def.bossAlt.when(), on = useAlt ? L.alt : L.main, off = useAlt ? L.main : L.alt;
@@ -463,7 +473,8 @@ function startChapter(n, opts = {}) {
 }
 /* progression: a chapter opens once the one before it has been completed (in this game or any saved one) */
 /* a save counts as having finished its chapter once the final boss of the chapter is down (even if it was saved before the Complete screen) */
-const finishedIn = (S) => !!(S && S.started && S.bossDead && (() => { const c = chapterDef(S.chapter), n = c.id === 4 ? (labour(S) ? 2 : 0) : c.parts ? c.parts.length : 0; return !n || (S.part || 1) === n; })());
+const partsIn = (c, S) => c.id === 4 ? (labour(S) ? 2 : 0) : c.id === 5 ? (CH5.route(S).parts.length > 1 ? 2 : 0) : c.parts ? c.parts.length : 0;
+const finishedIn = (S) => !!(S && S.started && S.bossDead && (() => { const n = partsIn(chapterDef(S.chapter), S); return !n || (S.part || 1) === n; })());
 GM.completed = function () {
   const d = Object.assign({}, GM.save.done || {}); if (finishedIn(GM.save)) d[GM.save.chapter] = d[GM.save.chapter] || {};
   for (const sl of readSlots()) if (sl && sl.save) { if (sl.save.done) Object.assign(d, sl.save.done); if (finishedIn(sl.save)) d[sl.save.chapter] = d[sl.save.chapter] || {}; }
@@ -480,7 +491,7 @@ GM.advance = function () {
 };
 const refreshAdvance = () => { const n = nextChapter(), ok = GM.canAdvance(); for (const id of ['pNext', 'rNext']) { const b = $(id); b.style.display = ok ? '' : 'none'; if (n) b.textContent = `CHAPTER ${n.numeral}: ${n.title.toUpperCase()}`; } };
 GM.unlocked = (id) => id <= 1 || !!GM.completed()[id - 1];
-const COVERS = { 1: 'assets/chapters/ch1.jpg', 2: 'assets/chapters/ch2.jpg', 3: 'assets/chapters/ch3.jpg', 4: 'assets/chapters/ch4.jpg' };
+const COVERS = { 1: 'assets/chapters/ch1.jpg', 2: 'assets/chapters/ch2.jpg', 3: 'assets/chapters/ch3.jpg', 4: 'assets/chapters/ch4.jpg', 5: 'assets/chapters/ch5.jpg' };
 function openChapters(ret) {
   chapterReturn = ret; const S = baseSave();
   $('chList').innerHTML = CHAPTERS.map((c) => {
@@ -512,7 +523,7 @@ function openChapters(ret) {
 }
 function chapterComplete(afterEpilogue) {
   const S = GM.save; const c = chapterDef(S.chapter);
-  if (c.epilogue && afterEpilogue !== true) { hudVisible(false); if (document.pointerLockElement) document.exitPointerLock(); startNarration('AFTER KALININGRAD', 'Spring 2095', c.epilogue(S), () => chapterComplete(true)); return; }
+  if (c.epilogue && afterEpilogue !== true) { const h = c.epilogueHead || ['', '']; hudVisible(false); if (document.pointerLockElement) document.exitPointerLock(); startNarration(h[0], h[1], c.epilogue(S), () => chapterComplete(true)); return; }
   S.done = S.done || {}; S.done[c.id] = { time: S.stats.time, deaths: S.stats.deaths, kills: S.stats.kills, rank: S.rank }; GM.persist();
   GM.state = 'complete'; hudVisible(false); if (document.pointerLockElement) document.exitPointerLock();
   $('cmpNum').textContent = `CHAPTER ${c.numeral} COMPLETE`; $('cmpTitle2').textContent = c.title;
@@ -569,7 +580,7 @@ function endCrawl() { if (GM.state === 'crawl') nextCrawl(); }
 
 /* ---------------- HUD helpers ---------------- */
 let subQ = [], subT = 0, toastT = 0, bannerT = 0;
-const NAMES = { thomas: 'Thomas', orion: 'Orion', radio: 'British Command', warden: 'Iron Warden', tide: 'Tidebreaker', talina: 'Talina', ines: 'Inés', pilot: 'Pact Pilot', hunter: 'The Hunter', bear: 'The Bear' };
+const NAMES = { thomas: 'Thomas', orion: 'Orion', radio: 'British Command', warden: 'Iron Warden', tide: 'Tidebreaker', talina: 'Talina', ines: 'Inés', pilot: 'Pact Pilot', hunter: 'The Hunter', bear: 'The Bear', yi: 'Yi Liang', orlov: 'Orlov', josiah: 'Josiah Williams' };
 /* Each level's boss speaks its own language (Mandarin for the Iron Warden, Russian for the Tidebreaker) with English subtitles.
    Lines with a recording play the mp3; the rest use the browser's text-to-speech. */
 const BV = () => LV.def.voice;
@@ -871,7 +882,7 @@ function step(dt, inp) {
     if (GM._inMenu) { // back from the menu stage to New London
       GM._inMenu = false; GM.menu.leave(); OE.scene = GM.worldRoot; Object.assign(OE.R, JSON.parse(JSON.stringify(GM.worldEnv)));
     }
-    if (st === 'play') { GM.save.stats.time += dt; if (GM.chapterEndT > 0) { GM.chapterEndT -= dt; if (GM.chapterEndT <= 0) { if (LV.def.cutscene) GM.cine.start(LV.def.cutscene); else GM.align.open(LV.def.choice, chapterComplete); } } }
+    if (st === 'play') { GM.save.stats.time += dt; if (GM.chapterEndT > 0) { GM.chapterEndT -= dt; if (GM.chapterEndT <= 0) { if (GM.save.chapter === 5 && (GM.save.part || 1) < partsIn(chapterDef(5), GM.save)) GM.toPart2(); else if (LV.def.cutscene) GM.cine.start(LV.def.cutscene); else GM.align.open(LV.def.choice, chapterComplete); } } }
     if (inp.lock) toggleLock();
     const P = GM.player;
     if (P.state === 'rest') P.setState('move', null);

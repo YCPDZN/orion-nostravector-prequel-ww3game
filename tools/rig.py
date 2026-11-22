@@ -349,7 +349,7 @@ if __name__ == '__main__':
     names = sys.argv[2].split(',') if len(sys.argv) > 2 else ['OrionMascar', 'ThomasHawthorne']
     HT = {'TalinaAlvarez': 1.72, 'InesAlvarez': 1.72, 'TalinaPregnant': 1.72}
     for name in names:
-        cs = anims.rifle_set() if name == 'ThomasHawthorne' else anims.duelist_set() if name in ('TalinaAlvarez', 'TalinaPregnant', 'VladimirOrlov', 'YiLiang', 'JosiahWilliams') else anims.ines_set() if name == 'InesAlvarez' else anims.sword_set()
+        cs = anims.rifle_set() if name == 'ThomasHawthorne' else anims.general_set() if name in ('VladimirOrlov', 'YiLiang', 'JosiahWilliams') else anims.duelist_set() if name in ('TalinaAlvarez', 'TalinaPregnant') else anims.ines_set() if name == 'InesAlvarez' else anims.sword_set()
         sc = HT.get(name, H) / 0.98
         nv, nf = build(name, f'/home/claude/work/{name}_raw.npz', f'/home/claude/work/{name}', f'{out}/{name}_rigged.glb', sc, cs)
         print(name, nv, nf, os.path.getsize(f'{out}/{name}_rigged.glb') // 1024, 'KB')

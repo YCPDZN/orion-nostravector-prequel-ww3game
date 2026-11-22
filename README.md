@@ -54,7 +54,7 @@ The game is split into chapters, each a self-contained mission. Pick one from **
   - *The assault*: down a tram avenue, past a collapsed apartment block (the chapter's choice, **Survivors in the Rubble**: talk to Thomas there), over the bridge on the frozen Pregel to the square before the House of Soviets, where **the Bear**, a huge winter-white machine with a cleaver in each fist, holds the city. If Orion spared Inés at Normandy, she fights beside him with her two sabres.
   - Dialogue is kept to a minimum: 22 numbered lines in all (no boss taunts, no call-outs). Record them as `voice/kaliningradNN.mp3` and list them in `js/voice_kaliningrad.js`; until then they are subtitles (the Hunter speaks Mandarin and the Bear Russian, through text-to-speech).
 - **After Kaliningrad.** When the Bear falls, a narration plays before the Chapter Complete screen. It reads back your war record (every choice Orion and Thomas made, from the Warden's core to the rubble), names **Croxian Mascar**, Orion and Talina's son, if he was born, and tells you where the war will end.
-- **Chapter V — Under One Banner** *(spring 2095)*: levels coming soon. Where it is fought, and against whom, depends on the alignments Orion and Thomas end Chapter IV with (9 outcomes):
+- **Chapter V — Under One Banner** *(spring 2095)*: the end of the war. Three new places: **Harbin** (Central Street's old Russian facades and neon, to the square before the Church of Saint Sophia), **Moscow** (a Stalinist boulevard in the rain, onto Red Square under the Kremlin wall and Saint Basil's) and **New London** again, burning at dawn. Yi Liang, Vladimir Orlov and Josiah Williams I fight with rifles: aimed bursts you can roll through, the rifle butt up close, grenades from half strength. Evil Thomas fights with his rifle; evil Orion with his sword. Beating Yi Liang or Orlov at the end brings the surrender choice; then a closing narration tells how the war ended, and what became of Orion, Thomas, Croxian and Inés. Where it is fought, and against whom, depends on the alignments Orion and Thomas end Chapter IV with (9 outcomes):
 
   | Orion | Thomas | Part I | Part II |
   |---|---|---|---|
@@ -66,7 +66,7 @@ The game is split into chapters, each a self-contained mission. Pick one from **
   | Evil | Neutral | New London, vs Orion Mascar (you play Thomas) | Moscow, vs Orlov (as Thomas) |
   | Evil | Evil | New London, vs Josiah Williams I, head of British Command (Orion, with Thomas) | — |
 
-  The routes and narration are in `js/chapters.js` (`CH5`). The three leaders are rigged (`models/VladimirOrlov_rigged.glb`, `YiLiang_rigged.glb`, `JosiahWilliams_rigged.glb`, embedded in `assets/models_ch5.js`).
+  The routes and narration are in `js/chapters.js` (`CH5`), the levels in `js/world_ch5.js` and `js/levels.js` ('5h', '5m', '5l'). The three leaders are rigged (`models/VladimirOrlov_rigged.glb`, `YiLiang_rigged.glb`, `JosiahWilliams_rigged.glb`, embedded in `assets/models_ch5.js`).
 
 Chapter I begins with a first-person memory: Orion recalls his birth in London in 2069 AD, shown as a soft, out-of-focus dream with a heartbeat, narrated by Orion (voice/intro1-6.mp3). Each chapter then opens with its own title card and prologue and ends with a *Chapter Complete* screen showing your time, kills, deaths and rank. Replaying a chapter keeps Orion's rank and upgrades. Chapters are defined in `js/chapters.js`; each chapter's enemies, boss, dialogue and weather are in `js/levels.js`.
 

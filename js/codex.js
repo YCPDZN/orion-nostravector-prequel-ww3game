@@ -73,6 +73,24 @@ const ENTRIES = [
     lore: ['The Pact\'s soldiers named it after the Bear on their banner. It was built in Kaliningrad, to hold the square before the House of Soviets for as long as the city stood.'],
     quote: 'Winter fights for us.',
     combat: 'The heaviest machine in the war: a cleaver in each fist, wide sweeps, ground slams with a wide shockwave, and a charge across the square. At half strength it calls the guns down on itself. Its reach is long; fight at its flank.' },
+  { id: 'yi', sec: 'ADVERSARIES', name: 'Yi Liang', role: 'Marshal · Supreme Commander of the Pact', model: 'yi', h: 1.8, unlock: 'boss5y',
+    facts: [['Rank', 'Marshal'], ['Command', 'The Sino-Russian Pact, Harbin'], ['Weapon', 'Assault rifle, grenades'], ['Voice', 'Mandarin Chinese']],
+    lore: ['The officer who signed the Pact for China in Harbin in 2080, and has commanded its armies ever since. When the war came back to the city where it began, he did not leave.'],
+    quote: 'You came too late. The Red Sun does not set.',
+    combat: 'Keeps his distance and fires aimed bursts after a short, glowing aim: roll through the shots, then close in. Up close he clubs you with the rifle. At half strength he starts throwing grenades: watch for the red markers.',
+    show: ['Idle', 'Aim', 'Shoot', 'Attack1', 'Idle'] },
+  { id: 'orlov', sec: 'ADVERSARIES', name: 'Vladimir Orlov', role: 'General · Defender of Moscow', model: 'orlov', h: 1.82, unlock: 'boss5o',
+    facts: [['Rank', 'General'], ['Command', 'The Russian army, Moscow'], ['Weapon', 'Assault rifle, grenades'], ['Voice', 'Russian']],
+    lore: ['A soldier\'s general, who fought every year of the war at the front. When the Pact fell back, he took what was left of the Russian army to the Kremlin, and dug in.'],
+    quote: 'Moscow does not surrender. Ever.',
+    combat: 'The toughest of the three. He fires aimed bursts from range, rifle-butts you up close and throws grenades from half strength. Roll through the shots and punish him while he reloads.',
+    show: ['Idle', 'Aim', 'Shoot', 'Attack1', 'Idle'] },
+  { id: 'josiah', sec: 'ADVERSARIES', name: 'Josiah Williams I', role: 'Head of British Command', model: 'josiah', h: 1.8, unlock: 'boss5j',
+    facts: [['Office', 'Head of British Command'], ['Command', 'Every British soldier of the war'], ['Weapon', 'Service rifle, grenades'], ['Voice', 'English']],
+    lore: ['The man in New London who gave every order Orion Mascar and Thomas Hawthorne ever followed. He sent them to Dover, to Normandy and to Kaliningrad. He never once went himself.'],
+    quote: 'I gave you every order you ever followed, Mascar. Here is the last one: kneel.',
+    combat: 'Fights like the generals he commanded: aimed rifle bursts at range, the rifle butt up close, grenades from half strength.',
+    show: ['Idle', 'Aim', 'Shoot', 'Attack1', 'Idle'] },
   { id: 'trooper', sec: 'ADVERSARIES', name: 'Pact Revenant', role: 'Russian-built blade infantry', enemy: 'trooper', h: 2.1, unlock: 'alert_trooper',
     facts: [['Class', 'Assault automaton'], ['Height', '2.0 m'], ['Armament', 'Forearm blade'], ['Origin', 'Russian foundries']],
     lore: ['The Pact\'s foot soldiers: tireless, fearless, built by the tens of thousands to hold what the heavier machines conquer.'],
@@ -123,6 +141,13 @@ function build() {
   rf.attach = () => M4.mul(rw, t.node.world, C.rifleModel);
   t.node.add(rf); C.models.thomas = { ch: t, node: t.node, rifle: rf };
   C.muzzle = { pos: [0, 0, 0], color: [1, 0.7, 0.3], intensity: 0, range: 6 };
+  const gunChar = (asset, glow) => { // Chapter V's leaders, rifles aimed the same way as Thomas's
+    const c = new OE.Character(asset, { rim: 0.06 }); root.add(c.node);
+    const r = new OE.Node(Wp.rifleMesh, Wp.metalMat()); r.mat.color = [0.4, 0.4, 0.42]; const g = new OE.Node(Wp.rifleGlow, { mode: 2, color: [0, 0, 0], emissive: glow }); g.castShadow = false; r.add(g);
+    const rm = M4.create(), w = M4.create(); r.attach = () => M4.mul(w, c.node.world, rm); c.node.add(r);
+    return { ch: c, node: c.node, rifle: r, rifleModel: rm };
+  };
+  C.models.yi = gunChar(GM.assets.yi, [3.2, 0.35, 0.2]); C.models.orlov = gunChar(GM.assets.orlov, [0.4, 1.2, 3.4]); C.models.josiah = gunChar(GM.assets.josiah, [2.6, 2.0, 0.5]);
   // war machines
   for (const type of ['boss', 'tidebreaker', 'hunter', 'bear', 'trooper', 'drone', 'brute']) {
     const e = new A.Enemy(type, STAGE.slice(), 0); e.reset(); e.root.pos = STAGE.slice(); if (e.hover) e.root.pos = [STAGE[0], 1.5, STAGE[2]];
@@ -196,12 +221,12 @@ C.update = function (dt, inp) {
       if (ch.finished || (ch.cur.loop && C.t > 3.2)) { C.showIdx = (C.showIdx + 1) % e.show.length; ch.play(e.show[C.showIdx], 0.25, 1, true); C.t = 0; }
       const clip = ch.cur.name; C.aim = OE.lerp(C.aim || 0, clip === 'Aim' || clip === 'Shoot' ? 1 : 0, Math.min(1, dt * 6));
       C.recoil = Math.max(0, (C.recoil || 0) - dt * 9); C.muzzle.intensity = Math.max(0, C.muzzle.intensity - dt * 40);
-      if (e.id === 'thomas' && clip === 'Shoot') { // fire with the burst kicks
+      if ((e.id === 'thomas' || m.rifleModel) && clip === 'Shoot') { // fire with the burst kicks
         const kt = [0.02, 0.14, 0.26]; const tt = ch.t;
         for (const k of kt) if (tt >= k && (C.lastShot === undefined || C.lastShot < k || C.lastShot > tt)) { C.recoil = 1; C.muzzle.intensity = 6; if (m.rifle.world) M4.point(C.muzzle.pos, m.rifle.world, [0, 0.04, 0.8]); GM.audio.gun(4); }
         C.lastShot = tt;
       }
-      if (e.id === 'thomas') A.rifleRig(ch, { aim: C.aim, dir: [0, 0, 1], recoil: C.recoil }, C.rifleModel);
+      if (e.id === 'thomas' || m.rifleModel) A.rifleRig(ch, { aim: C.aim, dir: [0, 0, 1], recoil: C.recoil }, m.rifleModel || C.rifleModel);
       Q.yaw(m.node.rot, C.yaw); m.node.pos = STAGE.slice();
     } else {
       const en = m.enemy; Q.yaw(m.node.rot, C.yaw);

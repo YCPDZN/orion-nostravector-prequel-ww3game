@@ -7,6 +7,32 @@ const say = (...a) => GM.say(...a);
 const sayN = (n, who, text, dur) => GM.say(who, text, GM.voDur(n, dur), GM.vo(n));
 /* numbered Chapter III lines: voice/normandyNN.mp3 */
 const say3 = (n, who, text, dur) => GM.say(who, text, GM.voDur3(n, dur), GM.vo3(n));
+/* numbered Chapter V lines: voice/ch5_NN.mp3 */
+const say5 = (n, who, text, dur) => GM.say(who, text, GM.voDur5(n, dur), GM.vo5(n));
+/* Chapter V: which part of the route this level is, and who is playing it */
+const part5 = () => { const r = CH5.route(GM.save); return r.parts[Math.min(r.parts.length, GM.save.part || 1) - 1] || r.parts[0]; };
+const asThomas = () => part5().hero === 'thomas';
+const GEN = (name, hp, dmg, glow, extra) => Object.assign({ name, hp, dmg, scrap: 6000, glow, gunCol: [0.36, 0.36, 0.38] }, extra || {});
+const BOSS5 = {
+  yi: { gunner: 'yi', pos: [0, 0, 162], seen: 'boss5y', T: GEN('MARSHAL YI LIANG, Supreme Commander of the Pact', 2600, 62, [3.2, 0.35, 0.2]) },
+  orlov: { gunner: 'orlov', pos: [0, 0, 162], seen: 'boss5o', T: GEN('GENERAL VLADIMIR ORLOV, Defender of Moscow', 3000, 66, [0.4, 1.2, 3.4]) },
+  thomas: { gunner: 'thomas', pos: [0, 0, 160], seen: 'boss5t', T: GEN('THOMAS HAWTHORNE, Lawful Evil', 2500, 56, [3.4, 0.35, 0.25], { down: 'Death', gunCol: [0.7, 0.7, 0.72] }) },
+  orion: { duelist: 'orionEye', pos: [0, 0, 160], seen: 'boss5m', T: { name: 'ORION MASCAR, Chaotic Evil', hp: 3200, dmg: 80, scrap: 6000, s: 1, glow: [3.4, 0.35, 0.25], light: [1, 0.15, 0.1], down: 'Death' } },
+  josiah: { gunner: 'josiah', pos: [0, 0, 160], seen: 'boss5j', T: GEN('JOSIAH WILLIAMS I, Head of British Command', 2400, 58, [2.6, 2.0, 0.5], { gunCol: [0.3, 0.32, 0.28] }) },
+};
+const SPRING_DUSK = { // Harbin: a smoky spring dusk
+  sunDir: [0.75, 0.22, 0.25], sunCol: [1.5, 0.95, 0.6], sky: [0.2, 0.18, 0.2], ground: [0.12, 0.1, 0.09], fogCol: [0.36, 0.28, 0.26], fogDen: 0.013, exposure: 1.15,
+  skyPal: { top: [0.08, 0.09, 0.16], hor: [0.75, 0.45, 0.3], glow: [0.5, 0.2, 0.06], clLo: [0.2, 0.15, 0.15], clHi: [0.7, 0.45, 0.35], stars: 0, moon: 0 } };
+const MOSCOW_RAIN = { // Moscow: grey spring rain
+  sunDir: [0.5, 0.45, 0.35], sunCol: [0.9, 0.92, 0.98], sky: [0.22, 0.24, 0.27], ground: [0.1, 0.1, 0.1], fogCol: [0.3, 0.32, 0.35], fogDen: 0.011, exposure: 1.1,
+  skyPal: { top: [0.16, 0.17, 0.2], hor: [0.45, 0.46, 0.48], glow: [0.1, 0.05, 0.02], clLo: [0.18, 0.19, 0.21], clHi: [0.42, 0.43, 0.45], stars: 0, moon: 0 } };
+const LONDON_DAWN = { // New London: a red dawn, the city burning again
+  sunDir: [0.6, 0.18, 0.5], sunCol: [1.6, 0.7, 0.4], sky: [0.16, 0.1, 0.1], ground: [0.1, 0.06, 0.05], fogCol: [0.3, 0.14, 0.09], fogDen: 0.009, exposure: 1.15,
+  skyPal: { top: [0.06, 0.05, 0.09], hor: [0.7, 0.28, 0.14], glow: [0.7, 0.25, 0.06], clLo: [0.14, 0.07, 0.06], clHi: [0.6, 0.26, 0.14], stars: 0, moon: 0 } };
+const SPAWNS5 = [['trooper', [2, 0, 20]], ['drone', [-3, 0, 30]], ['trooper', [3, 0, 40]], ['trooper', [-2, 0, 48]], ['brute', [2, 0, 58]],
+  ['drone', [-4, 0, 66]], ['trooper', [3, 0, 76]], ['trooper', [-3, 0, 84]], ['brute', [0, 0, 100]], ['drone', [4, 0, 106]], ['trooper', [-3, 0, 112]], ['trooper', [3, 0, 116]]];
+const ending5 = (S) => { const r = CH5.route(S); if (r.o === 'evil' && r.t !== 'evil') return 'The war is over. Thomas Hawthorne ended it.'; return ({ good: 'The war is over.', neutral: 'The war is over. Command has its victory.', evil: 'The war is over, and Orion Mascar won it his way.' })[r.o]; };
+
 /* numbered Chapter IV lines: voice/kaliningradNN.mp3 */
 const say4 = (n, who, text, dur) => GM.say(who, text, GM.voDur4(n, dur), GM.vo4(n));
 const SNOW_NIGHT = { // Kaliningrad, a winter night: snow cloud lit by the fires below
@@ -282,6 +308,50 @@ window.LEVELS = {
       const who = S.child === 'born' ? ' Somewhere behind the line, Talina is holding their son, Croxian Mascar.' : S.ines === 'companion' ? ' Inés Alvarez cleaned her blades and said nothing.' : '';
       return city + who;
     },
+  },
+  /* ---------------- Chapter V: spring 2095 ---------------- */
+  '5h': { // Harbin: Yi Liang
+    loading: 'Marching on Harbin', spawns: SPAWNS5, bosses: { yi: BOSS5.yi }, pickBoss: () => 'yi', get boss() { return BOSS5.yi; },
+    get hero() { return asThomas() ? 'thomas' : null; }, get solo() { return asThomas() || CH5.route(GM.save).t === 'evil'; }, ally: 'ines',
+    get choice() { return asThomas() ? 'surrender_t' : 'surrender'; }, ambience: 'ash', env: SPRING_DUSK,
+    voice: { who: 'yi', lang: 'zh-CN', file: null, vo: 5, lines: { intro: ['你们来得太晚了。红日不落。', 'You came too late. The Red Sun does not set.', 3], death: ['红日……落下了……', 'The Red Sun... is setting...', 4] } },
+    intro() { if (asThomas()) say5(2, 'radio', 'Hawthorne. Harbin\'s outer defences are down. Yi Liang is holding Saint Sophia\'s square. Finish this.', 6);
+      else say5(1, 'radio', 'Mascar. Harbin\'s outer defences are down. Yi Liang is holding Saint Sophia\'s square. End it.', 6); },
+    beacon() { }, bossIntro() { }, phase2() { },
+    victory() { return { banner: ['MARSHAL YI LIANG DEFEATED', 'HARBIN HAS FALLEN'], endIn: 7 }; },
+    ending: (S) => ending5(S),
+  },
+  '5m': { // Moscow: Orlov
+    loading: 'Marching on Moscow', spawns: SPAWNS5, bosses: { orlov: BOSS5.orlov }, pickBoss: () => 'orlov', get boss() { return BOSS5.orlov; },
+    get hero() { return asThomas() ? 'thomas' : null; }, get solo() { return asThomas() || CH5.route(GM.save).t === 'evil'; }, ally: 'ines',
+    get choice() { return asThomas() ? 'surrender_t' : 'surrender'; }, ambience: 'rain', env: MOSCOW_RAIN,
+    voice: { who: 'orlov', lang: 'ru-RU', file: null, vo: 5, lines: { intro: ['Москва не сдаётся. Никогда.', 'Moscow does not surrender. Ever.', 7], death: ['Медведь… пал…', 'The Bear... has fallen...', 8] } },
+    intro() { if (asThomas()) say5(6, 'radio', 'Hawthorne. Orlov is dug in on Red Square. Take the Kremlin.', 4.5);
+      else say5(5, 'radio', 'Mascar. Orlov is dug in on Red Square. Command wants the Kremlin by nightfall.', 5); },
+    beacon() { }, bossIntro() { }, phase2() { },
+    victory() { return { banner: ['GENERAL ORLOV DEFEATED', 'MOSCOW HAS FALLEN'], endIn: 7 }; },
+    ending: (S) => ending5(S),
+  },
+  '5l': { // New London: Orion (as Thomas), Thomas (as Orion) or Josiah Williams I
+    loading: 'Returning to New London', spawns: SPAWNS5, bosses: { orion: BOSS5.orion, thomas: BOSS5.thomas, josiah: BOSS5.josiah },
+    pickBoss: () => part5().boss, get boss() { return BOSS5[part5().boss]; },
+    get hero() { return asThomas() ? 'thomas' : null; }, get solo() { return part5().boss !== 'josiah'; }, ally: 'ines',
+    choice: null, ambience: 'ash', env: LONDON_DAWN,
+    get voice() {
+      const b = part5().boss;
+      if (b === 'orion') return { who: 'orion', lang: null, file: null, vo: 5, lines: { intro: [null, 'You were always the better of us, Tom. That\'s why it has to be you.', 12],
+        death: GM.save.child === 'born' ? [null, '...Look after them, Tom. Croxian... look after him.', 13] : [null, '...Finish it.', 14] } };
+      if (b === 'thomas') return { who: 'thomas', lang: null, file: null, vo: 5, lines: { intro: [null, 'You taught me everything, Commander. Even this.', 15], death: [null, '...I just wanted it to be over.', 16] } };
+      return { who: 'josiah', lang: null, file: null, vo: 5, lines: { intro: [null, 'I gave you every order you ever followed, Mascar. Here is the last one: kneel.', 17], death: [null, 'You\'ll find... the war doesn\'t end with me.', 18] } };
+    },
+    intro() { const b = part5().boss;
+      if (b === 'orion') say5(9, 'radio', 'Hawthorne... Mascar has taken the city. He isn\'t the Commander any more. Bring him down.', 6);
+      else if (b === 'thomas') say5(10, 'radio', 'Mascar. It\'s Hawthorne. He\'s holding the cathedral plaza, and he isn\'t answering us.', 5.5);
+      else say5(11, 'thomas', 'Williams is in the cathedral plaza, Orion. All of Command is with him.', 4.5); },
+    beacon() { }, bossIntro() { }, phase2() { },
+    victory() { const b = part5().boss;
+      return { banner: b === 'orion' ? ['ORION MASCAR DEFEATED', 'NEW LONDON IS FREE'] : b === 'thomas' ? ['THOMAS HAWTHORNE DEFEATED', 'NEW LONDON IS QUIET'] : ['JOSIAH WILLIAMS I DEFEATED', 'BRITISH COMMAND HAS FALLEN'], endIn: 7 }; },
+    ending: (S) => ending5(S),
   },
 };
 })();

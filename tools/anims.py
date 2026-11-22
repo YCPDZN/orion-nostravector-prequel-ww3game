@@ -278,5 +278,9 @@ def spin_pose():
 def ines_set():
     d = duelist_set(); d['SpinPose'] = spin_pose(); return d
 
+def general_set():
+    """Chapter V's generals: Thomas's rifle handling, plus a kneel for when they are beaten"""
+    d = rifle_set(); d['Kneel'] = kneel(); d['Block'] = block(); return d
+
 def duelist_set():
     d = sword_set(); d['Kneel'] = kneel(); d['Strike'] = strike(); return d

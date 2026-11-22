@@ -66,18 +66,27 @@ const CHOICES = [
       { align: 'neutral', say: 'Mark it for the rescue teams. We can\'t stop.', reply: 'Command will send someone... if there\'s anyone left to send.', result: 'Orion sprays a beacon mark on the rubble and moves on.', vo: [17, 18] },
       { align: 'evil', say: 'Take whatever supplies they had and keep moving.', reply: '...Orion. They\'re people.', result: 'Their supplies go into Orion\'s pack. The knocking stops.', reward: { scrap: 150 }, vo: [19, 20] },
     ] },
-  { id: 'surrender', chapter: 5, title: 'The Surrender',
-    scene: 'The Pact\'s marshal kneels before Orion, offering the surrender of his whole army in exchange for his life.',
-    thomas: 'That\'s the marshal, Orion. The whole Pact army, if we guarantee his life. It ends the war... or we end him. It\'s your call. It always was.',
+  // Chapter V: the beaten general offers the surrender of his army for his life (Harbin or Moscow routes only)
+  { id: 'surrender', chapter: 5, title: 'The Surrender', auto: true, when: () => GM.levelId(GM.save) !== '5l' && GM.heroKey !== 'thomas',
+    get scene() { return (GM.boss && GM.boss.T.name.split(',')[0] || 'The general') + ' kneels before Orion, offering the surrender of his whole army in exchange for his life.'; },
+    thomas: 'That\'s the whole Pact army, Orion, if we guarantee his life. It ends the war... or we end him. It\'s your call. It always was.',
     options: [
-      { align: 'good', say: 'Accept. If it ends the war, he lives.', reply: 'Then it\'s over. It\'s actually over.', result: 'The marshal gives the order. Across the front, the war machines go still.' },
-      { align: 'neutral', say: 'Hand him to Command. Let a tribunal decide.', reply: 'By the book, then. Like you taught me.', result: 'The marshal is taken into British custody. The fighting winds down, front by front.' },
+      { align: 'good', say: 'Accept. If it ends the war, he lives.', reply: 'Then it\'s over. It\'s actually over.', result: 'The order goes out. Across the front, the war machines go still.' },
+      { align: 'neutral', say: 'Hand him to Command. Let a tribunal decide.', reply: 'By the book, then. Like you taught me.', result: 'He is taken into British custody. The fighting winds down, front by front.' },
       { align: 'evil', say: 'No deals. The Pact ends with him.', reply: 'This isn\'t who you were, Orion.', result: 'Orion raises his sabre. Thomas turns away.' },
+    ] },
+  { id: 'surrender_t', chapter: 5, title: 'The Surrender', auto: true, chooser: 't', get asker() { return GM.boss && /YI LIANG/.test(GM.boss.T.name) ? 'yi' : 'orlov'; }, when: () => GM.levelId(GM.save) !== '5l' && GM.heroKey === 'thomas',
+    get scene() { return (GM.boss && GM.boss.T.name.split(',')[0] || 'The general') + ' kneels before Thomas, offering the surrender of his whole army in exchange for his life.'; },
+    thomas: 'Your commander is gone, boy. The army is mine to give. My life, for the war. Decide.',
+    options: [
+      { align: 'good', say: 'Accept. If it ends the war, you live.', reply: '...Then it is over.', result: 'The order goes out. Across the front, the war machines go still.' },
+      { align: 'neutral', say: 'You\'ll answer to a tribunal. Hands behind your head.', reply: 'As you wish.', result: 'Thomas binds his wrists and calls it in. The fighting winds down, front by front.' },
+      { align: 'evil', say: 'He taught me one thing that still matters. No deals.', reply: 'Then you are just like him.', result: 'Thomas raises his rifle. The square goes quiet.' },
     ] },
 ];
 AL.CHOICES = CHOICES;
-const ASKER = { pilot: 'Pact Pilot', talina: 'Talina', ines: 'Inés' };
-AL.forChapter = (n) => CHOICES.find((c) => c.chapter === n && (!c.when || c.when())) || CHOICES.find((c) => c.chapter === n);
+const ASKER = { pilot: 'Pact Pilot', talina: 'Talina', ines: 'Inés', yi: 'Yi Liang', orlov: 'Orlov' };
+AL.forChapter = (n) => { try { return CHOICES.find((c) => c.chapter === n && (!c.when || c.when())) || CHOICES.find((c) => c.chapter === n); } catch (e) { return CHOICES.find((c) => c.chapter === n); } };
 const done = (id) => !!(GM.save.choices && GM.save.choices[id]);
 
 AL.build = function () { }; // Chapter I's choice happens after the boss; later chapters will place theirs in their own levels

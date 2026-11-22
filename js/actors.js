@@ -374,7 +374,7 @@ A.Duelist = class {
     return true;
   }
   defeat() { // she doesn't die: she drops to one knee
-    this.spinA = 0; this.alive = false; this.state = 'defeated'; this.t = 0; this.ch.play('Kneel', 0.15, 1, true); this.lit = 0; GM.onEnemyKilled(this);
+    this.spinA = 0; this.alive = false; this.state = 'defeated'; this.t = 0; this.ch.play(this.T.down || 'Kneel', 0.15, 1, true); this.lit = 0; GM.onEnemyKilled(this);
   }
   startCombo() {
     if (this.T.spin && rnd() < (this.phase2 ? 0.5 : 0.3)) { this.startSpin(); return; }
@@ -462,6 +462,108 @@ A.Duelist = class {
       if (this.glowAmt > 0.3) { M4.point(this.tip2, this.sword2.world, [0, 0, 1.25]); M4.point(this.base2, this.sword2.world, [0, 0, 0.3]);
         for (let i = 0; i < 3; i++) { const u = rnd(); GM.parts.emit({ pos: [OE.lerp(this.base2[0], this.tip2[0], u), OE.lerp(this.base2[1], this.tip2[1], u), OE.lerp(this.base2[2], this.tip2[2], u)], vel: [0, 0, 0], life: 0.14, size: 0.03, col: [this.T.glow[0] * 0.7, this.T.glow[1] * 0.7, this.T.glow[2] * 0.7, 0.55], soft: 0, fade: 1 }); } }
     }
+  }
+};
+
+/* ---------------- Chapter V's gunmen: Yi Liang, Vladimir Orlov, Josiah Williams I (and Thomas, if he turns) ----------------
+   They keep their distance and strafe, fire aimed rifle bursts (visible bolts you can roll through), club you with the
+   rifle if you close in, and from half strength lob grenades (red markers). Beaten, they drop to one knee (or fall). */
+A.Gunner = class {
+  constructor(asset, pos, yaw, T) {
+    if (!rifleMesh) buildWeapons();
+    this.T = T; this.type = 'gunner'; this.boss = true; this.hover = false; this.radius = 0.45; this.home = pos.slice(); this.homeYaw = yaw;
+    this.ch = new OE.Character(asset, { rim: 0.06 }); this.root = this.node = this.ch.node; OE.scene.add(this.node);
+    const rf = new OE.Node(rifleMesh, metalMat()); rf.mat.color = T.gunCol || [0.4, 0.4, 0.42];
+    const rg = new OE.Node(rifleGlow, { mode: 2, color: [0, 0, 0], emissive: T.glow || [3, 0.4, 0.2] }); rg.castShadow = false; rf.add(rg);
+    this.rifleModel = M4.create(); this._rw = M4.create(); rf.attach = () => M4.mul(this._rw, this.node.world, this.rifleModel);
+    this.node.add(rf); this.rifle = rf; this.aimBlend = 0; this.recoil = 0;
+    this.muzzle = { pos: [0, 0, 0], color: [1, 0.6, 0.3], intensity: 0, range: 7 }; OE.R.lights.push(this.muzzle);
+    this.light = { pos: [0, 1, 0], color: [1, 0.3, 0.2], intensity: 0, range: 3 }; OE.R.lights.push(this.light);
+    this.reset();
+  }
+  reset() {
+    this.pos = this.home.slice(); this.yaw = this.homeYaw; this.maxHp = this.T.hp; this.hp = this.T.hp; this.alive = true; this.active = false;
+    this.state = 'idle'; this.t = 0; this.cd = 1.2; this.phase2 = false; this.showBar = 0; this.poiseDmg = 0; this.circ = 1; this.iframe = false; this.nadeCd = 4;
+    this.node.visible = true; this.ch.play('Idle', 0); this.deadT = 0;
+  }
+  hitY() { return 1.15; }
+  get spd() { return this.phase2 ? 1.2 : 1; }
+  set(s, clip, fade = 0.12, speed = 1) { this.state = s; this.t = 0; if (clip) this.ch.play(clip, fade, speed, true); }
+  damage(amount, fromPos, opts = {}) {
+    if (!this.alive || !this.active || this.iframe || this.state === 'defeated') return false;
+    this.hp -= amount; this.showBar = 3; GM.fx.blood([this.pos[0], 1.3, this.pos[2]]); this.poiseDmg += amount * (opts.heavy ? 1.5 : 1);
+    if (!this.phase2 && this.hp < this.maxHp * 0.5) { this.phase2 = true; this.set('taunt', 'Block', 0.1); GM.onBossPhase2(this); this.poiseDmg = 0; }
+    else if (this.poiseDmg > 110 && this.state !== 'fire') { this.poiseDmg = 0; this.knockYaw = yawTo(fromPos, this.pos); this.set('hit', 'Hit', 0.05); }
+    if (this.hp <= 0) { this.hp = 0; this.alive = false; this.state = 'defeated'; this.t = 0; this.ch.play(this.T.down || 'Kneel', 0.15, 1, true); GM.onEnemyKilled(this); }
+    return true;
+  }
+  muzzlePos() { // from the rifle's model-space placement, the general's position and facing (independent of rendering)
+    const m = M4.point([0, 0, 0], this.rifleModel, [0, 0.04, 0.74]), c = Math.cos(this.yaw), sn = Math.sin(this.yaw);
+    return [this.pos[0] + m[0] * c + m[2] * sn, m[1], this.pos[2] - m[0] * sn + m[2] * c];
+  }
+  fire(P) { // one aimed bolt, led slightly and spread, travelling fast enough to roll through on reaction
+    const m = this.muzzlePos(), tp = [P.pos[0] + P.vel[0] * 0.25 + R(-0.5, 0.5), 1.1 + R(-0.2, 0.3), P.pos[2] + P.vel[2] * 0.25 + R(-0.5, 0.5)];
+    const d = [tp[0] - m[0], tp[1] - m[1], tp[2] - m[2]], l = Math.hypot(...d) || 1, sp = 24;
+    GM.projectiles.push({ pos: m.slice(), vel: [d[0] / l * sp, d[1] / l * sp, d[2] / l * sp], dmg: this.T.dmg * 0.38, life: 2.2, r: 0.35 });
+    GM.parts.emit({ pos: m.slice(), vel: [0, 0, 0], life: 0.07, size: 0.22, col: [5, 2.4, 1.0, 1], soft: 0, fade: 0, rot: R(0, 6) });
+    this.muzzle.pos = m; this.muzzle.intensity = 6; this.recoil = 1; GM.audio.gun(dist2(this.pos, P.pos) * 0.5);
+  }
+  update(dt) {
+    this.t += dt; this.showBar -= dt; this.recoil = Math.max(0, this.recoil - dt * 8); this.muzzle.intensity = Math.max(0, this.muzzle.intensity - dt * 40);
+    const P = GM.player, S = this.state;
+    if (S === 'defeated') { this.aimBlend = Math.max(0, this.aimBlend - dt * 4); return this.sync(dt); }
+    if (!this.active || !P.alive) { if (S !== 'idle') this.set('idle', 'Idle', 0.3); return this.sync(dt); }
+    const d = dist2(this.pos, P.pos), ty = yawTo(this.pos, P.pos), sp = this.spd;
+    const face = (r) => { this.yaw += OE.angDiff(this.yaw, ty) * Math.min(1, dt * r); };
+    const move = (y, v) => { this.pos[0] += Math.sin(y) * v * dt; this.pos[2] += Math.cos(y) * v * dt; };
+    this.cd -= dt; this.nadeCd -= dt; let aim = 0;
+    if (S === 'idle') this.set('move', null);
+    else if (S === 'taunt' || S === 'roar') { face(6); this.ch.play('Block', 0.2); if (this.t > (S === 'roar' ? 1.4 : 1.1)) { this.set('move', null); this.cd = 0.3; } }
+    else if (S === 'move') { // keep a firing distance, circling
+      face(7); aim = 0.6;
+      if (rnd() < dt * 0.4) this.circ = -this.circ;
+      const want = this.phase2 ? 7 : 9;
+      if (d > want + 3) { move(ty, 3.6 * sp); this.ch.play('Run', 0.2, 1.0); aim = 0; }
+      else { move(ty + Math.PI / 2 * this.circ, 1.9 * sp); if (d < want - 2.5) move(ty + Math.PI, 2.2 * sp); this.ch.play('WalkAim', 0.25, 0.9); }
+      if (P.state === 'attack' && d < 3.4 && P.ch.t < 0.25 && rnd() < dt * 6) { this.rollDir = ty + Math.PI + (rnd() < 0.5 ? 1 : -1) * R(0.6, 1.2); this.set('roll', 'Roll', 0.06, 1.05); }
+      else if (d < 2.4 && this.cd <= 0.4) { this.hitDone = false; this.set('bash', 'Attack1', 0.08, 1.1); }
+      else if (this.phase2 && this.nadeCd <= 0 && d > 4) { this.set('nade', 'Block', 0.12); this.nadeCd = R(5, 7); }
+      else if (this.cd <= 0) { this.set('aim', 'Aim', 0.12); this.shots = this.phase2 ? 5 : 4; }
+    } else if (S === 'aim') { // a short, readable aim before the burst: the rifle glows
+      face(10); aim = 1; this.light.intensity = 1.5 * Math.min(1, this.t / 0.5);
+      if (this.t > (this.phase2 ? 0.45 : 0.6)) { this.set('fire', 'Shoot', 0.05); this.light.intensity = 0; this.next = 0; }
+    } else if (S === 'fire') {
+      face(4); aim = 1; this.next -= dt;
+      if (this.next <= 0 && this.shots > 0) { this.fire(P); this.shots--; this.next = 0.14; }
+      if (this.shots <= 0 && this.t > 0.5) { this.set('move', null); this.cd = R(1.2, 2.0) / sp; }
+    } else if (S === 'bash') {
+      face(8); aim = Math.sin(Math.min(1, this.ch.progress) * Math.PI);
+      if (!this.hitDone && this.ch.t > 0.24 && d < 2.6 + P.radius) { this.hitDone = true; P.damage(this.T.dmg * 0.9, this.pos, { boss: true }); }
+      if (this.ch.finished) { this.set('move', null); this.cd = 0.8; }
+    } else if (S === 'nade') { // lobs grenades around the player: red markers, then the blasts
+      face(8);
+      if (this.t > 0.35 && !this.thrown) { this.thrown = true; for (let i = 0; i < (this.phase2 ? 3 : 2); i++) GM.addMarker([P.pos[0] + R(-2.5, 2.5), 0, P.pos[2] + R(-2.5, 2.5)], 1.3 + i * 0.25, 2.2, this.T.dmg * 0.9); GM.audio.charge(); }
+      if (this.t > 0.8) { this.thrown = false; this.set('move', null); this.cd = Math.max(this.cd, 0.6); }
+    } else if (S === 'roll') {
+      const u = this.ch.t / this.ch.cur.dur; this.iframe = u > 0.05 && u < 0.6;
+      const v = u < 0.75 ? 6 * (1 - u * 0.6) : 1; move(this.rollDir, v);
+      if (this.ch.finished) { this.iframe = false; this.set('move', null); this.cd = Math.min(this.cd, 0.3); }
+    } else if (S === 'hit') {
+      const k = Math.max(0, 1 - this.t / 0.3) * 3; move(this.knockYaw, k);
+      if (this.t > 0.55) { this.set('move', null); this.cd = 0.4; }
+    }
+    this.aimBlend += (aim - this.aimBlend) * Math.min(1, dt * 10);
+    W.collide(this.pos, this.radius);
+    const A_ = W.arena, dx = this.pos[0] - A_.c[0], dz = this.pos[2] - A_.c[2], dd = Math.hypot(dx, dz);
+    if (dd > A_.r - 1) { this.pos[0] = A_.c[0] + dx / dd * (A_.r - 1); this.pos[2] = A_.c[2] + dz / dd * (A_.r - 1); }
+    this.sync(dt);
+  }
+  sync(dt) {
+    this.node.pos = this.pos; Q.yaw(this.node.rot, this.yaw); this.ch.update(dt);
+    const melee = this.state === 'bash' ? Math.sin(Math.min(1, this.ch.progress) * Math.PI) : 0;
+    if (this.state !== 'roll' && this.state !== 'defeated') A.rifleRig(this.ch, { aim: Math.max(this.aimBlend, melee), dir: [0, -0.02, 1], recoil: this.recoil, thrust: melee }, this.rifleModel);
+    else A.rifleRig(this.ch, { aim: 0, dir: [0, 0, 1], w: 0 }, this.rifleModel);
+    this.light.pos = this.muzzlePos();
   }
 };
 
