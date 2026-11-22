@@ -108,11 +108,14 @@ uniform sampler2DShadow uShadow; uniform float uShadowTexel; uniform bool uShado
 uniform vec4 uPL[12]; uniform vec4 uPLc[12]; uniform int uPLn; uniform float uFlash;
 out vec4 frag;
 const float PI=3.14159265;
-float shadowF(){
+uniform float uShadowNO; uniform mat4 uLightVP;
+float shadowF(vec3 Ng, float NL){
   if(!uShadowOn) return 1.0;
-  vec3 p = vLPos.xyz/vLPos.w*0.5+0.5;
+  // normal-offset lookup: sample the shadow map slightly off the surface so a moving body can't shadow itself in stripes
+  vec4 lp = uLightVP * vec4(vWPos + Ng * uShadowNO * (1.0 + 2.0*(1.0-NL)), 1.0);
+  vec3 p = lp.xyz/lp.w*0.5+0.5;
   if(p.x<0.0||p.x>1.0||p.y<0.0||p.y>1.0||p.z>1.0) return 1.0;
-  float s=0.0; float b=0.0012;
+  float s=0.0; float b=0.0006 + 0.0012*(1.0-NL);
   for(int x=-1;x<=1;x++) for(int y=-1;y<=1;y++) s+=texture(uShadow, vec3(p.xy+vec2(x,y)*uShadowTexel, p.z-b));
   return s/9.0;
 }
@@ -121,13 +124,14 @@ vec3 triSample(sampler2D t, vec3 p, vec3 w){
 }
 void main(){
   vec3 N = normalize(vNrm); vec3 albedo; float rough=uRough, metal=uMetal, ao=1.0;
+  vec3 Ngeo = normalize(cross(dFdx(vWPos), dFdy(vWPos))); if (dot(Ngeo, uCam - vWPos) < 0.0) Ngeo = -Ngeo;
   if(uMode==0){
     vec4 b = texture(uBase,vUV); albedo = b.rgb*uColor;
-    vec3 mr = texture(uMR,vUV).rgb; rough = clamp(mr.g*uRough,0.08,1.0); metal = mr.b*uMetal;
+    vec3 mr = texture(uMR,vUV).rgb; rough = clamp(mr.g*uRough,0.3,1.0); metal = mr.b*uMetal;
     if(uHasNrm){
       vec3 Tr = vTan.xyz - N*dot(N,vTan.xyz);
       if(dot(Tr,Tr)>1e-6){ vec3 T = normalize(Tr); vec3 B = cross(N,T)*vTan.w;
-        vec3 tn = texture(uNrmTex,vUV).xyz*2.0-1.0; tn.xy*=0.9; vec3 Nn = mat3(T,B,N)*tn; if(dot(Nn,Nn)>1e-6) N = normalize(Nn); }
+        vec3 tn = texture(uNrmTex,vUV).xyz*2.0-1.0; tn.xy*=0.75; vec3 Nn = mat3(T,B,N)*tn; if(dot(Nn,Nn)>1e-6) N = normalize(Nn); }
     }
   } else if(uMode==1){
     vec3 w = pow(abs(N), vec3(4.0)); w/=dot(w,vec3(1.0));
@@ -149,8 +153,10 @@ void main(){
   // safety: a shading normal pointing away from the viewer (thin cloth, merged geometry) is pulled back
   // towards the real face normal, so it can't catch rim/specular light and sparkle
   if (uMode == 0) {
-    vec3 Ng = normalize(cross(dFdx(vWPos), dFdy(vWPos))); if (dot(Ng, V) < 0.0) Ng = -Ng;
-    float nv = dot(N, V); if (nv < 0.15) N = normalize(mix(N, Ng, clamp((0.15 - nv) * 4.0, 0.0, 1.0)));
+    float nv = dot(N, V); if (nv < 0.15) N = normalize(mix(N, Ngeo, clamp((0.15 - nv) * 4.0, 0.0, 1.0)));
+    // specular anti-aliasing: where the normal changes faster than a pixel can show, widen the highlight
+    vec3 dn = fwidth(N); float var = dot(dn, dn);
+    rough = sqrt(clamp(rough*rough + min(2.0*var, 0.35), 0.0, 1.0));
   }
   vec3 F0 = mix(vec3(0.04), albedo, metal);
   vec3 col = vec3(0.0);
@@ -163,7 +169,7 @@ void main(){
     vec3 F = F0 + (1.0-F0)*pow(1.0-VH,5.0);
     vec3 spec = D*G*F/max(4.0*NL*NV,1e-3);
     vec3 kd = (1.0-F)*(1.0-metal);
-    col += (kd*albedo/PI + spec) * uSunCol * NL * shadowF();
+    col += (kd*albedo/PI + spec) * uSunCol * NL * shadowF(Ngeo, NL);
   }
   for(int i=0;i<12;i++){
     if(i>=uPLn) break;
@@ -232,7 +238,7 @@ void main(){ vec3 c=texture(uTex,vUV).rgb*0.227;
  c+=texture(uTex,vUV+uDir*3.23).rgb*0.07; c+=texture(uTex,vUV-uDir*3.23).rgb*0.07; frag=vec4(c,1.0); }`;
 const COMP_FS = `#version 300 es
 precision highp float; in vec2 vUV; out vec4 frag;
-uniform sampler2D uTex, uBloom; uniform float uExposure, uTime, uVig, uHurt, uDesat, uBloomOn;
+uniform sampler2D uTex, uBloom; uniform float uExposure, uTime, uVig, uHurt, uDesat, uBloomOn, uGrain;
 vec3 aces(vec3 x){ return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14),0.0,1.0); }
 void main(){
   vec3 c = texture(uTex,vUV).rgb;
@@ -247,7 +253,7 @@ void main(){
   vec2 q = vUV-0.5; float v = 1.0-dot(q,q)*uVig; c*=v;
   c = mix(c, c*vec3(1.4,0.35,0.3), uHurt*smoothstep(0.15,0.75,length(q)));
   float g = fract(sin(dot(vUV*vec2(1000.0,800.0)+uTime,vec2(12.9898,78.233)))*43758.5453);
-  c += (g-0.5)*0.014;
+  c += (g-0.5)*uGrain;
   frag = vec4(pow(max(c,0.0),vec3(1.0/2.2)),1.0);
 }`;
 const PART_VS = `#version 300 es
@@ -729,7 +735,7 @@ OE.render = function (cam, particles) {
   gl.uniform3fv(u.uCam, cam.pos); gl.uniform3fv(u.uSunDir, R.sunDir); gl.uniform3fv(u.uSunCol, R.sunCol);
   gl.uniform3fv(u.uSky, R.sky); gl.uniform3fv(u.uGround, R.ground); gl.uniform3fv(u.uFogCol, R.fogCol); gl.uniform1f(u.uFogDen, R.fogDen);
   gl.uniform1i(u.uBase, 0); gl.uniform1i(u.uNrmTex, 1); gl.uniform1i(u.uMR, 2); gl.uniform1i(u.uTriA, 3); gl.uniform1i(u.uTriN, 4); gl.uniform1i(u.uShadow, 5);
-  gl.activeTexture(gl.TEXTURE5); gl.bindTexture(gl.TEXTURE_2D, R.shadowTex); gl.uniform1f(u.uShadowTexel, 1 / R.shadowSize); gl.uniform1i(u.uShadowOn, 1);
+  gl.activeTexture(gl.TEXTURE5); gl.bindTexture(gl.TEXTURE_2D, R.shadowTex); gl.uniform1f(u.uShadowTexel, 1 / R.shadowSize); gl.uniform1f(u.uShadowNO, R.quality.shadowExt * 2 / R.shadowSize * 1.5); gl.uniform1i(u.uShadowOn, R.shadowOff ? 0 : 1);
   // point lights: nearest to camera target
   const tgt = cam.target;
   const pls = R.lights.filter(l => l.intensity > 0.01).sort((a, b) => (Math.hypot(a.pos[0]-tgt[0], a.pos[2]-tgt[2]) - a.range) - (Math.hypot(b.pos[0]-tgt[0], b.pos[2]-tgt[2]) - b.range)).slice(0, 12);
@@ -766,7 +772,7 @@ OE.render = function (cam, particles) {
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, P.main.t); gl.uniform1i(C.u.uTex, 0);
   gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, P.b1.t); gl.uniform1i(C.u.uBloom, 1);
   gl.uniform1f(C.u.uExposure, R.exposure); gl.uniform1f(C.u.uTime, R.time % 100); gl.uniform1f(C.u.uVig, 1.1);
-  gl.uniform1f(C.u.uHurt, R.hurt); gl.uniform1f(C.u.uDesat, R.desat); gl.uniform1f(C.u.uBloomOn, bloom ? 1 : 0);
+  gl.uniform1f(C.u.uHurt, R.hurt); gl.uniform1f(C.u.uDesat, R.desat); gl.uniform1f(C.u.uBloomOn, bloom ? 1 : 0); gl.uniform1f(C.u.uGrain, R.grain ?? 0.014);
   gl.drawArrays(gl.TRIANGLES, 0, 3);
 };
 function drawNode(n, u, cam) {

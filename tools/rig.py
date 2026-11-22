@@ -179,10 +179,42 @@ def compute_weights(P, Fp, cfg, reg):
     w4 = np.take_along_axis(W, idx, 1)
     w4[w4 < 0.02] = 0
     ss = w4.sum(1, keepdims=True); badw = (~np.isfinite(ss[:, 0])) | (ss[:, 0] <= 0)
-    if badw.any(): print('  fixing', int(badw.sum()), 'bad weight rows')
+    if badw.any():
+        print('  fixing', int(badw.sum()), 'bad weight rows; regions', np.bincount(reg[badw], minlength=6), 'y range', P[badw, 1].min().round(2), P[badw, 1].max().round(2))
+        # give each orphan vertex the weights of its nearest properly-weighted neighbour in the same region
+        from scipy.spatial import cKDTree
+        good = np.where(~badw)[0]
+        for rg in np.unique(reg[badw]):
+            g = good[reg[good] == rg] if (reg[good] == rg).any() else good
+            bad_i = np.where(badw & (reg == rg))[0]
+            _, nn = cKDTree(P[g]).query(P[bad_i])
+            idx[bad_i] = idx[g[nn]]; w4[bad_i] = w4[g[nn]]
+        ss = w4.sum(1, keepdims=True); badw = np.zeros(len(w4), bool)
     w4[badw] = [1, 0, 0, 0]; idx[badw, 0] = BONES.index('Hips'); ss[badw] = 1
     w4 /= ss
     return idx.astype(np.uint8), w4.astype(np.float32)
+
+def uv_coverage(uv, idx, S):
+    from PIL import Image, ImageDraw
+    m = Image.new('L', (S, S), 0); dr = ImageDraw.Draw(m); P = uv * S
+    for f in idx:
+        dr.polygon([tuple(P[f[0]]), tuple(P[f[1]]), tuple(P[f[2]])], fill=255)
+    from scipy import ndimage
+    cov = np.asarray(m) > 0
+    return ndimage.binary_erosion(cov, iterations=1) | (ndimage.binary_erosion(cov, iterations=0) & False) if False else cov
+
+def pad_texture(path, cov):
+    from PIL import Image
+    from scipy import ndimage
+    import io
+    img = np.asarray(Image.open(path).convert('RGB'))
+    if img.shape[:2] != cov.shape:
+        from PIL import Image as I2
+        cov = np.asarray(I2.fromarray(cov.astype(np.uint8) * 255).resize((img.shape[1], img.shape[0]), I2.NEAREST)) > 0
+    inner = ndimage.binary_erosion(cov, iterations=1)  # trust only texels safely inside an island
+    _, (iy, ix) = ndimage.distance_transform_edt(~inner, return_indices=True)
+    out = img[iy, ix]
+    b = io.BytesIO(); Image.fromarray(out).save(b, 'JPEG', quality=93); return b.getvalue()
 
 def tangents(V, N, UV, F):
     v0, v1, v2 = V[F[:, 0]], V[F[:, 1]], V[F[:, 2]]
@@ -282,10 +314,13 @@ def build(name, dec_path, tex_prefix, out_path, scale, clipset):
     for b in BONES:
         ch = [bone_node[c] for c in BONES if PARENT[c] == b]
         if ch: nodes[bone_node[b]]['children'] = ch
-    # images
+    # images: pad every UV island outwards into the empty atlas space (nearest-island colour), so that
+    # mipmapping and the slightly-shifted UVs of the simplified mesh never pull in gutter colour
+    # (which showed up as dark seams crawling over the model as it moved)
+    cov = uv_coverage(raw['uv'], raw['idx'], 1024)
     imgs = []
     for k in ('base', 'normal', 'mr'):
-        data = open(f'{tex_prefix}_{k}.jpg', 'rb').read()
+        data = pad_texture(f'{tex_prefix}_{k}.jpg', cov)
         imgs.append({'bufferView': g.view(data), 'mimeType': 'image/jpeg', 'name': k})
     j['images'] = imgs
     j['samplers'] = [{'magFilter': 9729, 'minFilter': 9987, 'wrapS': 33071, 'wrapT': 33071}]
