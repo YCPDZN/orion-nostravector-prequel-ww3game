@@ -136,7 +136,10 @@ A.Player = class {
   }
   get maxHp() { return Math.round(420 * (1 + 0.1 * GM.save.vig)); }
   get maxStam() { return 100 + 8 * GM.save.end; }
-  get dmgMul() { return 1 + 0.08 * GM.save.str; }
+  /* alignment of whoever you are playing: Evil hits twice as hard but takes 1.5x damage; Good hits 1.5x harder and takes 1.5x less */
+  get alignTier() { return GM.align ? GM.align.tier(this.who) : 'neutral'; }
+  get dmgMul() { return (1 + 0.08 * GM.save.str) * ({ good: 1.5, evil: 2 }[this.alignTier] || 1); }
+  get hurtMul() { return { good: 1 / 1.5, evil: 1.5 }[this.alignTier] || 1; }
   reset(pos, yaw) {
     this.pos = pos.slice(); this.yaw = yaw; this.hp = this.maxHp; this.stam = this.maxStam; this.state = 'move'; this.alive = true;
     this.stims = GM.save.maxStims; this.ch.play('Idle', 0); this.queued = null;
@@ -300,6 +303,7 @@ A.Player = class {
   }
   damage(amount, fromPos, opts = {}) {
     if (!this.alive || this.iframe || GM.state !== 'play') return false;
+    amount *= this.hurtMul;
     const ay = yawTo(this.pos, fromPos);
     if (this.state === 'block' && Math.abs(OE.angDiff(this.yaw, ay)) < 1.2 && !opts.unblockable) {
       this.stam -= amount * 0.9 + 6; this.stamDelay = 1.0;

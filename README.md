@@ -58,6 +58,7 @@ Alignment carries from one chapter to the next: finishing Chapter I takes Orion'
 Orion's choices decide who he becomes, and Thomas follows his lead. Both start **Neutral (yellow)** and can end up **Good (blue)** or **Evil (red)**.
 - **One dialogue choice per chapter.** Thomas raises the dilemma, Orion picks his reply (good, neutral or evil), and Thomas answers. Chapter I's replies are fully voiced (voice/ch1_*.mp3).
 - Orion is always **Chaotic** and Thomas always **Lawful**, so as they turn they become Chaotic Good / Chaotic Neutral / Chaotic Evil and Lawful Good / Lawful Neutral / Lawful Evil. Both start Neutral.
+- Alignment changes how you fight. **Good**: you deal 1.5x damage and take 1.5x less. **Neutral**: normal. **Evil**: you deal 2x damage but take 1.5x more. It uses the alignment of whoever you are playing (Orion, or Thomas in Chapter II, Part II).
 - Every choice moves Orion's alignment, and moves Thomas's by 90% as much, so one choice is enough to change both. Evil choices pay in scrap and stims; good ones cost you.
 - You can see alignment in the HUD chips under the health bars, the colour of Orion's sabre and Thomas's rifle stripe, the Codex, the chapter list, and the Chapter Complete screen (with an ending line for Orion's path). It is kept in your save slots.
 
