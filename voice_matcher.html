@@ -20,7 +20,7 @@ textarea{width:100%;height:60px;background:#0c141b;color:#dfe8ee;border:1px soli
 </style></head><body>
 <header><h1>CHAPTER II — VOICE MATCHER</h1>
 <p>Press <b>▶</b> to hear each recording, then pick the script line it really is. Pick <b>— not used —</b> for any you don't want. When you're done, press <b>Save to game</b> (the game uses it straight away; refresh the game) and <b>Copy code</b>, then paste the code to Claude so it's built into the game for good.</p>
-<div class="bar"><button id="save">Save to game</button><button id="copy">Copy code</button><button id="reset">Reset to file numbers</button><button id="stop">Stop audio</button></div>
+<div class="bar"><button id="save">Save to game</button><button id="copy">Copy code</button><button id="reset">Reset to built-in</button><button id="stop">Stop audio</button></div>
 <div id="msg"></div><textarea id="code" readonly></textarea></header>
 <main id="list"></main>
 <script>window.GM = {};</script>
@@ -31,12 +31,12 @@ const KEY = 'orion_ch2_voice_map';
 const recs = Object.keys(window.DOVER_VO).map(Number).sort((a, b) => a - b);
 let saved = null; try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { }
 // saved map is line -> recording; invert it for the table (recording -> line)
-const recToLine = {}; if (saved) for (const l in saved) recToLine[saved[l]] = +l;
+const base = saved || window.DOVER_MAP; const recToLine = {}; if (base) for (const l in base) recToLine[base[l]] = +l;
 const opts = '<option value="0">— not used —</option>' + LINES.map((l) => `<option value="${l.n}">${l.n}. ${l.who}: ${l.t.replace(/"/g, '&quot;')}</option>`).join('');
 const list = document.getElementById('list'); let audio = null;
 list.innerHTML = recs.map((r) => `<div class="row" id="r${r}"><button class="play" data-r="${r}">▶</button><div class="rec">file <b>${r}</b><br>${window.DOVER_VO[r].toFixed(1)} s</div><select data-r="${r}">${opts}</select></div>`).join('');
-for (const s of list.querySelectorAll('select')) { const r = +s.dataset.r; s.value = recToLine[r] !== undefined ? recToLine[r] : (saved ? 0 : r); mark(s); s.onchange = () => mark(s); }
-function mark(s) { document.getElementById('r' + s.dataset.r).classList.toggle('changed', +s.value !== +s.dataset.r); }
+for (const s of list.querySelectorAll('select')) { const r = +s.dataset.r; s.value = recToLine[r] !== undefined ? recToLine[r] : (base ? 0 : r); mark(s); s.onchange = () => mark(s); }
+function mark(s) { const def = window.DOVER_MAP ? (Object.keys(window.DOVER_MAP).find((l) => window.DOVER_MAP[l] === +s.dataset.r) || 0) : +s.dataset.r; document.getElementById('r' + s.dataset.r).classList.toggle('changed', +s.value !== +def); }
 list.onclick = (e) => { const b = e.target.closest('.play'); if (!b) return; if (audio) audio.pause(); audio = new Audio('voice/dover' + String(b.dataset.r).padStart(2, '0') + '.mp3'); audio.play(); };
 document.getElementById('stop').onclick = () => { if (audio) audio.pause(); };
 function current() { const m = {}, dup = []; for (const s of list.querySelectorAll('select')) { const l = +s.value; if (!l) continue; if (m[l]) dup.push(l); m[l] = +s.dataset.r; } return { m, dup }; }
@@ -45,5 +45,5 @@ document.getElementById('save').onclick = () => { const { m, dup } = current(); 
 document.getElementById('copy').onclick = () => { const { m, dup } = current(); if (dup.length) return msg('Two recordings are set to the same line: ' + dup.join(', ') + '. Fix that first.', true);
   const code = 'VOICEMAP ' + Object.keys(m).map((l) => l + '=' + m[l]).join(','); const t = document.getElementById('code'); t.style.display = 'block'; t.value = code; t.select();
   try { navigator.clipboard.writeText(code); msg('Code copied. Paste it to Claude.'); } catch (e) { msg('Select the code below and copy it.'); } };
-document.getElementById('reset').onclick = () => { localStorage.removeItem(KEY); for (const s of list.querySelectorAll('select')) { s.value = s.dataset.r; mark(s); } msg('Back to file numbers (the game is too, after a refresh).'); };
+document.getElementById('reset').onclick = () => { localStorage.removeItem(KEY); for (const s of list.querySelectorAll('select')) { const r = +s.dataset.r; const l = window.DOVER_MAP ? (Object.keys(window.DOVER_MAP).find((k) => window.DOVER_MAP[k] === r) || 0) : r; s.value = l; mark(s); } msg('Back to the built-in matching (the game is too, after a refresh).'); };
 </script></body></html>
