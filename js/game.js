@@ -386,7 +386,7 @@ function openChapters(ret) {
     }
     return `<div class="chap ${c.available ? '' : 'locked'}"><div class="num">CHAPTER ${c.numeral}</div><div class="ttl">${c.title}</div>
       ${c.place ? `<div class="meta">${c.place} · ${c.date}</div>` : ''}<div class="sum">${c.summary}</div>
-      ${(() => { const ch = GM.align.forChapter(c.id); if (!ch) return ''; const made = S.choices && S.choices[ch.id]; return `<div class="meta">Dialogue choice: <b style="color:#efe4cc">${ch.title}</b>${made ? ` — <span style="color:${GM.align.TIERS[made].css}">${GM.align.TIERS[made].name}</span>` : ''}</div>`; })()}<div class="st ${done ? 'done' : ''}">${status}</div><div class="bt">${btns}</div></div>`;
+      ${(() => { const ch = GM.align.forChapter(c.id); if (!ch) return ''; const made = S.choices && S.choices[ch.id]; return `<div class="meta">Dialogue choice: <b style="color:#efe4cc">${ch.title}</b>${made ? ` — <span style="color:${GM.align.TIERS[made].css}">${GM.align.label('o', made)}</span>` : ''}</div>`; })()}<div class="st ${done ? 'done' : ''}">${status}</div><div class="bt">${btns}</div></div>`;
   }).join('');
   $('chList').querySelectorAll('[data-ch]').forEach((b) => b.onclick = () => {
     AU.init(); AU.ui(); const id = +b.dataset.id;

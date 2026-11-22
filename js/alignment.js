@@ -1,6 +1,7 @@
 /* Alignment — Orion's choices shape who he becomes, and Thomas follows his lead.
    Values run from -100 (evil) to +100 (good). Both start at 0 (neutral).
-   Tiers: >= +30 GOOD (blue) · between NEUTRAL (yellow) · <= -30 EVIL (red). */
+   Tiers: >= +30 GOOD (blue) · between NEUTRAL (yellow) · <= -30 EVIL (red).
+   Orion is always Chaotic, Thomas always Lawful (e.g. Chaotic Good / Lawful Evil). */
 (function () {
 'use strict';
 const $ = (id) => document.getElementById(id);
@@ -16,6 +17,9 @@ AL.value = (who) => { const a = GM.save.align || (GM.save.align = { o: 0, t: 0 }
 AL.tierOf = (v) => v >= 30 ? 'good' : v <= -30 ? 'evil' : 'neutral';
 AL.tier = (who) => AL.tierOf(AL.value(who));
 AL.info = (who) => AL.TIERS[AL.tier(who)];
+/* Orion is chaotic by nature, Thomas lawful: choices move them along good / neutral / evil only. */
+AL.AXIS = { o: 'CHAOTIC', t: 'LAWFUL' };
+AL.label = (who, tier) => AL.AXIS[who === 't' ? 't' : 'o'] + ' ' + AL.TIERS[tier || AL.tier(who)].name;
 
 /* ---------------- one dialogue choice per chapter ----------------
    Thomas raises the dilemma; Orion picks his reply; Thomas answers. Only the current chapter's choice is live. */
@@ -120,11 +124,11 @@ function choose(i) {
   else if (after[1] !== before[1]) GM.pendingAlignBanner = 't';
   AL.hud(true);
 }
-function chip(name, who) { const t = AL.info(who); return `<span class="alchip"><i style="background:${t.css};box-shadow:0 0 8px ${t.css}"></i>${name} <b style="color:${t.css}">${t.name}</b></span>`; }
+function chip(name, who) { const t = AL.info(who); return `<span class="alchip"><i style="background:${t.css};box-shadow:0 0 8px ${t.css}"></i>${name} <b style="color:${t.css}">${AL.label(who)}</b></span>`; }
 AL.chip = chip;
 function close() {
   $('choice').classList.add('hidden'); GM.state = prevState === 'choice' ? 'play' : prevState; current = null;
-  if (GM.pendingAlignBanner) { const w = GM.pendingAlignBanner; GM.pendingAlignBanner = null; const t = AL.info(w); GM.hud.toast((w === 'o' ? 'ORION' : 'THOMAS') + ' IS NOW ' + t.name); }
+  if (GM.pendingAlignBanner) { const w = GM.pendingAlignBanner; GM.pendingAlignBanner = null; const t = AL.info(w); GM.hud.toast((w === 'o' ? 'ORION' : 'THOMAS') + ' IS NOW ' + AL.label(w)); }
   const cb = onClose; onClose = null; if (cb) cb(); else if (GM.ui && GM.ui.lock) GM.ui.lock();
 }
 $('chLeave').onclick = () => { GM.audio.ui(); close(); };

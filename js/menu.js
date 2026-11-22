@@ -113,7 +113,7 @@ MN.update = function (dt) {
     el.style.left = Math.max(8, Math.min(innerWidth - w - 8, s[0] - w / 2)) + 'px'; el.style.top = (s[1] - el.offsetHeight - 14) + 'px'; };
   place('tagO', [O.node.pos[0], 1.98, O.node.pos[2]]); place('tagT', [T.node.pos[0], 1.94, T.node.pos[2]]);
   const cap = document.getElementById('menuAlign');
-  if (cap) { const key = tier; if (cap.dataset.k !== key) { cap.dataset.k = key; cap.innerHTML = `<i style="background:${info.css};box-shadow:0 0 10px ${info.css}"></i>${info.name}`; cap.style.color = info.css; } }
+  if (cap) { const key = tier; if (cap.dataset.k !== key) { cap.dataset.k = key; cap.innerHTML = `<i style="background:${info.css};box-shadow:0 0 10px ${info.css}"></i>${GM.align.label('o', tier)}`; cap.style.color = info.css; } }
 };
 MN.leave = function () {
   GM.cam.fov = GM.camFov || 1.0; // give the game its own camera lens back
