@@ -57,26 +57,82 @@ A.rifleRig = function (ch, s, out) {
   return out;
 };
 
-/* ---------------- player: Orion Mascar ---------------- */
+/* muzzle flash, tracer, casing and impact for one rifle round */
+A.rifleFx = function (rifleNode, muzzle, tp, hit, listener) {
+  const W_ = rifleNode.world; const m = M4.point([0, 0, 0], W_, [0, 0.04, 0.74]);
+  const d = [tp[0] - m[0], tp[1] - m[1], tp[2] - m[2]]; const l = Math.hypot(...d) || 1; const u = [d[0] / l, d[1] / l, d[2] / l];
+  GM.parts.emit({ pos: [m[0] + u[0] * 1.2, m[1] + u[1] * 1.2, m[2] + u[2] * 1.2], vel: [u[0] * 90, u[1] * 90, u[2] * 90], stretch: 1.1, size: 0.03, life: Math.min(0.25, l / 90), col: [5, 3.2, 1.2, 1], soft: 0.2, fade: 0 });
+  GM.parts.emit({ pos: m.slice(), vel: [0, 0, 0], life: 0.07, size: 0.22, col: [5, 3, 1.2, 1], soft: 0, fade: 0, rot: R(0, 6) });
+  GM.parts.emit({ pos: m.slice(), vel: [u[0] * 1.5 + R(-0.2, 0.2), R(0.2, 0.6), u[2] * 1.5 + R(-0.2, 0.2)], drag: 2, life: R(0.6, 1.0), size: 0.08, grow: 0.4, col: [0.35, 0.33, 0.3, 0.35], add: false, soft: 0 });
+  const ej = M4.point([0, 0, 0], W_, [0.05, 0.05, 0.2]); const rx = [W_[0], W_[1], W_[2]];
+  GM.parts.emit({ pos: ej, vel: [rx[0] * 2.5 + R(-0.3, 0.3), R(1.5, 2.5), rx[2] * 2.5 + R(-0.3, 0.3)], grav: 9.8, floor: 0.02, life: 1.2, size: 0.012, stretch: 0.02, col: [2.2, 1.6, 0.6, 1], soft: 0.4, fade: 1, add: true });
+  if (hit) GM.fx.sparks(tp, [-u[0], 0.3, -u[2]], 10, [3.5, 2.2, 1]); else GM.fx.dust([tp[0], Math.max(0.1, tp[1]), tp[2]], 2);
+  muzzle.pos = m.slice(); muzzle.intensity = 6;
+  GM.audio.gun(listener);
+};
+
+/* ---------------- player: Orion Mascar (sword) or Thomas Hawthorne (rifle) ---------------- */
 const ATK = {
   Attack1: { hit: [0.27, 0.44], dmg: 30, stam: 16, lunge: [0.16, 0.36, 2.0], range: 2.7, arc: 120, next: [0.40, 0.78] },
   Attack2: { hit: [0.30, 0.46], dmg: 34, stam: 18, lunge: [0.18, 0.38, 2.2], range: 2.7, arc: 100, next: [0.42, 0.82] },
   Heavy: { hit: [0.55, 0.70], dmg: 68, stam: 30, lunge: [0.44, 0.62, 2.4], range: 3.0, arc: 80, heavy: true },
+  Butt: { clip: 'Attack1', hit: [0.24, 0.38], dmg: 40, stam: 20, lunge: [0.12, 0.3, 1.4], range: 2.4, arc: 110, heavy: true }, // Thomas's rifle-butt strike
 };
+const RIFLE = { dmg: 21, stam: 9, gap: 0.12, rounds: 3, range: 26, cone: 0.7 };
 A.Player = class {
-  constructor(asset) {
+  constructor(asset, kit = 'sword') {
     if (!swordMesh) buildWeapons();
+    this.kit = kit; this.who = kit === 'rifle' ? 't' : 'o';
     this.ch = new OE.Character(asset, { rim: 0.06 }); this.node = this.ch.node; OE.scene.add(this.node);
     this.pos = [0, 0, 0]; this.yaw = 0; this.vel = [0, 0, 0];
     this.state = 'move'; this.t = 0; this.hp = 1; this.stam = 1; this.stamDelay = 0; this.iframe = false;
     this.stims = 4; this.hitSet = new Set(); this.combo = 0; this.queued = null; this.radius = 0.42; this.alive = true; this.poise = 0;
+    this.light = { pos: [0, 1, 0], color: [0.3, 0.8, 1.0], intensity: 0.0, range: 4 }; OE.R.lights.push(this.light);
+    if (kit === 'rifle') { // Thomas: rifle held with two-hand IK, like the companion
+      const rf = new OE.Node(rifleMesh, metalMat()); rf.mat.color = [0.7, 0.7, 0.72];
+      const rg = new OE.Node(rifleGlow, { mode: 2, color: [0, 0, 0], emissive: [3, 0.6, 0.2] }); rg.castShadow = false; rf.add(rg); this.rifleGlowNode = rg;
+      this.rifleModel = M4.create(); this._rw = M4.create(); this._hm = M4.create(); this._hp = [0, 0, 0]; this._rm = M4.create();
+      rf.attach = () => this.useIK ? M4.mul(this._rw, this.node.world, this.rifleModel) : this.handRifle();
+      this.node.add(rf); this.rifle = rf; this.aimBlend = 0; this.aimHold = 0; this.recoil = 0; this.aimDir = [0, 0, 1];
+      this.muzzle = { pos: [0, 0, 0], color: [1, 0.7, 0.3], intensity: 0, range: 7 }; OE.R.lights.push(this.muzzle);
+      return;
+    }
     const sw = new OE.Node(swordMesh, metalMat()); const gl = new OE.Node(swordGlow, { mode: 2, color: [0, 0, 0], emissive: [0.6, 2.2, 3.2] });
     sw.add(gl); gl.castShadow = false;
     sw.attach = () => this.ch.boneWorld('R_Hand', this._hm || (this._hm = M4.create()));
     sw.pos = [0.0, -0.085, 0.02]; OE.Q.euler(sw.rot, 0, 0, 0);
     this.node.add(sw); this.sword = sw; this.swordGlow = gl;
     this.tipW = [0, 0, 0]; this.baseW = [0, 0, 0];
-    this.light = { pos: [0, 1, 0], color: [0.3, 0.8, 1.0], intensity: 0.0, range: 4 }; OE.R.lights.push(this.light);
+  }
+  handRifle() { // rifle carried in the right hand (rolling, healing, falling)
+    const hw = this.ch.boneWorld('R_Hand', this._hm); const hp = M4.point(this._hp, hw, [0, -0.075, 0.02]);
+    const f = fwdOf(this.yaw); let z = [f[0] * 0.8, -0.6, f[2] * 0.8]; let l = Math.hypot(...z); z = [z[0] / l, z[1] / l, z[2] / l];
+    let x = [z[2], 0, -z[0]]; l = Math.hypot(...x) || 1; x = [x[0] / l, 0, x[2] / l];
+    const y = [z[1] * x[2] - z[2] * x[1], z[2] * x[0] - z[0] * x[2], z[0] * x[1] - z[1] * x[0]];
+    const o = [hp[0] - z[0] * 0.06, hp[1] - z[1] * 0.06 + 0.1, hp[2] - z[2] * 0.06];
+    this._rm.set([x[0], x[1], x[2], 0, y[0], y[1], y[2], 0, z[0], z[1], z[2], 0, o[0], o[1], o[2], 1]); return this._rm;
+  }
+  /* best target for a rifle burst: the lock-on, else whoever is nearest the aim line */
+  rifleTarget(aimYaw) {
+    if (GM.lock && GM.lock.alive) return GM.lock;
+    let best = null, bs = -1e9; const f = [Math.sin(aimYaw), Math.cos(aimYaw)];
+    for (const e of GM.enemies) {
+      if (!e.alive || (e.boss && !e.active)) continue; const dx = e.pos[0] - this.pos[0], dz = e.pos[2] - this.pos[2], d = Math.hypot(dx, dz);
+      if (d > RIFLE.range) continue; const dot = (dx * f[0] + dz * f[1]) / (d || 1); if (dot < RIFLE.cone) continue;
+      if (W.ray([this.pos[0], 1.5, this.pos[2]], [e.pos[0], e.hitY(), e.pos[2]], 1.6) < 0.98) continue;
+      const sc = dot * 3 - d / 10; if (sc > bs) { bs = sc; best = e; }
+    }
+    return best;
+  }
+  fireRound() {
+    const tg = this.shotTarget; const ads = this.ads;
+    let tp, hit = false;
+    if (tg && tg.alive) {
+      hit = rnd() < (ads ? 0.97 : 0.88);
+      tp = hit ? [tg.pos[0] + R(-0.12, 0.12), tg.hitY() + R(-0.15, 0.15), tg.pos[2] + R(-0.12, 0.12)] : [tg.pos[0] + R(-1, 1), tg.hitY() + R(-0.5, 0.8), tg.pos[2] + R(-1, 1)];
+      if (hit) tg.damage(RIFLE.dmg * this.dmgMul * (ads ? 1.25 : 1) * R(0.92, 1.08), this.pos, { from: 'player', light: true });
+    } else { const f = fwdOf(this.yaw); tp = [this.pos[0] + f[0] * 24, 1.3, this.pos[2] + f[2] * 24]; }
+    A.rifleFx(this.rifle, this.muzzle, tp, hit, 0); this.recoil = 1; GM.shake(0.05);
   }
   get maxHp() { return Math.round(420 * (1 + 0.1 * GM.save.vig)); }
   get maxStam() { return 100 + 8 * GM.save.end; }
@@ -110,12 +166,20 @@ A.Player = class {
       const a = ATK[clip]; if (this.stam <= 0) return false;
       this.useStam(a.stam); this.hitSet.clear(); this.atk = a; this.atkClip = clip;
       if (lock) this.yaw = yawTo(this.pos, lock.pos); else if (mag > 0.2) this.yaw = Math.atan2(wx, wz);
-      this.setState('attack', clip, 0.08); GM.audio.swing(clip === 'Heavy'); this.queued = null; return true;
+      this.setState('attack', a.clip || clip, 0.08); GM.audio.swing(clip === 'Heavy'); this.queued = null; return true;
     };
-    if (canAct && this.queued) {
+    const rifle = this.kit === 'rifle';
+    const canShoot = rifle && (st === 'move' || (st === 'shoot' && this.t > 0.34));
+    if (rifle && this.queued === 'light' && canShoot && this.stam > 0) { // fire a burst
+      this.queued = null; this.useStam(RIFLE.stam);
+      const aimYaw = lock ? yawTo(this.pos, lock.pos) : (this.ads || mag < 0.2 ? camYaw : Math.atan2(wx, wz));
+      this.shotTarget = this.rifleTarget(aimYaw); this.yaw = this.shotTarget ? yawTo(this.pos, this.shotTarget.pos) : aimYaw;
+      this.burst = RIFLE.rounds; this.burstT = 0; this.aimHold = 1.4; this.setState('shoot', 'Shoot', 0.06);
+    }
+    if ((canAct || (rifle && st === 'shoot' && this.t > 0.3)) && this.queued) {
       const q = this.queued;
-      if (q === 'light') { this.combo = 0; startAttack('Attack1'); }
-      else if (q === 'heavy') startAttack('Heavy');
+      if (q === 'light') { if (!rifle) { this.combo = 0; startAttack('Attack1'); } }
+      else if (q === 'heavy') startAttack(rifle ? 'Butt' : 'Heavy');
       else if (q === 'roll' && this.stam > 0) {
         this.useStam(20); this.queued = null;
         this.rollDir = mag > 0.2 ? Math.atan2(wx, wz) : this.yaw; this.yaw = this.rollDir; this.setState('roll', 'Roll', 0.06); GM.audio.roll();
@@ -123,20 +187,32 @@ A.Player = class {
       else if (q === 'heal') { this.queued = null; GM.hud.toast('No stims remaining'); }
     }
     const S = this.state;
+    if (rifle && S === 'shoot') {
+      this.burstT -= dt;
+      if (this.burst > 0 && this.burstT <= 0) { if (this.shotTarget && this.shotTarget.alive) this.yaw = yawTo(this.pos, this.shotTarget.pos); this.fireRound(); this.burst--; this.burstT = RIFLE.gap; }
+      this.pos[0] += wx * 1.4 * dt; this.pos[2] += wz * 1.4 * dt;
+      if (this.t > 0.5) this.setState('move', null);
+    }
+    this.ads = rifle && inp.block && (this.state === 'move' || this.state === 'shoot');
+    if (rifle && this.ads) this.aimHold = Math.max(this.aimHold, 0.3);
     if (S === 'move' || S === 'block') {
-      const blocking = inp.block && this.stam > 0;
+      const blocking = !rifle && inp.block && this.stam > 0;
       if (blocking && S !== 'block') { this.setState('block', 'Block', 0.12); }
       if (!blocking && S === 'block') { this.setState('move', null); }
       const sprint = (inp.sprint || mag > 0.92) && !blocking && mag > 0.5;
       let speed = blocking ? 1.6 : (mag < 0.6 ? 2.2 * mag / 0.6 : (sprint ? 5.6 : 4.2));
+      if (this.ads) speed = Math.min(speed, 1.9);
       if (inp.sprint && mag > 0.5 && !blocking) { speed = 6.2; this.stam -= dt * 14; this.stamDelay = 0.4; if (this.stam < 0) this.stam = 0; }
       if (mag > 0.08) {
         this.pos[0] += wx / Math.max(mag, 1e-3) * speed * dt * Math.min(1, mag * 1.2);
         this.pos[2] += wz / Math.max(mag, 1e-3) * speed * dt * Math.min(1, mag * 1.2);
         if (lock && !sprint) this.faceTowards(yawTo(this.pos, lock.pos), 10, dt);
+        else if (this.ads) this.faceTowards(camYaw, 12, dt);
         else this.faceTowards(Math.atan2(wx, wz), 12, dt);
       } else if (lock) this.faceTowards(yawTo(this.pos, lock.pos), 8, dt);
-      if (this.state !== 'block') {
+      else if (this.ads) this.faceTowards(camYaw, 12, dt);
+      if (rifle && this.aimHold > 0 && this.state === 'move') this.ch.play(mag < 0.08 ? 'Aim' : 'WalkAim', 0.18);
+      else if (this.state !== 'block') {
         if (mag < 0.08) this.ch.play('Idle', 0.25);
         else if (speed < 3.0) this.ch.play('Walk', 0.2, Math.max(0.6, speed / 2.2));
         else this.ch.play('Run', 0.2, speed / 4.6);
@@ -178,6 +254,7 @@ A.Player = class {
     W.collide(this.pos, this.radius);
     this.ch.update(dt);
     this.syncNode();
+    if (rifle) { this.updateRifle(dt); return; }
     // sword glow light and trail
     const tg = this.swordLit ? 1 : 0; this.glowAmt = OE.lerp(this.glowAmt || 0, tg, Math.min(1, dt * 18));
     const AT = GM.align ? GM.align.info('o') : { glow: [0.6, 2.2, 3.2], light: [0.3, 0.8, 1.0], trail: [0.35, 1.1, 2.0] }; // blade colour follows Orion's alignment
@@ -188,6 +265,16 @@ A.Player = class {
     if (this.glowAmt > 0.3) {
       for (let i = 0; i < 4; i++) { const u = rnd(); GM.parts.emit({ pos: [OE.lerp(this.baseW[0], this.tipW[0], u), OE.lerp(this.baseW[1], this.tipW[1], u), OE.lerp(this.baseW[2], this.tipW[2], u)], vel: [0, 0, 0], life: 0.14, size: 0.03, col: [AT.trail[0], AT.trail[1], AT.trail[2], 0.55], soft: 0.0, fade: 1 }); }
     }
+  }
+  updateRifle(dt) {
+    this.aimHold -= dt; this.recoil = Math.max(0, this.recoil - dt * 9); this.muzzle.intensity = Math.max(0, this.muzzle.intensity - dt * 40);
+    const st = this.state; const want = (this.aimHold > 0 || st === 'shoot') && st !== 'roll' && st !== 'heal' && st !== 'hit' && this.alive ? 1 : 0;
+    this.aimBlend += (want - this.aimBlend) * Math.min(1, dt * 10);
+    this.useIK = this.alive && st !== 'roll' && st !== 'heal';
+    const melee = st === 'attack' ? Math.sin(Math.min(1, this.ch.progress) * Math.PI) : 0;
+    if (this.useIK) A.rifleRig(this.ch, { aim: Math.max(this.aimBlend, melee), dir: [0, -0.02, 1], recoil: this.recoil, thrust: melee }, this.rifleModel);
+    if (this.rifleGlowNode && GM.align) this.rifleGlowNode.mat.emissive = GM.align.info('t').glow;
+    this.light.intensity = 0;
   }
   stepSound(dt, speed) {
     if (speed <= 0) { this.stepT = 0; return; }
@@ -230,6 +317,124 @@ A.Player = class {
     return true;
   }
   die() { this.alive = false; this.state = 'dead'; this.ch.play('Death', 0.1, 1, true); this.swordLit = false; GM.onPlayerDeath(); }
+};
+
+/* ---------------- duelist boss: Talina Alvarez ----------------
+   A human swordswoman on the same rig as Orion. She circles, guards and ripostes, rolls away from
+   telegraphed attacks and chains combos; at half strength she drops the act and speeds up. */
+const DUEL = {
+  Attack1: { hit: [0.27, 0.44], dmg: 1.0, lunge: [0.16, 0.36, 2.2], range: 2.4, arc: 110 },
+  Attack2: { hit: [0.30, 0.46], dmg: 1.1, lunge: [0.18, 0.38, 2.4], range: 2.4, arc: 100 },
+  Heavy: { hit: [0.55, 0.70], dmg: 1.7, lunge: [0.40, 0.62, 3.6], range: 2.8, arc: 80, unblockable: true },
+};
+A.Duelist = class {
+  constructor(asset, pos, yaw, T) {
+    if (!swordMesh) buildWeapons();
+    this.T = T; this.type = 'duelist'; this.boss = true; this.hover = false; this.radius = 0.45; this.home = pos.slice(); this.homeYaw = yaw;
+    this.ch = new OE.Character(asset, { rim: 0.06 }); this.root = this.node = this.ch.node; OE.scene.add(this.node);
+    const sw = new OE.Node(swordMesh, metalMat()); const gl = new OE.Node(swordGlow, { mode: 2, color: [0, 0, 0], emissive: T.glow });
+    sw.add(gl); gl.castShadow = false; sw.attach = () => this.ch.boneWorld('R_Hand', this._hm || (this._hm = M4.create()));
+    sw.pos = [0.0, -0.085, 0.02]; this.node.add(sw); this.sword = sw; this.swordGlow = gl; this.tipW = [0, 0, 0]; this.baseW = [0, 0, 0];
+    this.light = { pos: [0, 1, 0], color: T.light, intensity: 0, range: 4 }; OE.R.lights.push(this.light);
+    this.reset();
+  }
+  reset() {
+    this.pos = this.home.slice(); this.yaw = this.homeYaw; this.maxHp = this.T.hp; this.hp = this.T.hp; this.alive = true; this.active = false;
+    this.state = 'idle'; this.t = 0; this.cd = 1; this.phase2 = false; this.showBar = 0; this.poiseDmg = 0; this.combo = []; this.circ = 1; this.iframe = false;
+    this.node.visible = true; this.ch.play('Idle', 0); this.lit = 0; this.deadT = 0;
+  }
+  hitY() { return 1.15; }
+  get spd() { return this.phase2 ? 1.22 : 1; }
+  set(s, clip, fade = 0.1, speed = 1) { this.state = s; this.t = 0; if (clip) this.ch.play(clip, fade, speed, true); }
+  damage(amount, fromPos, opts = {}) {
+    if (!this.alive || !this.active || this.iframe || this.state === 'defeated') return false;
+    const ay = yawTo(this.pos, fromPos), facing = Math.abs(OE.angDiff(this.yaw, ay)) < 1.1;
+    const free = this.state === 'chase' || this.state === 'guard';
+    if (facing && (this.state === 'guard' || (free && !opts.heavy && !opts.light && rnd() < (this.phase2 ? 0.42 : 0.3)))) {
+      // parried
+      if (this.state !== 'guard') this.set('guard', 'Block', 0.06); this.guardT = 0.45; this.riposte = rnd() < 0.6;
+      GM.fx.sparks([this.pos[0] + Math.sin(ay) * 0.5, 1.3, this.pos[2] + Math.cos(ay) * 0.5], [Math.sin(ay), 0, Math.cos(ay)], 22, [2.6, 1.2, 3.2]);
+      GM.audio.block(); this.hp -= amount * 0.08; this.showBar = 3; return true;
+    }
+    this.hp -= amount; this.showBar = 3; GM.fx.blood([this.pos[0], 1.3, this.pos[2]]);
+    this.poiseDmg += amount;
+    if (!this.phase2 && this.hp < this.maxHp * 0.5) { this.phase2 = true; this.set('taunt', 'Block', 0.1); GM.onBossPhase2(this); this.poiseDmg = 0; }
+    else if (this.poiseDmg > (opts.heavy ? 60 : 95) && this.state !== 'attack') { this.poiseDmg = 0; this.knockYaw = ay + Math.PI; this.set('hit', 'Hit', 0.05); }
+    if (this.hp <= 0) { this.hp = 0; this.defeat(); }
+    return true;
+  }
+  defeat() { // she doesn't die: she drops to one knee
+    this.alive = false; this.state = 'defeated'; this.t = 0; this.ch.play('Kneel', 0.15, 1, true); this.lit = 0; GM.onEnemyKilled(this);
+  }
+  startCombo() {
+    const r = rnd(); const p2 = this.phase2;
+    this.combo = r < 0.35 ? ['Attack1', 'Attack2'] : r < 0.6 ? ['Attack1', 'Attack2', p2 ? 'Heavy' : 'Attack1'] : r < 0.8 ? ['Attack2', 'Attack1'] : ['Heavy'];
+    if (rnd() < 0.3) GM.wardenTaunt();
+    this.nextSwing();
+  }
+  nextSwing() { const c = this.combo.shift(); if (!c) { this.set('chase', null); this.cd = R(0.7, 1.5) / this.spd; return; } this.atk = DUEL[c]; this.hitDone = false; this.set('attack', c, 0.08, this.spd); }
+  update(dt) {
+    this.t += dt; this.showBar -= dt;
+    const P = GM.player, S = this.state;
+    const sync = () => { this.node.pos = this.pos; Q.yaw(this.node.rot, this.yaw); this.ch.update(dt); this.glow(dt); };
+    if (S === 'defeated' || S === 'cut') { sync(); return; }
+    if (!this.active || !P.alive) { if (S !== 'idle') this.set('idle', 'Idle', 0.3); sync(); return; }
+    const d = dist2(this.pos, P.pos), ty = yawTo(this.pos, P.pos), sp = this.spd;
+    this.cd -= dt;
+    const face = (rate) => { this.yaw += OE.angDiff(this.yaw, ty) * Math.min(1, dt * rate); };
+    if (S === 'idle') this.set('chase', null);
+    else if (S === 'roar' || S === 'taunt') { face(6); this.ch.play('Block', 0.2); if (this.t > (S === 'roar' ? 1.6 : 1.1)) { this.set('chase', null); this.cd = 0.3; } }
+    else if (S === 'chase') {
+      face(8);
+      // dodge a telegraphed swing
+      if (P.state === 'attack' && d < 3.2 && P.ch.t < 0.25 && rnd() < dt * (this.phase2 ? 9 : 6)) {
+        this.rollDir = ty + Math.PI + (rnd() < 0.5 ? 1 : -1) * R(0.6, 1.3); this.set('roll', 'Roll', 0.06, 1.05); return sync();
+      }
+      if (d > 2.6) {
+        const v = (d > 6 ? 5.0 : 2.8) * sp; this.pos[0] += Math.sin(this.yaw) * v * dt; this.pos[2] += Math.cos(this.yaw) * v * dt;
+        this.ch.play(d > 6 ? 'Run' : 'Walk', 0.2, d > 6 ? 1.05 : 1.1);
+      } else { // circle, sword ready
+        if (rnd() < dt * 0.5) this.circ = -this.circ;
+        const a = ty + Math.PI / 2 * this.circ; const v = 1.5 * sp;
+        this.pos[0] += Math.sin(a) * v * dt; this.pos[2] += Math.cos(a) * v * dt;
+        if (d < 1.6) { this.pos[0] -= Math.sin(ty) * 1.5 * dt; this.pos[2] -= Math.cos(ty) * 1.5 * dt; }
+        this.ch.play('Walk', 0.25, 0.8);
+      }
+      if (this.cd <= 0 && d < 3.0) this.startCombo();
+      else if (this.cd <= 0 && d > 7 && rnd() < dt * 1.5) { this.combo = []; this.atk = DUEL.Heavy; this.hitDone = false; this.set('attack', 'Heavy', 0.1, sp); }
+    } else if (S === 'attack') {
+      const a = this.atk, t = this.ch.t;
+      if (t < a.lunge[0]) face(7);
+      if (t > a.lunge[0] && t < a.lunge[1] && d > 1.3) { const v = a.lunge[2] / (a.lunge[1] - a.lunge[0]); this.pos[0] += Math.sin(this.yaw) * v * dt; this.pos[2] += Math.cos(this.yaw) * v * dt; }
+      this.lit = t > a.hit[0] - 0.1 && t < a.hit[1] + 0.05 ? 1 : 0;
+      if (!this.hitDone && t >= a.hit[0] && t <= a.hit[1] && d < a.range + P.radius && Math.abs(OE.angDiff(this.yaw, ty)) < a.arc / 2 * Math.PI / 180) {
+        this.hitDone = true; P.damage(this.T.dmg * a.dmg * (this.phase2 ? 1.1 : 1), this.pos, { boss: true, unblockable: a.unblockable });
+      }
+      if (this.ch.finished || t > this.ch.cur.dur - 0.04) { this.lit = 0; this.nextSwing(); }
+    } else if (S === 'roll') {
+      const u = this.ch.t / this.ch.cur.dur; this.iframe = u > 0.05 && u < 0.6;
+      const v = u < 0.75 ? 6.0 * (1 - u * 0.6) : 1; this.pos[0] += Math.sin(this.rollDir) * v * dt; this.pos[2] += Math.cos(this.rollDir) * v * dt;
+      if (this.ch.finished) { this.iframe = false; this.set('chase', null); this.cd = Math.min(this.cd, 0.25); }
+    } else if (S === 'guard') {
+      face(10); this.guardT -= dt;
+      if (this.guardT <= 0) { if (this.riposte && d < 3.2) { this.combo = ['Attack2']; this.nextSwing(); } else this.set('chase', null); }
+    } else if (S === 'hit') {
+      const k = Math.max(0, 1 - this.t / 0.3) * 3; this.pos[0] += Math.sin(this.knockYaw) * k * dt; this.pos[2] += Math.cos(this.knockYaw) * k * dt;
+      if (this.t > 0.5) { this.set('chase', null); this.cd = 0.15; }
+    }
+    W.collide(this.pos, this.radius);
+    const A_ = W.arena, dx = this.pos[0] - A_.c[0], dz = this.pos[2] - A_.c[2], dd = Math.hypot(dx, dz);
+    if (dd > A_.r - 1) { this.pos[0] = A_.c[0] + dx / dd * (A_.r - 1); this.pos[2] = A_.c[2] + dz / dd * (A_.r - 1); }
+    const pd = dist2(this.pos, P.pos); if (pd < 0.9) { const a = yawTo(P.pos, this.pos); this.pos[0] = P.pos[0] + Math.sin(a) * 0.9; this.pos[2] = P.pos[2] + Math.cos(a) * 0.9; }
+    sync();
+  }
+  glow(dt) {
+    this.glowAmt = OE.lerp(this.glowAmt || 0, this.lit, Math.min(1, dt * 18));
+    this.swordGlow.mat.emissive = this.T.glow.map((c) => c * (1 + 1.1 * this.glowAmt));
+    M4.point(this.tipW, this.sword.world, [0, 0, 1.25]); M4.point(this.baseW, this.sword.world, [0, 0, 0.3]);
+    this.light.pos = [(this.tipW[0] + this.baseW[0]) / 2, (this.tipW[1] + this.baseW[1]) / 2, (this.tipW[2] + this.baseW[2]) / 2]; this.light.intensity = 0.15 + this.glowAmt * 2.2;
+    if (this.glowAmt > 0.3) for (let i = 0; i < 3; i++) { const u = rnd(); GM.parts.emit({ pos: [OE.lerp(this.baseW[0], this.tipW[0], u), OE.lerp(this.baseW[1], this.tipW[1], u), OE.lerp(this.baseW[2], this.tipW[2], u)], vel: [0, 0, 0], life: 0.14, size: 0.03, col: [this.T.glow[0] * 0.7, this.T.glow[1] * 0.7, this.T.glow[2] * 0.7, 0.55], soft: 0, fade: 1 }); }
+  }
 };
 
 /* ---------------- companion: Thomas Hawthorne ---------------- */

@@ -93,7 +93,7 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;color:#e3ebf0;fon
 .ctag{text-align:center;padding:4px 10px;border:1px solid color-mix(in srgb,var(--acc) 40%,transparent);background:rgba(0,0,0,.45)}
 .ctag::after{content:"";position:absolute;left:50%;bottom:-11px;width:1px;height:10px;background:var(--acc);box-shadow:0 0 6px var(--acc)}
 .ctag small{display:block;color:var(--acc);font-size:9.5px;letter-spacing:.3em;margin-top:2px}
-@media (max-height:500px){#title h1{font-size:clamp(30px,11vh,64px)}#title .menu .btn{margin:4px 0;padding-top:7px;padding-bottom:7px;font-size:13px}#title .malign{margin-bottom:2.4vh}#title .kicker{display:none}.ctag{display:none}}}
+@media (max-height:500px){#title h1{font-size:clamp(30px,11vh,64px)}#title .menu .btn{margin:4px 0;padding-top:7px;padding-bottom:7px;font-size:13px}#title .malign{margin-bottom:2.4vh}#title .kicker{display:none}.ctag{display:none}}
 #crawl{background:#000;cursor:pointer}
 #crawl .txt{position:relative;width:min(86vw,780px);height:60vh;text-align:center;color:#c8d4dc}
 #crawl .txt p{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);margin:0;opacity:0;transition:opacity 1.2s;font-size:clamp(17px,min(3vw,5.2vh),30px);line-height:1.55}
@@ -187,7 +187,7 @@ body.touchmode #bossbar{width:min(52vw,600px);left:44%}
 .bar::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 9px,rgba(0,0,0,.55) 9px 10px);pointer-events:none}
 #hpb i{background:linear-gradient(90deg,#c22a1f,#ff5a3c);box-shadow:0 0 8px #ff3b2a}
 #stb i{background:linear-gradient(90deg,#1fa37a,#4ef0b5)}
-.bars::before{content:"VITALS // CMDR. O. MASCAR";display:block;font-size:9.5px;letter-spacing:.32em;color:color-mix(in srgb,var(--acc) 80%,#fff);margin-bottom:4px;text-shadow:0 1px 2px #000}
+.bars::before{content:attr(data-who);display:block;font-size:9.5px;letter-spacing:.32em;color:color-mix(in srgb,var(--acc) 80%,#fff);margin-bottom:4px;text-shadow:0 1px 2px #000}
 .stims{font-size:12px;letter-spacing:.22em;color:#dfe8ee}
 .stims .vial{width:9px;height:18px;border-radius:1px;border-color:rgba(78,240,181,.7);clip-path:polygon(0 3px,3px 0,100% 0,100% 100%,0 100%)}
 #scrap{font-size:17px;letter-spacing:.18em;color:#eef6fb;background:rgba(4,8,12,.6);clip-path:polygon(10px 0,100% 0,100% 100%,0 100%,0 10px)}
@@ -234,6 +234,12 @@ body.touchmode #bossbar{width:min(52vw,600px);left:44%}
 #birth .bt p{font-style:normal;font-weight:300}
 body.touchmode #sub{top:31%;width:min(58vw,600px)}
 @media (max-height:500px){.bars::before{display:none}.alchip{font-size:9px;padding:2px 6px}}
+#cine{position:fixed;inset:0;z-index:30;pointer-events:none}
+#cine .lb{position:absolute;left:0;right:0;height:10vh;background:#000}#cine .lb.t{top:0}#cine .lb.b{bottom:0}
+#cineBlack{position:absolute;inset:0;background:#000;opacity:0}
+#cine .bskip{position:absolute;right:max(20px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));pointer-events:auto;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.3);color:#dfe8ee;font-family:var(--sci);letter-spacing:.3em;font-size:12px;padding:8px 14px;cursor:pointer;z-index:2}
+#hud.cine .bars,#hud.cine #scrap,#hud.cine #bossbar,#hud.cine #prompt,#hud.cine #pauseBtn,#hud.cine #lockon,#hud.cine #ehps,#hud.cine #toast{display:none!important}
+#hud.cine{z-index:32}#hud.cine #sub{bottom:13vh;top:auto}
 #birth .bskip{clip-path:polygon(0 0,calc(100% - 7px) 0,100% 7px,100% 100%,0 100%)}
 </style>
 </head>
@@ -292,6 +298,7 @@ body.touchmode #sub{top:31%;width:min(58vw,600px)}
   <button class="bskip" id="birthSkip">SKIP</button>
 </div>
 
+<div id="cine" class="hidden"><div class="lb t"></div><div class="lb b"></div><div id="cineBlack"></div><button class="bskip" id="cineSkip">SKIP</button></div>
 <div id="crawl" class="screen hidden"><div class="txt" id="crawlTxt"></div><div class="skip">TAP / PRESS ANY KEY TO CONTINUE</div></div>
 
 <div id="pause" class="screen hidden"><div class="panel">
@@ -397,18 +404,20 @@ body.touchmode #sub{top:31%;width:min(58vw,600px)}
 
 <div id="rotate" class="screen hidden"><div>For the best experience,<br>turn your device to landscape.<br><br><button class="btn" id="rotOk" style="width:auto;display:inline-block">PLAY ANYWAY</button></div></div>
 
-<script src="js/engine.js?v=30"></script>
-<script src="js/world.js?v=30"></script>
-<script src="js/world_dover.js?v=30"></script>
-<script src="js/actors.js?v=30"></script>
-<script src="js/audio.js?v=30"></script>
-<script src="js/chapters.js?v=30"></script>
-<script src="js/levels.js?v=30"></script>
-<script src="js/game.js?v=30"></script>
-<script src="js/codex.js?v=30"></script>
-<script src="js/alignment.js?v=30"></script>
-<script src="js/menu.js?v=30"></script>
-<script src="js/opening.js?v=30"></script>
+<script src="js/engine.js?v=31"></script>
+<script src="js/world.js?v=31"></script>
+<script src="js/world_dover.js?v=31"></script>
+<script src="js/world_castle.js?v=31"></script>
+<script src="js/actors.js?v=31"></script>
+<script src="js/audio.js?v=31"></script>
+<script src="js/chapters.js?v=31"></script>
+<script src="js/levels.js?v=31"></script>
+<script src="js/game.js?v=31"></script>
+<script src="js/codex.js?v=31"></script>
+<script src="js/alignment.js?v=31"></script>
+<script src="js/menu.js?v=31"></script>
+<script src="js/cine.js?v=31"></script>
+<script src="js/opening.js?v=31"></script>
 <script>
 // models are loaded after the page shows the loading screen
 (function () {

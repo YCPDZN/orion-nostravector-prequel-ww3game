@@ -38,6 +38,17 @@ CHARS = {
           'L_UpperArm': .05, 'L_ForeArm': .046, 'L_Hand': .038, 'L_UpLeg': .068, 'L_Leg': .055, 'L_Foot': .05, 'L_Toe': .04}),
    cloak=True, arm_cut=1.25),
 }
+# Talina Alvarez: long open coat (handled like a cloak); her stance is slightly asymmetric, so the legs are measured per side
+_t = mirror({'Hips': (0, .50, 0), 'Spine': (0, .60, 0), 'Chest': (0, .70, -.01), 'Neck': (0, .83, -.01), 'Head': (0, .875, .005),
+          'L_Shoulder': (.04, .80, -.01), 'L_UpperArm': (.118, .785, -.01), 'L_ForeArm': (.148, .63, -.01), 'L_Hand': (.162, .48, .015),
+          'L_UpLeg': (.065, .48, 0), 'L_Leg': (.095, .255, -.012), 'L_Foot': (.13, .07, -.035), 'L_Toe': (.142, .02, .05)})
+_t.update({'R_Leg': (-.057, .255, -.014), 'R_Foot': (-.07, .07, -.035), 'R_Toe': (-.08, .02, .05)})
+_te = mirror({'Head': (0, .98, 0), 'L_Hand': (.166, .42, .02), 'L_Toe': (.145, .02, .085), 'Hips': (0, .44, 0)}); _te['R_Toe'] = (-.082, .02, .085)
+CHARS['TalinaAlvarez'] = dict(joints=_t, ends=_te,
+   radius=mirror({'Hips': .095, 'Spine': .095, 'Chest': .10, 'Neck': .045, 'Head': .07, 'L_Shoulder': .042,
+          'L_UpperArm': .046, 'L_ForeArm': .042, 'L_Hand': .036, 'L_UpLeg': .062, 'L_Leg': .05, 'L_Foot': .046, 'L_Toe': .036}),
+   cloak=True, arm_cut=1.25)
+CHARS['OrionEyepatch'] = CHARS['OrionMascar']  # same body, new face
 CHILD_FOR_SEG = {'Hips': None, 'Spine': 'Chest', 'Chest': 'Neck', 'Neck': 'Head', 'Head': None,
                  'L_Shoulder': 'L_UpperArm', 'L_UpperArm': 'L_ForeArm', 'L_ForeArm': 'L_Hand', 'L_Hand': None,
                  'R_Shoulder': 'R_UpperArm', 'R_UpperArm': 'R_ForeArm', 'R_ForeArm': 'R_Hand', 'R_Hand': None,
@@ -303,7 +314,10 @@ if __name__ == '__main__':
     H = 1.82
     out = sys.argv[1] if len(sys.argv) > 1 else './work/out'
     import os; os.makedirs(out, exist_ok=True)
-    for name, cs in (('OrionMascar', anims.sword_set()), ('ThomasHawthorne', anims.rifle_set())):
-        sc = H / 0.98
+    names = sys.argv[2].split(',') if len(sys.argv) > 2 else ['OrionMascar', 'ThomasHawthorne']
+    HT = {'TalinaAlvarez': 1.72}
+    for name in names:
+        cs = anims.rifle_set() if name == 'ThomasHawthorne' else anims.duelist_set() if name == 'TalinaAlvarez' else anims.sword_set()
+        sc = HT.get(name, H) / 0.98
         nv, nf = build(name, f'./work/{name}_raw.npz', f'./work/{name}', f'{out}/{name}_rigged.glb', sc, cs)
         print(name, nv, nf, os.path.getsize(f'{out}/{name}_rigged.glb') // 1024, 'KB')

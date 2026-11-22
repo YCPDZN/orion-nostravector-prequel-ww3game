@@ -26,6 +26,16 @@ const ENTRIES = [
     combat: 'Fights at range with a service rifle, firing aimed three-round bursts at whatever Orion is fighting or locked on to. Anything that gets too close gets the rifle stock. He is built to take punishment — three times what a normal soldier can — and against the Iron Warden he digs in even harder, shrugging off half of every blow. If he falls, give him time: he always gets back up.',
     quote: 'You didn\'t think I\'d let you finish this alone, did you?',
     show: ['Idle', 'Aim', 'Shoot', 'Shoot', 'Idle'] },
+  { id: 'talina', sec: 'ADVERSARIES', name: 'Talina Alvarez', role: 'Traitor of British Command', model: 'talina', h: 1.72, unlock: 'boss2a',
+    facts: [['Born', 'Seville, Spain'], ['Raised', 'London'], ['Former rank', 'Commander, British Command'], ['Allegiance', 'Sino-Russian Pact'], ['Weapon', 'Thermal sabre']],
+    lore: [
+      'Born in Seville and raised in London, Talina Alvarez rose to commander in British Command at twenty-three and trained half of its cadets with a sabre.',
+      'When London fell, she was ordered to hold the line underground while the city burned above her. She never forgave Command for it. Within the year she had crossed to the Pact, and the Pact gave her Dover Castle.',
+      'At Dover she met Orion Mascar, and took his left eye.',
+    ],
+    quote: 'Then let me leave you something to remember me by.',
+    combat: 'A duelist, not a machine. She circles out of reach, parries quick strikes and answers with a riposte, and rolls clear of anything she sees coming. Heavy attacks break through her guard. At half strength she drops the act: she gets faster and finishes her combos with an unblockable lunge.',
+    show: ['Idle', 'Attack1', 'Attack2', 'Heavy', 'Block', 'Idle'] },
   { id: 'boss', sec: 'ADVERSARIES', name: 'The Iron Warden', role: 'Last Sentinel of the Sino-Russian Pact', enemy: 'boss', h: 4.7, unlock: 'boss',
     facts: [['Class', 'Siege sentinel'], ['Height', '4.6 m'], ['Armament', 'Breaching cleaver, orbital uplink'], ['Origin', 'Sino-Russian Pact'], ['Voice', 'Mandarin Chinese']],
     lore: [
@@ -72,6 +82,13 @@ function build() {
   const sw = new OE.Node(Wp.swordMesh, Wp.metalMat()); const sg = new OE.Node(Wp.swordGlow, { mode: 2, color: [0, 0, 0], emissive: [1.2, 3.6, 5] }); sw.add(sg); sg.castShadow = false;
   const hm = M4.create(); sw.attach = () => o.boneWorld('R_Hand', hm); sw.pos = [0, -0.085, 0.02]; o.node.add(sw);
   C.models.orion = { ch: o, node: o.node };
+  const swordChar = (asset, glow) => { // another sword-bearer: eyepatch Orion, Talina
+    const c = new OE.Character(asset, { rim: 0.06 }); root.add(c.node);
+    const s2 = new OE.Node(Wp.swordMesh, Wp.metalMat()); const g2 = new OE.Node(Wp.swordGlow, { mode: 2, color: [0, 0, 0], emissive: glow }); s2.add(g2); g2.castShadow = false;
+    const m2 = M4.create(); s2.attach = () => c.boneWorld('R_Hand', m2); s2.pos = [0, -0.085, 0.02]; c.node.add(s2); return { ch: c, node: c.node };
+  };
+  C.models.orionEye = swordChar(GM.assets.orionEye, [1.2, 3.6, 5]);
+  C.models.talina = swordChar(GM.assets.talina, [2.2, 0.35, 2.8]);
   // Thomas with rifle (aimed procedurally, like in game)
   const t = new OE.Character(GM.assets.thomas, { rim: 0.06 }); root.add(t.node);
   const rf = new OE.Node(Wp.rifleMesh, Wp.metalMat()); rf.mat.color = [0.7, 0.7, 0.72];
@@ -103,11 +120,12 @@ function renderTabs() {
   $('cxTabs').innerHTML = html;
   $('cxTabs').querySelectorAll('.cx-tab').forEach((b) => b.onclick = () => { GM.audio.ui(); select(b.dataset.id); });
 }
+const mkey = (e) => e.model === 'orion' && GM.save.eye ? 'orionEye' : (e.model || e.enemy);
 function select(id) {
   const e = ENTRIES.find((x) => x.id === id); C.cur = e; C.t = 0; C.showIdx = 0; C.yaw = 0.35;
   const locked = e.unlock && !GM.save.seen[e.unlock];
   for (const k in C.models) C.models[k].node.visible = false;
-  const m = C.models[e.model || e.enemy];
+  const m = C.models[mkey(e)];
   if (m && !locked) { m.node.visible = true; if (m.ch) m.ch.play((e.show || ['Idle'])[0], 0, 1, true); }
   const b = $('cxBody');
   if (locked) { b.innerHTML = `<h1>???</h1><div class="cx-role">Unknown</div><p class="cx-lockedmsg">Not yet encountered. Venture further into New London to learn more.</p>`; }
@@ -145,7 +163,7 @@ C.update = function (dt, inp) {
   if (inp && inp.pause) { C.close(); return; }
   const e = C.cur; if (!e) return; C.t += dt;
   if (C.drag === null) { C.spin = (C.spin || 0) * Math.exp(-dt * 3); C.yaw += dt * 0.25 + C.spin * dt; }
-  const m = C.models[e.model || e.enemy]; const locked = e.unlock && !GM.save.seen[e.unlock];
+  const m = C.models[mkey(e)]; const locked = e.unlock && !GM.save.seen[e.unlock];
   if (m && !locked) {
     if (m.ch) {
       const ch = m.ch; ch.update(dt);

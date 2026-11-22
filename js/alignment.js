@@ -8,6 +8,7 @@ const $ = (id) => document.getElementById(id);
 const AL = window.GM.align = {};
 const THOMAS_SHARE = 0.9;          // how strongly Orion's choices pull Thomas
 const STEP = 35;                   // alignment change per good/evil choice
+const ORION_SHARE = 0.5;           // when Thomas makes the choice himself, Orion is pulled half as far
 AL.TIERS = {
   good: { name: 'GOOD', css: '#3d8bff', glow: [0.6, 2.2, 3.4], light: [0.3, 0.6, 1.0], trail: [0.35, 1.0, 2.2] },
   neutral: { name: 'NEUTRAL', css: '#f2c94c', glow: [3.0, 2.3, 0.45], light: [1.0, 0.8, 0.25], trail: [2.0, 1.5, 0.3] },
@@ -32,13 +33,13 @@ const CHOICES = [
       { align: 'neutral', say: 'Seal it up and hand it to Command. It\'s their call, not ours.', reply: 'Command will want to study it. Let\'s hope that\'s all they do.', voice: ['voice/ch1_neutral1.mp3', 4.36, 'voice/ch1_neutral2.mp3', 4.05], result: 'Thomas seals the core in a containment case for Command\'s engineers.', reward: { scrap: 500 } },
       { align: 'evil', say: 'We keep it. With power like that, nobody gives us orders again.', reply: 'Orion... what are you becoming?', voice: ['voice/ch1_evil1.mp3', 5.96, 'voice/ch1_evil2.mp3', 3.0], result: 'Orion lifts the core. Its red light spills across his armour.', reward: { scrap: 1000 } },
     ] },
-  { id: 'pilot', chapter: 2, title: 'The Pilot', auto: true,
-    scene: 'The Tidebreaker\'s cockpit splits open. Its pilot drags himself out of the burning wreck onto the shingle and raises his empty hands.',
-    thomas: 'He\'s just a kid, Commander. My age, maybe. He\'s got his hands up. What do we do with him?',
+  { id: 'pilot', chapter: 2, title: 'The Pilot', auto: true, chooser: 't', asker: 'pilot',
+    scene: 'The Tidebreaker\'s cockpit splits open. Its pilot drags himself out of the burning wreck onto the shingle and raises his empty hands. He can\'t be much older than Thomas.',
+    thomas: 'Please... I am nineteen. I did not choose this. Please.',
     options: [
-      { align: 'good', say: 'Let him go. Tell him to run, and never come back.', reply: '...Thank you, Commander. He\'s just like me.', result: 'He stares, then runs into the smoke. Thomas watches him until he is gone.' },
-      { align: 'neutral', say: 'Zip-tie him. Command can decide what he\'s worth.', reply: 'Right. He\'ll keep until the pickup team gets here.', result: 'Thomas binds his wrists and radios his position for pickup.', reward: { scrap: 100 } },
-      { align: 'evil', say: 'Take his gear and leave him for the drones.', reply: 'We\'re supposed to be better than them.', result: 'Orion takes his kit and walks away. Behind them, the drones are already circling.', reward: { scrap: 220 } },
+      { align: 'good', say: 'Go. Run, and don\'t ever come back.', reply: '...Thank you. Thank you.', result: 'He stumbles away into the smoke. Thomas watches him until he is gone.' },
+      { align: 'neutral', say: 'Hands where I can see them. Command decides what happens to you.', reply: '...Yes. Yes, okay.', result: 'Thomas binds his wrists and radios his position for pickup.', reward: { scrap: 100 } },
+      { align: 'evil', say: 'You don\'t get to walk away. Not after what your lot did to the Commander.', reply: 'No — please —', result: 'Thomas takes his kit and leaves him on the beach. Behind him, the drones are already circling.', reward: { scrap: 220 } },
     ] },
   { id: 'hospital', chapter: 3, title: 'The Field Hospital',
     scene: 'An abandoned field hospital. Wounded soldiers on every cot, and a handful of stims left on the shelf.',
@@ -91,11 +92,12 @@ AL.open = function (id, after) {
   const c = CHOICES.find((x) => x.id === id); if (!c || done(id)) { if (after) after(); return; }
   current = c; onClose = after || null; prevState = GM.state; GM.state = 'choice';
   if (document.pointerLockElement) document.exitPointerLock();
-  $('chTitle').textContent = c.title; $('chText').innerHTML = `<i>${c.scene}</i><div class="tline"><b>Thomas:</b> “${c.thomas}”</div>`;
+  const askN = c.asker === 'pilot' ? 'Pact Pilot' : 'Thomas', chN = c.chooser === 't' ? 'THOMAS' : 'ORION';
+  $('chTitle').textContent = c.title; $('chText').innerHTML = `<i>${c.scene}</i><div class="tline"><b>${askN}:</b> “${c.thomas}”</div>`;
   $('chResult').textContent = ''; $('chResult').style.display = 'none';
-  $('chOpts').innerHTML = `<div class="orionsay">ORION</div>` + c.options.map((o, i) => `<button class="btn chopt" data-i="${i}" style="border-color:${AL.TIERS[o.align].css}"><span class="dot" style="background:${AL.TIERS[o.align].css}"></span>“${o.say}”</button>`).join('');
+  $('chOpts').innerHTML = `<div class="orionsay">${chN}</div>` + c.options.map((o, i) => `<button class="btn chopt" data-i="${i}" style="border-color:${AL.TIERS[o.align].css}"><span class="dot" style="background:${AL.TIERS[o.align].css}"></span>“${o.say}”</button>`).join('');
   $('chOpts').querySelectorAll('.chopt').forEach((b) => b.onclick = () => choose(+b.dataset.i));
-  GM.say('thomas', c.thomas, Math.max(4, c.thomas.length * 0.06));
+  GM.say(c.asker || 'thomas', c.thomas, Math.max(4, c.thomas.length * 0.06));
   $('chLeave').style.display = c.auto ? 'none' : ''; $('chLeave').textContent = 'STEP AWAY';
   $('choice').classList.remove('hidden');
 };
@@ -105,20 +107,22 @@ function choose(i) {
   const d = o.align === 'good' ? STEP : o.align === 'evil' ? -STEP : 0;
   const a = S.align || (S.align = { o: 0, t: 0 });
   const before = [AL.tier('o'), AL.tier('t')];
-  a.o = OE.clamp(a.o + d, -100, 100); a.t = OE.clamp(a.t + d * THOMAS_SHARE, -100, 100);
+  if (c.chooser === 't') { a.t = OE.clamp(a.t + d, -100, 100); a.o = OE.clamp(a.o + d * ORION_SHARE, -100, 100); }
+  else { a.o = OE.clamp(a.o + d, -100, 100); a.t = OE.clamp(a.t + d * THOMAS_SHARE, -100, 100); }
   if (o.reward) {
     if (o.reward.scrap) S.scrap += o.reward.scrap;
     if (o.reward.stims) GM.player.stims += o.reward.stims;
   }
   GM.audio.ui();
   $('chOpts').innerHTML = ''; $('chResult').style.display = '';
-  $('chResult').innerHTML = `<div class="tline"><b class="o">Orion:</b> “${o.say}”</div><div class="tline"><b>Thomas:</b> “${o.reply}”</div><div class="res">${o.result}</div>` +
+  const tSay = c.chooser === 't' ? 'Thomas' : 'Orion', tRep = c.asker === 'pilot' ? 'Pact Pilot' : 'Thomas';
+  $('chResult').innerHTML = `<div class="tline"><b class="o">${tSay}:</b> “${o.say}”</div><div class="tline"><b>${tRep}:</b> “${o.reply}”</div><div class="res">${o.result}</div>` +
     (o.reward ? `<div class="rw">${o.reward.scrap ? '+' + o.reward.scrap + ' scrap ' : ''}${o.reward.stims ? '+' + o.reward.stims + ' stim' + (o.reward.stims > 1 ? 's' : '') : ''}</div>` : '') +
     `<div class="al">${chip('ORION', 'o')} ${chip('THOMAS', 't')}</div>`;
   $('chLeave').style.display = ''; $('chLeave').textContent = 'CONTINUE';
   subQ_clear();
   if (o.voice) { GM.say('orion', o.say, o.voice[1] + 0.6, o.voice[0]); GM.say('thomas', o.reply, o.voice[3] + 0.8, o.voice[2]); } // recorded lines
-  else { GM.say('orion', o.say, Math.max(3, o.say.length * 0.055)); GM.say('thomas', o.reply, Math.max(3, o.reply.length * 0.065)); }
+  else { GM.say(c.chooser === 't' ? 'thomas' : 'orion', o.say, Math.max(3, o.say.length * 0.055)); GM.say(c.asker || 'thomas', o.reply, Math.max(3, o.reply.length * 0.065)); }
   const after = [AL.tier('o'), AL.tier('t')];
   if (after[0] !== before[0]) GM.pendingAlignBanner = 'o';
   else if (after[1] !== before[1]) GM.pendingAlignBanner = 't';

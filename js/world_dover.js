@@ -6,7 +6,7 @@
 const rnd = OE.rng(1940);
 const R = (a, b) => a + (b - a) * rnd();
 
-W.builders[2] = function () {
+W.builders['2b'] = function () {
   const T = W.textures();
   if (!T.chalk) T.chalk = OE.proceduralTex('chalk', 512);
   if (!T.shingle) T.shingle = OE.proceduralTex('shingle', 512);

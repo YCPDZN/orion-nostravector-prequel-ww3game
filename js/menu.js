@@ -33,6 +33,18 @@ function build() {
   OE.scene = prev;
 }
 
+/* Orion wears the eyepatch on the menu once he has lost the eye (in the latest save, or this session) */
+MN.eye = function () {
+  if (GM.save && GM.save.eye) return true;
+  try { const slots = JSON.parse(localStorage.getItem('orion_ww3_slots') || '[]').filter(Boolean).sort((a, b) => b.when - a.when); return !!(slots.length && slots[0].save && slots[0].save.eye); } catch (e) { return false; }
+};
+let eyeOn = false;
+function setOrion(eye) {
+  if (eye === eyeOn || !root) return; eyeOn = eye;
+  const old = O; O = new OE.Character(eye ? GM.assets.orionEye : GM.assets.orion, { rim: 0.2 });
+  O.node.pos = old.node.pos.slice(); O.node.rot = old.node.rot.slice ? old.node.rot.slice() : old.node.rot;
+  old.node.remove(sword); O.node.add(sword); root.remove(old.node); root.add(O.node); O.play('Idle', 0);
+}
 /* alignment shown on the menu: the most recent save (or neutral when there is none) */
 MN.tier = function () {
   try {
@@ -65,6 +77,7 @@ function thumbsUp(ch) {
 
 MN.update = function (dt) {
   if (!root) build();
+  setOrion(MN.eye());
   t += dt; OE.scene = root;
   const R = OE.R, tier = MN.tier(), info = GM.align.TIERS[tier];
   // black stage

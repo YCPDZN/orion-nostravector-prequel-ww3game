@@ -45,6 +45,33 @@ GM.shake = (a) => { GM.cam.shake = Math.min(1, GM.cam.shake + a); };
 let LV = null; GM.levels = {};
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const ENV_KEYS = ['sunDir', 'sunCol', 'sky', 'ground', 'fogCol', 'fogDen', 'exposure', 'skyPal'];
+/* a chapter can have parts, each with its own level: Chapter II is '2a' (Orion, Dover Castle) then '2b' (Thomas, the beach) */
+const levelId = (S) => S.chapter === 2 ? (S.part === 2 ? '2b' : '2a') : (S.chapter || 1);
+GM.levelId = levelId;
+/* who you play: Orion (sword; eyepatch once he has lost the eye, except in Chapter I) or Thomas (rifle) */
+GM.heroes = {};
+function heroFor(def) {
+  const S = GM.save;
+  if (def.hero === 'thomas') return 'thomas';
+  if (S.chapter === 1) return 'orion';
+  if (S.chapter === 2 && S.part !== 2) return S.eyeLost ? 'orionEye' : 'orion';
+  return S.eye ? 'orionEye' : 'orion';
+}
+function hero(key) {
+  if (!GM.heroes[key]) { const prev = OE.scene; OE.scene = new OE.Node();
+    GM.heroes[key] = key === 'thomas' ? new A.Player(GM.assets.thomas, 'rifle') : new A.Player(key === 'orionEye' ? GM.assets.orionEye : GM.assets.orion);
+    OE.scene = prev; }
+  return GM.heroes[key];
+}
+GM.pickHero = function () {
+  const def = LV.def, key = heroFor(def), P = hero(key);
+  if (GM.player && GM.player !== P) { P.pos = GM.player.pos.slice(); P.yaw = GM.player.yaw; }
+  for (const k in GM.heroes) { const h = GM.heroes[k]; if (h.node.parent) h.node.parent.remove(h.node); if (h !== P) { h.light.intensity = 0; if (h.muzzle) h.muzzle.intensity = 0; } }
+  GM.player = P; GM.heroKey = key; LV.root.add(P.node);
+  if (GM.companion.node.parent) GM.companion.node.parent.remove(GM.companion.node);
+  GM.solo = !!def.solo; if (!GM.solo) LV.root.add(GM.companion.node);
+  document.querySelector('.bars').dataset.who = key === 'thomas' ? 'VITALS // APPR. T. HAWTHORNE' : 'VITALS // CMDR. O. MASCAR';
+};
 GM.loadLevel = function (id) {
   if (!LEVELS[id]) id = 1;
   let L = GM.levels[id];
@@ -52,21 +79,22 @@ GM.loadLevel = function (id) {
     const before = new Set(OE.R.lights), prevScene = OE.scene, root = new OE.Node(); OE.scene = root;
     const st = W.make(id), def = LEVELS[id];
     const enemies = def.spawns.map(([t, p]) => new A.Enemy(t, p, Math.PI));
-    const b = new A.Enemy(def.boss.type, def.boss.pos, Math.PI); enemies.push(b);
+    const b = def.boss.duelist ? new A.Duelist(GM.assets[def.boss.duelist], def.boss.pos, Math.PI, def.boss.T) : new A.Enemy(def.boss.type, def.boss.pos, Math.PI); enemies.push(b);
     const env = clone(GM.baseEnv); if (def.env) Object.assign(env, clone(def.env));
     L = GM.levels[id] = { id, def, root, st, enemies, boss: b, env, lights: OE.R.lights.filter((l) => !before.has(l)) };
     OE.scene = prevScene;
   }
-  if (LV === L) return L;
-  if (LV) OE.R.lights = OE.R.lights.filter((l) => !LV.lights.includes(l));
-  for (const l of L.lights) if (!OE.R.lights.includes(l)) OE.R.lights.push(l);
-  W.use(L.st); GM.enemies = L.enemies; boss = GM.boss = L.boss;
-  for (const a of [GM.player, GM.companion]) if (a) { if (a.node.parent) a.node.parent.remove(a.node); L.root.add(a.node); }
-  GM.worldRoot = L.root; GM.worldEnv = L.env; LV = GM.level = L;
-  if (!GM._inMenu) { OE.scene = L.root; Object.assign(OE.R, clone(L.env)); }
+  if (LV !== L) {
+    if (LV) OE.R.lights = OE.R.lights.filter((l) => !LV.lights.includes(l));
+    for (const l of L.lights) if (!OE.R.lights.includes(l)) OE.R.lights.push(l);
+    W.use(L.st); GM.enemies = L.enemies; boss = GM.boss = L.boss;
+    GM.worldRoot = L.root; GM.worldEnv = L.env; LV = GM.level = L;
+    if (!GM._inMenu) { OE.scene = L.root; Object.assign(OE.R, clone(L.env)); }
+  }
+  GM.pickHero();
   return L;
 };
-const introKey = (n) => n === 1 ? 'intro' : 'intro' + n;
+const introKey = (id) => id === 1 ? 'intro' : 'intro_' + id;
 
 /* ---------------- boot ---------------- */
 GM.boot = async function () {
@@ -84,8 +112,10 @@ GM.boot = async function () {
     const thomas = await OE.loadGLB(dec(ORION_MODELS.thomas));
     msg('Waking the war machines', 0.9); await tick();
     GM.parts = new OE.Particles(QUALITY[qName()].particles);
-    GM.assets = { orion, thomas };
-    GM.player = new A.Player(orion); GM.companion = new A.Companion(thomas);
+    msg('Loading Talina Alvarez', 0.8); await tick();
+    const orionEye = await OE.loadGLB(dec(ORION_MODELS.orionEye)), talina = await OE.loadGLB(dec(ORION_MODELS.talina));
+    GM.assets = { orion, thomas, orionEye, talina };
+    GM.heroes.orion = GM.player = new A.Player(orion); GM.companion = new A.Companion(thomas);
     msg('Building New London', 0.95); await tick();
     GM.loadLevel(1);
     respawnAll(true);
@@ -111,7 +141,7 @@ function respawnAll(first) {
   if (GM.align) GM.align.hud(true);
   const sp = spawnPoint();
   GM.player.reset(sp.pos, sp.yaw);
-  GM.companion.reset([sp.pos[0] - 1.6, 0, sp.pos[2] - 0.8]);
+  GM.companion.reset([sp.pos[0] - 1.6, 0, sp.pos[2] - 0.8]); if (GM.solo) GM.companion.alive = false;
   for (const e of GM.enemies) { if (e.boss && GM.save.bossDead) { e.alive = false; e.state = 'dead'; e.root.visible = false; continue; } e.reset(); }
   GM.projectiles.length = 0; GM.markers.length = 0; GM.shocks.length = 0; GM.lock = null;
   W.beacons.forEach((b, i) => setBeaconLit(b, !!GM.save.lit[i]));
@@ -261,6 +291,7 @@ function setupUI() {
   $('pLoad').onclick = () => { AU.ui(); openSaves('load', 'pause'); };
   $('rSave').onclick = () => { AU.ui(); openSaves('save', 'rest'); };
   $('svBack').onclick = () => { AU.ui(); show(savesReturn); };
+  $('cineSkip').onclick = () => { GM.cine.skip(); };
   $('bNew').onclick = () => { AU.init(); AU.ui(); GM.save = JSON.parse(JSON.stringify(NEW_SAVE)); startChapter(1); };
   $('birth').onclick = (e) => { if (e.target.id === 'birthSkip') GM.birth.skip(); else GM.birth.advance(); };
   $('bChapters').onclick = () => { AU.init(); AU.ui(); openChapters('title'); };
@@ -313,13 +344,14 @@ function showTitle() {
 }
 function hudVisible(v) { $('hud').classList.toggle('hidden', !v); $('touch').classList.toggle('hidden', !(v && touchOn())); document.body.classList.toggle('touchmode', touchOn()); }
 function startPlay() {
+  clearTimeout(crawlTimer); clearTimeout(GM._crawlFade);
   show(null); GM.state = 'play'; hudVisible(true);
   if (isTouch) { try { const de = document.documentElement; if (de.requestFullscreen && !document.fullscreenElement) de.requestFullscreen({ navigationUI: 'hide' }).then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => { })).catch(() => { }); } catch (e) { } }
   else { lockPointer(); }
-  const ik = introKey(GM.save.chapter || 1);
+  const ik = introKey(LV.id);
   if (!GM.save.seen[ik]) { GM.save.seen[ik] = 1; GM.persist(); LV.def.intro(); }
 }
-function openPause() { if (GM.state !== 'play') return; GM.state = 'pause'; const pc = chapterDef(GM.save.chapter); $('pChapter').textContent = `CHAPTER ${pc.numeral} · ${pc.title.toUpperCase()}`; $('prompt').classList.add('hidden'); show('pause'); hudVisible(false); if (document.pointerLockElement) document.exitPointerLock(); }
+function openPause() { if (GM.state !== 'play') return; GM.state = 'pause'; const pc = chapterDef(GM.save.chapter), pp = pc.parts && pc.parts[(GM.save.part || 1) - 1]; $('pChapter').textContent = `CHAPTER ${pc.numeral} · ${pp ? 'PART ' + pp.numeral + ' · ' + pp.title.toUpperCase() : pc.title.toUpperCase()}`; $('prompt').classList.add('hidden'); show('pause'); hudVisible(false); if (document.pointerLockElement) document.exitPointerLock(); }
 function closePause() { show(null); GM.state = 'play'; hudVisible(true); lockPointer(); }
 
 /* ---------------- prologue crawl ---------------- */
@@ -345,7 +377,7 @@ function saveToSlot(i) {
 function loadSlot(i) {
   const d = readSlots()[i]; if (!d) return;
   GM.save = Object.assign(JSON.parse(JSON.stringify(NEW_SAVE)), JSON.parse(JSON.stringify(d.save)));
-  GM.chapterEndT = 0; GM.loadLevel(GM.save.chapter || 1); respawnAll();
+  GM.chapterEndT = 0; GM.loadLevel(levelId(GM.save)); respawnAll();
   if (d.world) {
     const P = GM.player, w = d.world; P.pos = w.p.pos.slice(); P.yaw = w.p.yaw; P.hp = Math.min(P.maxHp, w.p.hp); P.stims = w.p.stims;
     GM.companion.pos = w.t.pos.slice(); GM.cam.yaw = P.yaw;
@@ -384,18 +416,21 @@ function openSaves(mode, ret) {
 /* ---------------- chapters ---------------- */
 let chapterReturn = 'title';
 const fmtTime = (t) => { t = Math.floor(t); const h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, s2 = t % 60; return (h ? h + 'h ' : '') + m + 'm ' + String(s2).padStart(2, '0') + 's'; };
-function startChapter(n) {
+function startChapter(n, opts = {}) {
   // replaying keeps Orion's rank and stats, but the mission itself starts over
   const S0 = GM.save;
   // alignment carries from chapter to chapter; replaying a chapter rewinds it to how it stood when that chapter began
   const alignAt = clone(S0.alignAt || {}); const align = clone(alignAt[n] || S0.align || { o: 0, t: 0 }); alignAt[n] = clone(align);
   for (const k in alignAt) if (+k > n) delete alignAt[k]; // later chapters will follow from this run instead
   const choices = {}; for (let i = 1; i < n; i++) { const c = GM.align.forChapter(i); if (c && S0.choices && S0.choices[c.id]) choices[c.id] = S0.choices[c.id]; }
-  const seen = clone(S0.seen || {}); const bk = LEVELS[n] ? LEVELS[n].boss.seen : 'boss'; delete seen[introKey(n)]; delete seen['talk_' + bk];
-  const keep = { vig: S0.vig, end: S0.end, str: S0.str, rank: S0.rank, maxStims: S0.maxStims, done: S0.done || {}, align, alignAt, choices, seen, stats: clone(S0.stats || NEW_SAVE.stats) };
-  GM.save = Object.assign(clone(NEW_SAVE), keep, { started: true, chapter: n });
+  const seen = clone(S0.seen || {});
+  for (const id of Object.keys(LEVELS)) if (String(id)[0] === String(n)) { delete seen[introKey(isNaN(id) ? id : +id)]; delete seen['talk_' + LEVELS[id].boss.seen]; }
+  const keep = { vig: S0.vig, end: S0.end, str: S0.str, rank: S0.rank, maxStims: S0.maxStims, done: S0.done || {}, align, alignAt, choices, seen, eye: !!S0.eye, reached: S0.reached || {} };
+  GM.save = Object.assign(clone(NEW_SAVE), keep, { started: true, chapter: n, part: opts.part || 1 });
   GM.save.stats = { time: 0, deaths: 0, kills: 0 };
-  GM.chapterEndT = 0; GM.loadLevel(n); respawnAll();
+  if (opts.part === 2) { GM.save.eyeLost = true; GM.save.eye = true; }
+  GM.chapterEndT = 0; GM.loadLevel(levelId(GM.save)); respawnAll();
+  if (opts.part === 2) { startCrawl(2); return; }
   const ch = chapterDef(n);
   if (ch.opening) { GM.state = 'birth'; show(null); hudVisible(false); AU.musicDuck(0.1); GM.birth.start(ch.opening, startCrawl); } else startCrawl();
 }
@@ -408,6 +443,7 @@ function openChapters(ret) {
     if (c.available) {
       if (S.started && S.chapter === c.id) btns += `<button class="btn" data-ch="cont" data-id="${c.id}">CONTINUE</button>`;
       btns += `<button class="btn" data-ch="start" data-id="${c.id}">${done || (S.started && S.chapter === c.id) ? 'REPLAY CHAPTER' : 'START CHAPTER'}</button>`;
+      if (c.parts && S.reached && S.reached[c.id + 'b']) btns += `<button class="btn" data-ch="part2" data-id="${c.id}">PART II: ${c.parts[1].title.toUpperCase()}</button>`;
     }
     return `<div class="chap ${c.available ? '' : 'locked'}"><div class="num">CHAPTER ${c.numeral}</div><div class="ttl">${c.title}</div>
       ${c.place ? `<div class="meta">${c.place} · ${c.date}</div>` : ''}<div class="sum">${c.summary}</div>
@@ -416,6 +452,7 @@ function openChapters(ret) {
   $('chList').querySelectorAll('[data-ch]').forEach((b) => b.onclick = () => {
     AU.init(); AU.ui(); const id = +b.dataset.id;
     if (b.dataset.ch === 'cont') { if (GM.state === 'complete') { show(null); GM.state = 'play'; hudVisible(true); lockPointer(); } else startPlay(); }
+    else if (b.dataset.ch === 'part2') startChapter(id, { part: 2 });
     else startChapter(id);
   });
   show('chapters');
@@ -428,7 +465,7 @@ function chapterComplete() {
   $('cmpStats').innerHTML = [['Time', fmtTime(S.stats.time)], ['War machines destroyed', S.stats.kills], ['Times killed in action', S.stats.deaths], ['Rank', S.rank],
     ['Orion', GM.align.chip('', 'o')], ['Thomas', GM.align.chip('', 't')]]
     .map(([k, v]) => `<div class="row"><span>${k}</span><span class="v">${v}</span></div>`).join('') +
-    `<div class="small" style="margin-top:10px;font-style:italic;text-align:center">${LV.def.endings[GM.align.tier('o')]}</div>`;
+    `<div class="small" style="margin-top:10px;font-style:italic;text-align:center">${LV.def.endings[GM.align.tier(LV.def.endingBy || 'o')]}</div>`;
   S.done[c.id].align = GM.align.tier('o');
   S.alignAt = S.alignAt || {}; S.alignAt[c.id + 1] = clone(S.align); // the next chapter starts from how this one ended
   const next = CHAPTERS.find((x) => x.id === c.id + 1);
@@ -437,17 +474,28 @@ function chapterComplete() {
   nb.onclick = () => { AU.ui(); startChapter(next.id); };
   $('banner').style.opacity = 0; show('complete'); AU.beacon();
 }
-function startCrawl() {
+/* Part I ends (Talina has taken Orion's eye): Thomas carries on alone on the beach */
+GM.toPart2 = function () {
+  const S = GM.save; S.part = 2; S.eyeLost = true; S.eye = true; S.bossDead = false; S.lit = [true, false]; S.beacon = 0; S.echo = null;
+  S.reached = S.reached || {}; S.reached['2b'] = 1; GM.chapterEndT = 0; GM.inBoss = false;
+  GM.loadLevel(levelId(S)); respawnAll(); hudVisible(false); startCrawl(2);
+};
+function startCrawl(part) {
   GM.state = 'crawl'; show('crawl'); const box = $('crawlTxt');
-  const ch = chapterDef(GM.save.chapter);
-  box.innerHTML = `<p class="first"><small>CHAPTER ${ch.numeral}</small>${ch.title}</p>` + ch.prologue.map((t) => `<p>${t}</p>`).join('');
+  const ch = chapterDef(GM.save.chapter); const pt = ch.parts ? ch.parts[(part || GM.save.part || 1) - 1] : null;
+  GM.crawlPart = pt;
+  const head = pt ? `<p class="first"><small>CHAPTER ${ch.numeral} · PART ${pt.numeral}</small>${pt.title}</p>` : `<p class="first"><small>CHAPTER ${ch.numeral}</small>${ch.title}</p>`;
+  const lines = (pt && pt.prologue) || ch.prologue;
+  box.innerHTML = (pt && pt.numeral === 'I' ? `<p class="first"><small>CHAPTER ${ch.numeral}</small>${ch.title}</p>` : '') + head + lines.map((t) => `<p>${t}</p>`).join('');
   crawlIdx = -1; $('crawl').onclick = endCrawl; AU.musicDuck(0.4); nextCrawl();
 }
 function nextCrawl() {
   const ps = $('crawlTxt').querySelectorAll('p'); clearTimeout(crawlTimer); clearTimeout(GM._crawlFade);
   ps.forEach((p) => p.style.opacity = 0);
   crawlIdx++;
-  if (crawlIdx >= ps.length) { AU.musicDuck(0.28); startPlay(); const ch = chapterDef(GM.save.chapter); banner(ch.title.toUpperCase(), `CHAPTER ${ch.numeral} · ${ch.place.toUpperCase()}, ${ch.date.toUpperCase()}`, 'gold', 4.5); return; }
+  if (crawlIdx >= ps.length) { AU.musicDuck(0.28); startPlay(); const ch = chapterDef(GM.save.chapter), pt = GM.crawlPart;
+    if (pt) banner(pt.title.toUpperCase(), `CHAPTER ${ch.numeral} · PART ${pt.numeral} · ${pt.place.toUpperCase()}`, 'gold', 4.5);
+    else banner(ch.title.toUpperCase(), `CHAPTER ${ch.numeral} · ${ch.place.toUpperCase()}, ${ch.date.toUpperCase()}`, 'gold', 4.5); return; }
   const p = ps[crawlIdx]; GM._crawlFade = setTimeout(() => { if (GM.state === 'crawl') p.style.opacity = 1; }, crawlIdx ? 700 : 200);
   crawlTimer = setTimeout(nextCrawl, 1800 + p.textContent.length * 55);
 }
@@ -455,7 +503,7 @@ function endCrawl() { if (GM.state === 'crawl') nextCrawl(); }
 
 /* ---------------- HUD helpers ---------------- */
 let subQ = [], subT = 0, toastT = 0, bannerT = 0;
-const NAMES = { thomas: 'Thomas', orion: 'Orion', radio: 'British Command', warden: 'Iron Warden', tide: 'Tidebreaker' };
+const NAMES = { thomas: 'Thomas', orion: 'Orion', radio: 'British Command', warden: 'Iron Warden', tide: 'Tidebreaker', talina: 'Talina', pilot: 'Pact Pilot' };
 /* Each level's boss speaks its own language (Mandarin for the Iron Warden, Russian for the Tidebreaker) with English subtitles.
    Lines with a recording play the mp3; the rest use the browser's text-to-speech. */
 const BV = () => LV.def.voice;
@@ -483,7 +531,7 @@ GM.warden = (key, story = true) => {
   if (key === 'taunts') line = nextTaunt();
   if (story && ['intro', 'phase2', 'death', 'kill'].includes(key)) { subQ.length = 0; subT = 0; try { if (voiceEl) voiceEl.pause(); } catch (e) { } } // boss moments cut in
   const [zh, en, file, secs] = line;
-  const dur = file && V.file ? Math.max(2.6, secs + 1.0) : Math.max(3.2, en.length * 0.06 + 1.4, zh.length * (V.lang === 'zh-CN' ? 0.34 : 0.075) + 1.2);
+  const dur = file && V.file ? Math.max(2.6, secs + 1.0) : Math.max(3.2, en.length * 0.06 + 1.4, zh ? zh.length * (V.lang === 'zh-CN' ? 0.34 : 0.075) + 1.2 : 0);
   GM.say(V.who, en, dur, { zh, lang: V.lang, file: file && V.file ? V.file(file) : null });
 };
 GM.wardenTaunt = () => { if (time - tauntT < 11 || Math.random() > 0.35) return; tauntT = time; GM.warden('taunts', false); };
@@ -512,7 +560,7 @@ function updateHud(dt) {
   if (GM.inBoss && boss) { $('bossbar').querySelector('i').style.transform = `scaleX(${Math.max(0, boss.hp / boss.maxHp)})`; $('bossbar').querySelector('b').style.transform = `scaleX(${Math.max(0, boss.hp / boss.maxHp)})`; }
   // subtitles
   subT -= dt; const sub = $('sub');
-  if (subT <= 0) { if (subQ.length) { const s = subQ.shift(); sub.innerHTML = `<b>${NAMES[s.who] || s.who}:</b> ${s.text}`; /* English subtitles only */ sub.style.opacity = 1; subT = s.dur; if (s.voice && s.voice.file) playVoice(s.voice.file); else if (s.voice && s.voice.zh) speakZh(s.voice.zh, s.voice.lang); else if (s.voice) playVoice(s.voice); } else sub.style.opacity = 0; }
+  if (subT <= 0) { if (subQ.length) { const s = subQ.shift(); sub.innerHTML = `<b>${NAMES[s.who] || s.who}:</b> ${s.text}`; /* English subtitles only */ sub.style.opacity = 1; subT = s.dur; if (s.voice && s.voice.file) playVoice(s.voice.file); else if (s.voice && s.voice.zh) speakZh(s.voice.zh, s.voice.lang); else if (s.voice && typeof s.voice !== 'object') playVoice(s.voice); } else sub.style.opacity = 0; }
   toastT -= dt; if (toastT <= 0) $('toast').style.opacity = 0;
   bannerT -= dt; if (bannerT <= 0) $('banner').style.opacity = 0;
   // lock-on marker & enemy health bars
@@ -604,6 +652,12 @@ GM.alert = (e) => {
   if (seen[k] || e.boss) return; seen[k] = 1;
   const lines = { trooper: 'Contact! Pact Revenants — Russian-built. They hit hard but they\'re slow to recover. Punish the swing, like you taught me!', drone: 'Seeker drone — Chinese tech! Roll through the bolts, don\'t try to outrun them.',
     brute: 'Juggernaut! Don\'t trade blows with that thing, Commander. Dodge the slam, then hit it from behind.' };
+  if (GM.solo) { // nobody to warn you: the hero talks it through alone (text only)
+    const solo = GM.heroKey === 'thomas'
+      ? { trooper: 'Revenants. Hit hard, slow to recover. Punish the swing — just like he taught me.', drone: 'Seeker drone. Don\'t outrun the bolts. Roll through them.', brute: 'Juggernaut. Don\'t trade blows. Dodge the slam, then hit it from behind.' }
+      : { trooper: 'Revenants. Slow to recover — punish the swing.', drone: 'Seeker drone. Roll through the bolts, then close in.', brute: 'Juggernaut. Don\'t trade blows with it. Dodge the slam.' };
+    GM.say(GM.heroKey === 'thomas' ? 'thomas' : 'orion', solo[e.type], 5); return;
+  }
   GM.say('thomas', lines[e.type], { trooper: 8.3, drone: 5.7, brute: 6.9 }[e.type], { trooper: 4, drone: 5, brute: 6 }[e.type]);
 };
 GM.onEnemyKilled = (e) => {
@@ -632,7 +686,7 @@ function victory() {
   setTimeout(() => { $('bossbar').classList.add('hidden'); GM.inBoss = false; }, 2500);
   subQ.length = 0; subT = 0; GM.warden('death');
   const v = LV.def.victory();
-  setTimeout(() => banner(v.banner[0], v.banner[1], 'gold', 6), 1800);
+  if (v.banner) setTimeout(() => banner(v.banner[0], v.banner[1], 'gold', 6), 1800);
   GM.chapterEndT = v.endIn;
 }
 function interactables() {
@@ -743,12 +797,12 @@ function step(dt, inp) {
     if (GM._inMenu) { // back from the menu stage to New London
       GM._inMenu = false; GM.menu.leave(); OE.scene = GM.worldRoot; Object.assign(OE.R, JSON.parse(JSON.stringify(GM.worldEnv)));
     }
-    if (st === 'play') { GM.save.stats.time += dt; if (GM.chapterEndT > 0) { GM.chapterEndT -= dt; if (GM.chapterEndT <= 0) GM.align.open(LV.def.choice, chapterComplete); } }
+    if (st === 'play') { GM.save.stats.time += dt; if (GM.chapterEndT > 0) { GM.chapterEndT -= dt; if (GM.chapterEndT <= 0) { if (LV.def.cutscene) GM.cine.start(LV.def.cutscene); else GM.align.open(LV.def.choice, chapterComplete); } } }
     if (inp.lock) toggleLock();
     const P = GM.player;
     if (P.state === 'rest') P.setState('move', null);
     P.update(sdt, st === 'play' ? inp : { mx: 0, my: 0 });
-    GM.companion.update(sdt);
+    if (!GM.solo) GM.companion.update(sdt);
     for (const e of GM.enemies) { if (A.dist2(e.pos, P.pos) < 55 || e.state === 'dead') e.update(sdt); }
     updateHazards(sdt);
     // echo pickup
@@ -767,6 +821,10 @@ function step(dt, inp) {
     GM.align.markers(time);
     if (!GM.debug || !GM.debug.freeze) updateCamera(dt, st === 'play' ? inp : { cx: 0, cy: 0 });
     updateHud(dt);
+  } else if (st === 'cutscene') {
+    GM.cine.update(dt);
+    for (const e of GM.enemies) if (e.boss) e.update(dt);
+    updateHud(dt);
   } else {
     // menus: keep world gently alive
     GM.player.ch.update(dt); GM.companion.ch.update(dt);
@@ -784,5 +842,5 @@ function step(dt, inp) {
   GM.parts.update(sdt);
 }
 GM.ui = { show, hudVisible, lock: lockPointer };
-GM.debug = { loadLevel: (n) => GM.loadLevel(n), startChapter: (n) => startChapter(n), victory: () => victory(), sim(sec, inpF) { GM.simulating = true; const n = Math.round(sec * 60); for (let i = 0; i < n; i++) step(1 / 60, Object.assign({ mx: 0, my: 0, cx: 0, cy: 0 }, inpF ? inpF(i) : {})); GM.simulating = false; }, startPlay, respawnAll, doInteract, interactables, toggleLock, show, banner, get boss() { return boss; } };
+GM.debug = { startPart2: () => startChapter(2, { part: 2 }), loadLevel: (n) => GM.loadLevel(n), startChapter: (n) => startChapter(n), victory: () => victory(), sim(sec, inpF) { GM.simulating = true; const n = Math.round(sec * 60); for (let i = 0; i < n; i++) step(1 / 60, Object.assign({ mx: 0, my: 0, cx: 0, cy: 0 }, inpF ? inpF(i) : {})); GM.simulating = false; }, startPlay, respawnAll, doInteract, interactables, toggleLock, show, banner, get boss() { return boss; } };
 })();

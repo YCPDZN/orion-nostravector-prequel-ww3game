@@ -54,9 +54,55 @@ window.LEVELS = {
     endings: { good: 'London will remember the commander who fought for its people.', neutral: 'A soldier who did his duty — no more, no less.', evil: 'London is free. But the man who freed it is not the man who arrived.' },
   },
 
-  /* ---------------- Chapter II: Dover ---------------- */
-  2: {
+  /* ---------------- Chapter II, Part I: Dover Castle — Orion alone ---------------- */
+  '2a': {
+    loading: 'Climbing to Dover Castle',
+    hero: 'orion', solo: true,
+    spawns: [['trooper', [2, 0, 22]], ['drone', [-4, 0, 34]], ['trooper', [5, 0, 46]], ['trooper', [-3, 0, 74]], ['drone', [6, 0, 82]],
+      ['brute', [0, 0, 90]], ['trooper', [-8, 0, 104]], ['drone', [3, 0, 108]], ['trooper', [8, 0, 113]], ['brute', [-3, 0, 116]]],
+    boss: { duelist: 'talina', pos: [0, 0, 158], seen: 'boss2a',
+      T: { name: 'TALINA ALVAREZ, Traitor of British Command', hp: 1500, dmg: 44, scrap: 2500, s: 1, glow: [2.2, 0.35, 2.8], light: [0.8, 0.2, 1.0] } },
+    cutscene: 'eye',
+    ambience: 'rain',
+    env: { sunDir: [0.72, 0.3, 0.3], sunCol: [1.05, 0.9, 0.78], sky: [0.2, 0.22, 0.26], ground: [0.11, 0.1, 0.095], fogCol: [0.27, 0.29, 0.33], fogDen: 0.013, exposure: 1.05,
+      skyPal: { top: [0.13, 0.15, 0.19], hor: [0.5, 0.47, 0.45], glow: [0.18, 0.07, 0.02], clLo: [0.16, 0.17, 0.19], clHi: [0.44, 0.43, 0.43], stars: 0, moon: 0 } },
+    // Talina speaks English with some Spanish; subtitles only for now
+    voice: { who: 'talina', lang: null, file: null, lines: {
+      intro: [null, 'Commander Mascar. I hoped they\'d send someone I didn\'t have to respect.'],
+      taunts: [
+        [null, 'The Red Sun and the Bear don\'t need Britain. But they wanted me.'],
+        [null, '¡Vamos, niño! Is that all?'],
+        [null, 'Too slow, Commander.'],
+        [null, 'I trained half of Command\'s cadets. Who do you think taught your teachers?'],
+        [null, 'Britain is already dead. You just haven\'t noticed.'],
+      ],
+      phase2: [null, 'Basta de juegos. Enough games.'],
+      kill: [null, 'Lo siento, Orion. You were good. Just not good enough.'],
+      death: [null, 'Bien hecho, Comandante... You really are what they say.'],
+    } },
+    intro() {
+      say('radio', 'Command to Mascar. Hawthorne\'s with the assault force on the beach. Pact spotters in Dover Castle are calling the fleet\'s guns down on them. Clear the clifftop.', 8.5);
+      say('orion', 'Understood. Tell Tom to keep his head down. I\'ll be back for him.', 5);
+      say('radio', 'One more thing, Commander. The castle garrison answers to Talina Alvarez.', 5);
+      say('orion', '...Alvarez. She trained half of Command. She was one of us.', 5);
+    },
+    beacon(i) {
+      if (i === 0) say('orion', 'Beacon\'s lit. Command knows I\'m up here.', 3.5);
+      else say('orion', 'The old Roman lighthouse. Two thousand years it\'s watched the Channel. It can watch one more fight.', 6);
+    },
+    bossIntro() {
+      say('orion', 'Talina Alvarez. You swore the same oath I did.', 4);
+      say('talina', 'And I watched London burn while Command hid underground. The Pact keeps its promises, Orion. Does Britain?', 7);
+    },
+    phase2() { },
+    victory() { return { endIn: 4.4 }; },
+    endings: {},
+  },
+
+  /* ---------------- Chapter II, Part II: Dover Beach — Thomas alone ---------------- */
+  '2b': {
     loading: 'Landing at Dover',
+    hero: 'thomas', solo: true, endingBy: 't', // Thomas's story: the closing line follows his alignment
     spawns: [['trooper', [2, 0, 20]], ['drone', [7, 0, 27]], ['trooper', [-4, 0, 33]], ['trooper', [4, 0, 41]], ['drone', [-3, 0, 47]],
       ['brute', [1, 0, 58]], ['drone', [8, 0, 64]], ['trooper', [-6, 0, 71]], ['trooper', [3, 0, 79]], ['drone', [-1, 0, 85]], ['drone', [8, 0, 88]],
       ['brute', [-2, 0, 105]], ['trooper', [4, 0, 109]], ['trooper', [-8, 0, 113]], ['drone', [1, 0, 116]]],
@@ -84,26 +130,26 @@ window.LEVELS = {
       death: ['Берег… потерян…', 'The shore… is lost…'],
     } },
     intro() {
-      say('radio', 'British Command to Commander Mascar. The Pact holds a beachhead under the cliffs at Dover. The American fleet can\'t land until it\'s gone. Break it.', 8.5);
-      say('thomas', 'The white cliffs, Commander. My gran used to sing about these. Never thought I\'d see them.', 6);
-      say('orion', 'Take a good look, Tom. We\'re taking them back. Light the beacon — Command will want to know we\'ve landed.', 6.5);
+      say('radio', 'Command to Hawthorne. Commander Mascar is being flown out. He\'s alive, Tom — but he\'s out of this fight.', 7);
+      say('thomas', '...What happened up there?', 3);
+      say('radio', 'Alvarez. She got away. The beachhead still has to fall, and you\'re all we\'ve got left on the shingle. It\'s down to you.', 7.5);
+      say('thomas', 'Understood. I won\'t let him down. Beacon first — then the Tidebreaker.', 5.5);
     },
     beacon(i) {
-      if (i === 0) say('thomas', 'Beacon\'s live. They can see it from across the water. If it goes bad down there, we fall back here.', 6);
-      else say('thomas', 'This old pillbox held this beach once before, in the last war. The landing zone\'s just past that ship, Commander.', 6.5);
+      if (i === 0) say('thomas', 'Beacon\'s live. Command can see me from across the water.', 4.5);
+      else say('thomas', 'The old pillbox. It held this beach once before. The landing zone\'s just past that ship.', 5.5);
     },
     bossIntro() {
-      say('orion', 'So that\'s what\'s been holding the beach. Tom — whatever happens, keep it off the water.', 6);
-      say('thomas', 'It\'s built for the surf. Watch the slam, and roll through the shockwave!', 5);
+      say('thomas', 'So you\'re what\'s been holding the beach. The Commander\'s not here. You\'ve got me instead.', 6);
     },
-    phase2() { say('thomas', 'Its reactor\'s spiking — it\'s calling the fleet down on us! Watch for the markers!', 5); },
+    phase2() { say('thomas', 'Its reactor\'s spiking — it\'s calling the fleet down! Keep moving, Tom. Keep moving...', 5); },
     victory() {
-      say('thomas', 'It\'s down! The beachhead\'s broken!', 3.5);
-      say('radio', 'Command to Mascar. We see it from here. The beach is clear — the American fleet is turning for Dover. Well done, both of you.', 8);
-      say('orion', 'Not yet, Tom. Something\'s moving in the wreck.', 4);
-      return { banner: ['TIDEBREAKER DESTROYED', 'THE BEACH IS OURS'], endIn: 17 };
+      say('thomas', 'It\'s down... It\'s down! Command, the beachhead\'s broken!', 4.5);
+      say('radio', 'We see it, Hawthorne. The American fleet is turning for Dover. ...He\'d be proud of you, son.', 7);
+      say('thomas', 'Something\'s moving in the wreck.', 3.5);
+      return { banner: ['TIDEBREAKER DESTROYED', 'THE BEACH IS OURS'], endIn: 16 };
     },
-    endings: { good: 'Somewhere, a boy from that wreck is still alive — and he will remember the British commander who let him go.', neutral: 'The beach is clear and the orders were followed. The fleet can land.', evil: 'Dover is free. Its cliffs will remember a different kind of soldier.' },
+    endings: { good: 'Thomas let him go. Somewhere, a boy from that wreck is alive because of him.', neutral: 'Thomas followed his orders to the letter. The beach is clear, and the fleet can land.', evil: 'The beach is clear. But Thomas Hawthorne came back from Dover colder than he went.' },
   },
 };
 })();

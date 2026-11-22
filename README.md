@@ -41,7 +41,11 @@ The title screen is a black stage where Orion and Thomas stand posed according t
 ## Chapters
 The game is split into chapters, each a self-contained mission. Pick one from **CHAPTERS** on the title screen.
 - **Chapter I — The Siege of New London** *(New London, November 2090)*: fight through the ruined city, light the signal beacons and destroy the Iron Warden.
-- **Chapter II — Ashes of Dover** *(Dover, December 2090)*: fight north along the shingle beneath the white cliffs, past beached Pact landing craft, Czech hedgehogs and WW2 pillboxes, to break the Pact beachhead and destroy the **Tidebreaker**, an amphibious assault frame that speaks Russian (browser text-to-speech, English subtitles). Its pilot survives, and Orion must decide what to do with him (The Pilot).
+- **Chapter II — Ashes of Dover** *(Dover, December 2090)*, in two parts, whatever your alignment:
+  - **Part I — The Traitor** *(Dover Castle)*: you play **Orion alone**. Climb the cliff road under the castle walls, through the gatehouse and the outer bailey (Roman lighthouse, Saxon church, Pact artillery), to the inner bailey and a sword duel with **Talina Alvarez**, a Seville-born British Command officer who defected to the Pact. She parries, ripostes and rolls clear of telegraphed attacks; at half strength she gets faster and finishes combos with an unblockable lunge. Beaten, she drops to one knee, and takes Orion's left eye (the screen cuts to black: nothing graphic is shown). From then on Orion wears an eyepatch: in later chapters, on the main menu and in the codex (Chapter I replays keep his original face).
+  - **Part II — The Apprentice** *(Dover Beach)*: you play **Thomas alone**; Orion does not appear. Fight north along the shingle beneath the white cliffs, past beached Pact landing craft, Czech hedgehogs and WW2 pillboxes, and destroy the **Tidebreaker**, an amphibious assault frame that speaks Russian (browser text-to-speech, English subtitles). Its pilot survives, and **Thomas** decides what to do with him (The Pilot): this moves Thomas's alignment fully and Orion's by half.
+  - Playing as Thomas: **attack** fires an auto-aimed 3-round burst at your lock-on or whoever is nearest your aim, **heavy** is a rifle-butt strike, and **block** aims down the sights (slower, steadier, harder-hitting shots). Roll and stims work as for Orion.
+  - Once you have reached Part II, **CHAPTERS** offers a button to start it directly.
 - **Chapter III — Iron Tide** *(Normandy, February 2091)*: coming soon.
 - **Chapter IV — Winter of the Bear** *(Kaliningrad, March 2091)*: coming soon.
 - **Chapter V — Under One Banner** *(Harbin, summer 2091)*: coming soon.
@@ -88,8 +92,10 @@ index.html            the game
 rig-viewer.html       preview every animation on both rigged characters
 js/engine.js          WebGL2 renderer (skinning, PBR, shadows, bloom, particles)
 js/world.js           New London level: street, overpass, fog gate, cathedral arena
-js/world_dover.js     Dover level: white cliffs, shingle beach, the Channel, landing ships, landing zone
-js/levels.js          per-chapter enemies, boss, voice lines, sky and weather
+js/world_castle.js    Dover Castle level (Chapter II, Part I): cliff road, gatehouse, baileys, Great Tower
+js/world_dover.js     Dover beach level (Chapter II, Part II): white cliffs, shingle, the Channel, landing ships
+js/cine.js            in-engine cutscenes (Talina and Orion's eye)
+js/levels.js          per-level enemies, boss, playable hero, voice lines, sky and weather
 js/actors.js          Orion, Thomas, enemies, boss, weapons
 js/game.js            input (keyboard, touch, gamepad), camera, HUD, saves, story
 js/audio.js           procedural sound effects, ambience and music
@@ -106,7 +112,7 @@ tools/*.py            the rigging pipeline used to build them
 ```
 
 ## The rigged models
-`models/OrionMascar_rigged.glb` and `models/ThomasHawthorne_rigged.glb` are standard skinned glTF 2.0 files that import into Unity, Blender, Godot or Unreal.
+`models/OrionMascar_rigged.glb`, `models/OrionEyepatch_rigged.glb`, `models/ThomasHawthorne_rigged.glb` and `models/TalinaAlvarez_rigged.glb` are standard skinned glTF 2.0 files that import into Unity, Blender, Godot or Unreal.
 - **Skeleton:** 21 bones (Hips, Spine, Chest, Neck, Head, Shoulder/UpperArm/ForeArm/Hand ×2, UpLeg/Leg/Foot/Toe ×2).
 - **Scale:** real-world metres, about 1.82 m tall.
 - **Mesh:** optimised for mobile from about 1.9M to about 50k triangles, with the original 1024² colour, normal and metal/roughness textures kept.

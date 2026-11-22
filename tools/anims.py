@@ -224,6 +224,28 @@ def rifle_melee():
     return keyed([(0, base), (0.2, wind), (0.32, hitp, 'in'), (0.7, base)], 0.7)
 
 
+def kneel():
+    """defeated: drops to one knee, head bowed, sword low"""
+    base = merge(legs_stance(), SWORD_ARMS)
+    k = merge(base, P(Spine=(15, 0, 0), Chest=(12, 0, 0), Neck=(10, 0, 0), Head=(22, 0, 0),
+                      L_UpLeg=(-82, 0, 6), L_Leg=(86, 0, 0), L_Foot=(-4, 0, 0),
+                      R_UpLeg=(8, 0, -6), R_Leg=(100, 0, 0), R_Foot=(35, 0, 0),
+                      R_UpperArm=(-15, 0, -22), R_ForeArm=(-35, 0, 0), R_Hand=(10, 0, 0),
+                      L_UpperArm=(-42, 0, 12), L_ForeArm=(-48, 0, 0), hy=-0.46, hz=-0.05))
+    return keyed([(0, base), (0.25, merge(base, P(Spine=(20, 0, 0), hy=-0.12))), (0.7, k, 'out'), (2.0, k)], 2.0)
+
+def strike():
+    """from the kneel: a sudden rising slash"""
+    _, _, _ = None, None, None
+    kf, _, _ = kneel()
+    kn = kf(2.0)
+    wind = merge(kn, P(Chest=(25, 25, 0), R_UpperArm=(35, 0, -35), R_ForeArm=(-60, 0, 0), Head=(5, 0, 0)))
+    rise = merge(legs_stance(), SWORD_ARMS, P(Spine=(-6, -10, 0), Chest=(-12, -20, 0), Head=(-8, 0, 0),
+                      R_UpperArm=(-150, -10, -12), R_ForeArm=(-15, 0, 0), R_Hand=(-20, 0, 0),
+                      L_UpperArm=(-30, 0, 35), L_ForeArm=(-20, 0, 0),
+                      L_UpLeg=(-55, 0, 4), L_Leg=(55, 0, 0), R_UpLeg=(18, 0, -4), R_Leg=(22, 0, 0), hy=-0.14, hz=0.12))
+    return keyed([(0, kn), (0.16, wind, 'out'), (0.3, rise, 'in'), (0.9, rise)], 0.9)
+
 def sword_set():
     return {
         'Idle': idle(SWORD_ARMS),
@@ -241,5 +263,8 @@ def rifle_set():
         'Run': locomotion(LOW_ARMS, 0.66, 40, 75, 14, 0.05, 0, ''),
         'WalkAim': locomotion(AIM_ARMS, 1.15, 18, 30, 3, 0.015, 0, ''),
         'Aim': aim(), 'Shoot': shoot(), 'Attack1': rifle_melee(),
-        'Roll': roll(), 'Hit': hit(), 'Death': death(),
+        'Roll': roll(), 'Hit': hit(), 'Death': death(), 'Heal': heal(),
     }
+
+def duelist_set():
+    d = sword_set(); d['Kneel'] = kneel(); d['Strike'] = strike(); return d
