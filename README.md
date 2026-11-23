@@ -76,6 +76,9 @@ Chapters unlock in order: each one opens once the chapter before it has been com
 
 Alignment carries from one chapter to the next: finishing Chapter I takes Orion's and Thomas's alignment into Dover (use the **NEXT CHAPTER** button on the Chapter Complete screen). Replaying a chapter rewinds the story to the start of that chapter: its dialogue choice and every later one are undone so you can make them again, and alignment is rebuilt from the choices that remain (so a replay never counts a choice twice). Rank, stats and unlocked chapters are kept. This is how you reach all nine endings of Chapter V without starting over. From the title screen, Chapter Select builds on your most recent save; **New Game** starts completely fresh, with Orion and Thomas both back to Neutral.
 
+## Test fight
+Open the game as `index.html?fight=thomas` and the title screen gets a **TEST FIGHT** button that drops you straight into the cathedral plaza against the evil Thomas Hawthorne (playing Orion), with end-game stats; die and you are put straight back in. Nothing is saved unless you choose to.
+
 ## Alignment
 Orion's choices decide who he becomes, and Thomas follows his lead. Both start **Neutral (yellow)** and can end up **Good (blue)** or **Evil (red)**.
 - **One dialogue choice per chapter.** Thomas raises the dilemma, Orion picks his reply (good, neutral or evil), and Thomas answers. Chapter I's replies are fully voiced (voice/ch1_*.mp3).

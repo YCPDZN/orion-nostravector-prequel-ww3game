@@ -369,8 +369,29 @@ function refreshSettings() {
   $('sTouch').textContent = GM.settings.touch.toUpperCase(); $('touch').classList.toggle('hidden', !(touchOn() && GM.state === 'play'));
 }
 function openSettings() { refreshSettings(); show('settings'); }
+/* ---------------- test fight: index.html?fight=thomas ----------------
+   A title-screen button drops you straight into the cathedral plaza against the evil Thomas Hawthorne (as Orion, on the
+   Good Orion / Evil Thomas route) with end-game stats; dying puts you straight back in. Nothing is saved unless you choose to save. */
+const FIGHTS = { thomas: ['Evil Thomas Hawthorne (as Orion)', 60, -60, 2] };
+const fightKey = (() => { try { const k = new URLSearchParams(location.search).get('fight'); return k && FIGHTS[k.toLowerCase()] ? k.toLowerCase() : null; } catch (e) { return null; } })();
+function enterArena() {
+  for (const e of GM.enemies) if (!e.boss) { e.alive = false; e.state = 'dead'; (e.root || e.node).visible = false; }
+  GM.player.pos = [0, 0, W.gate.z - 2]; GM.player.yaw = 0; GM.cam.yaw = 0; doInteract({ type: 'gate' });
+}
+GM.testFight = function (key) {
+  const f = FIGHTS[key]; if (!f) return;
+  AU.init(); AU.ui();
+  GM.save = Object.assign(clone(NEW_SAVE), { started: true, chapter: 5, part: f[3], talina: 'fled', talina3: 'saved', child: 'born', family: 'embraced', eye: true, eyeLost: true,
+    align: { o: f[1], t: f[2] }, alignAt: { 5: { o: f[1], t: f[2] } }, vig: 7, end: 6, str: 7, rank: 21, maxStims: 8, done: { 1: {}, 2: {}, 3: {}, 4: {} }, reached: { '5b': 1 } });
+  GM.save.seen.alert_trooper = GM.save.seen.alert_drone = GM.save.seen.alert_brute = 1;
+  GM.testing = key; GM.chapterEndT = 0;
+  GM.loadLevel(levelId(GM.save)); GM.save.seen[introKey(LV.id)] = 1; respawnAll(); startPlay(); enterArena();
+  banner('TEST FIGHT', f[0].toUpperCase(), 'gold', 3);
+};
 function showTitle() {
   GM.state = 'title'; show('title'); hudVisible(false);
+  if (fightKey && !$('bTest')) { const b = document.createElement('button'); b.className = 'btn'; b.id = 'bTest'; b.textContent = 'TEST FIGHT: ' + FIGHTS[fightKey][0].toUpperCase();
+    b.onclick = () => GM.testFight(fightKey); $('bNew').parentNode.insertBefore(b, $('bNew')); }
   const sl = readSlots(); const latest = sl.filter(Boolean).sort((a, b) => b.when - a.when)[0];
   $('bContinue').style.display = latest ? '' : 'none'; $('bLoad').style.display = latest ? '' : 'none';
   if (latest) $('bContinue').textContent = 'CONTINUE — CHAPTER ' + chapterDef(latest.save.chapter).numeral;
@@ -773,7 +794,7 @@ GM.onPlayerDeath = () => {
 function updateDeath(dt) {
   GM.deathT += dt;
   if (!GM.deathBanner && GM.deathT > 1.3) { GM.deathBanner = true; banner('K.I.A.', 'KILLED IN ACTION', 'red', 4); }
-  if (GM.deathT > 5.8) { respawnAll(); GM.state = 'play'; hudVisible(true); OE.R.desat = 0; lockPointer(); }
+  if (GM.deathT > 5.8) { respawnAll(); GM.state = 'play'; hudVisible(true); OE.R.desat = 0; lockPointer(); if (GM.testing) { GM.save.echo = null; enterArena(); } } // test fight: straight back in
 }
 function victory() {
   GM.save.bossDead = true; GM.persist(); AU.bossMusic(false); AU.victory();
