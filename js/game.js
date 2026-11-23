@@ -369,11 +369,11 @@ function refreshSettings() {
   $('sTouch').textContent = GM.settings.touch.toUpperCase(); $('touch').classList.toggle('hidden', !(touchOn() && GM.state === 'play'));
 }
 function openSettings() { refreshSettings(); show('settings'); }
-/* ---------------- test fight: index.html?fight=thomas ----------------
-   A title-screen button drops you straight into the cathedral plaza against the evil Thomas Hawthorne (as Orion, on the
+/* ---------------- test fight ----------------
+   A title-screen button (always there) drops you straight into the cathedral plaza against the evil Thomas Hawthorne (as Orion, on the
    Good Orion / Evil Thomas route) with end-game stats; dying puts you straight back in. Nothing is saved unless you choose to save. */
 const FIGHTS = { thomas: ['Evil Thomas Hawthorne (as Orion)', 60, -60, 2] };
-const fightKey = (() => { try { const k = new URLSearchParams(location.search).get('fight'); return k && FIGHTS[k.toLowerCase()] ? k.toLowerCase() : null; } catch (e) { return null; } })();
+const fightKey = 'thomas'; // always offered on the title screen
 function enterArena() {
   for (const e of GM.enemies) if (!e.boss) { e.alive = false; e.state = 'dead'; (e.root || e.node).visible = false; }
   GM.player.pos = [0, 0, W.gate.z - 2]; GM.player.yaw = 0; GM.cam.yaw = 0; doInteract({ type: 'gate' });
