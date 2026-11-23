@@ -206,7 +206,7 @@ C.update = function (dt) {
 C.finish = function () {
   C.on = false;
   $('hud').classList.remove('cine'); $('cine').classList.add('hidden'); black(0); OE.R.hurt = 0;
-  if (C.name === 'birth') { if (bundle && bundle.parent) bundle.parent.remove(bundle); const L = GM.level; if (L.after) L.after.node.visible = false; if (L.npc) L.npc.ch.node.visible = true; /* ready for a replay */ if (GM.ally) GM.ally.node.visible = true; GM.save.child = 'born'; GM.toPart2(); return; }
+  if (C.name === 'birth') { if (bundle && bundle.parent) bundle.parent.remove(bundle); const L = GM.level; if (L.after) L.after.node.visible = false; if (L.npc) L.npc.ch.node.visible = true; /* ready for a replay */ if (GM.ally) GM.ally.node.visible = true; GM.save.child = 'born'; GM.align.open('family', () => GM.toPart2()); return; }
   if (C.name === 'eye') { GM.save.talina = C.br.fate; GM.boss.node.visible = false; GM.boss.sword.visible = true; GM.toPart2(); }
 };
 })();

@@ -289,7 +289,7 @@ window.LEVELS = {
       ['trooper', [-4, 0, 112]], ['trooper', [3, 0, 116]], ['drone', [0, 0, 118]]],
     boss: { type: 'bear', pos: [0, 0, 162], seen: 'boss4' },
     ally: 'ines', // fights beside Orion if he spared her at Normandy
-    choice: ['rubble', 'garrison'], // the Rubble (if Orion walked past it), then the Garrison once the Bear is down
+    choice: 'rubble', // if Orion walked past the rubble, Thomas asks him once the Bear is down
     ambience: 'snow',
     env: SNOW_NIGHT,
     voice: { who: 'bear', lang: 'ru-RU', file: null, vo: 4, lines: {
@@ -306,7 +306,7 @@ window.LEVELS = {
     ending(S) {
       const t = GM.align.tier('o');
       const city = { good: 'Kaliningrad is free, and Orion still remembers why he fights.', neutral: 'Kaliningrad is free. One more city off the list.', evil: 'Kaliningrad is free, and its people are afraid of the man who freed it.' }[t];
-      const who = S.child === 'born' ? ' Somewhere behind the line, Talina is holding their son, Croxian Mascar.' : S.ines === 'companion' ? ' Inés Alvarez cleaned her blades and said nothing.' : '';
+      const who = S.child === 'born' ? (S.family === 'abandoned' ? ' Talina has taken their son south, to Seville. She has named him Croxian Alvarez.' : S.family === 'command' ? ' Somewhere behind the line, British Command is keeping Talina and their son, Croxian Mascar, safe.' : ' Somewhere behind the line, Talina is holding their son, Croxian Mascar.') : S.ines === 'companion' ? ' Inés Alvarez cleaned her blades and said nothing.' : '';
       return city + who;
     },
   },
@@ -349,7 +349,7 @@ window.LEVELS = {
     get voice() {
       const b = part5().boss;
       if (b === 'orion') return { who: 'orion', lang: null, file: null, vo: 5, lines: { intro: [null, 'You were always the better of us, Tom. That\'s why it has to be you.', 19],
-        death: GM.save.child === 'born' ? [null, '...Look after them, Tom. Croxian... look after him.', 20] : [null, '...Finish it.', 21] } };
+        death: GM.save.child === 'born' ? [null, '...Look after them, Tom. Croxian... look after him.', 20] : [null, '...Finish it.', 21] } }; // after abandoning them, he asks Tom to do what he didn't
       if (b === 'thomas') return { who: 'thomas', lang: null, file: null, vo: 5, lines: { intro: [null, 'You taught me everything, Commander. Even this.', 22],
         // Thomas, drowned in it: ten sadistic lines through the fight
         taunts: [[null, 'You taught me to aim for the heart. I\'m going to miss. On purpose. For a long time.', 26],

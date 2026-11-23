@@ -66,16 +66,15 @@ const CHOICES = [
       { align: 'neutral', say: 'Mark it for the rescue teams. We can\'t stop.', reply: 'Command will send someone... if there\'s anyone left to send.', result: 'Orion sprays a beacon mark on the rubble and moves on.', vo: [17, 18] },
       { align: 'evil', say: 'Take whatever supplies they had and keep moving.', reply: '...Orion. They\'re people.', result: 'Their supplies go into Orion\'s pack. The knocking stops.', reward: { scrap: 150 }, vo: [19, 20] },
     ] },
-  // Chapter IV, after the Bear falls: what Orion does with the garrison that surrenders. Only Orion's alignment moves: it is his order alone.
+  // Chapter IV, Part I, straight after the birth: what Orion does about Talina and their son. Only Orion's alignment moves: it is his alone.
   // (This is what lets a father turn: Orion can spare Talina at Normandy, see Croxian born, and still end the war as Chaotic Evil.)
-  { id: 'garrison', chapter: 4, title: 'The Garrison', auto: true, only: 'o', vox: 4,
-    scene: 'The Bear lies dead across the square. What is left of the Kaliningrad garrison comes out of the House of Soviets with their hands raised: boys, old men, and a colonel carrying a white flag.',
-    thomas: 'Commander, there must be two hundred of them. Command says there\'s no transport for prisoners until the spring. What are your orders?',
+  { id: 'family', chapter: 4, part: 1, title: 'Croxian', auto: true, only: 'o', asker: 'talina', vox: 4, when: () => GM.levelId(GM.save) === '4a',
+    scene: 'The guns have gone quiet at the field hospital. Talina sits against the wall with their son wrapped in an army blanket. She has not taken her eyes off Orion.',
+    thomas: 'His name is Croxian. ...Well, Orion? Are you staying with us, or going back to your war?',
     options: [
-      { align: 'good', say: 'Feed them and get them out of the snow. They surrendered. That still means something.', reply: 'Yes, sir. ...Thank you, sir.', result: 'Orion\'s own rations go to the garrison first. The colonel salutes him, and Orion returns it.' },
-      { align: 'neutral', say: 'Disarm them and hold them in the square. Command can sort out the rest.', reply: 'Understood. I\'ll set a watch.', result: 'The garrison sits in the snow under guard, waiting for Command to remember them.', reward: { scrap: 150 } },
-      { align: 'evil', say: 'We have no room for prisoners. None of them fights again.', get reply() { return GM.save.child === 'born' ? '...Orion. You have a son now.' : '...Orion. They surrendered.'; },
-        result: 'Thomas walks to the far end of the square and does not look back.', reward: { scrap: 300 } },
+      { align: 'good', say: 'Come here. Both of you. I\'m not going anywhere.', reply: '...Then hold him. Carefully, idiota.', result: 'Orion holds his son for the first time. For a long while, nobody says anything.', set: { family: 'embraced' } },
+      { align: 'neutral', say: 'I\'m calling British Command. They\'ll get you both behind the line. It\'s the safest place for him.', reply: 'Command. Always Command. ...Fine. For him.', result: 'Orion radios for an evacuation. Before dawn, a Command truck takes Talina and the baby west.', set: { family: 'command' }, reward: { scrap: 150 } },
+      { align: 'evil', say: 'I can\'t do this. The war needs me more than he does.', reply: 'Then go. He will not carry your name.', result: 'Orion walks out into the snow without looking back. Talina names the boy Croxian Alvarez.', set: { family: 'abandoned' }, reward: { scrap: 300 } },
     ] },
   // Chapter V: the beaten general offers the surrender of his army for his life (Harbin or Moscow routes only)
   { id: 'surrender', chapter: 5, title: 'The Surrender', auto: true, when: () => GM.levelId(GM.save) !== '5l' && GM.heroKey !== 'thomas',

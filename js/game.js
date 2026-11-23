@@ -465,12 +465,12 @@ function startChapter(n, opts = {}) {
   const S0 = opts.fresh ? clone(NEW_SAVE) : baseSave();
   const p2 = opts.part === 2, choices = clone(S0.choices || {}), alignAt = clone(S0.alignAt || {});
   const r5 = n === 5 && CH5.route(S0), inPart2 = () => n !== 5 || (r5.parts[1] && r5.parts[1].place !== 'london'); // Chapter V: the surrender is in whichever part isn't New London
-  for (const c of GM.align.CHOICES) if (c.chapter > n || (c.chapter === n && (!p2 || inPart2()))) delete choices[c.id];
+  for (const c of GM.align.CHOICES) if (c.chapter > n || (c.chapter === n && (!p2 || (c.part !== 1 && inPart2())))) delete choices[c.id]; // c.part 1: made in Part I, kept by a Part II replay
   for (const k of Object.keys(alignAt)) if (+k > n) delete alignAt[k];
   const align = GM.align.fromChoices(choices);
   const story = { // what earlier chapters decided, kept only if the replay starts after it was decided
     talina: n > 2 || (n === 2 && p2) ? S0.talina : undefined, eye: n > 2 || (n === 2 && p2) ? !!S0.eye : false,
-    talina3: n > 3 ? S0.talina3 : undefined, ines: n > 3 ? S0.ines : undefined, child: n > 4 || (n === 4 && p2) ? S0.child : undefined };
+    talina3: n > 3 ? S0.talina3 : undefined, ines: n > 3 ? S0.ines : undefined, child: n > 4 || (n === 4 && p2) ? S0.child : undefined, family: n > 4 || (n === 4 && p2) ? S0.family : undefined };
   const seen = clone(S0.seen || {});
   for (const id of Object.keys(LEVELS)) if (String(id)[0] === String(n)) { delete seen[introKey(isNaN(id) ? id : +id)]; delete seen['talk_' + LEVELS[id].boss.seen]; }
   const keep = Object.assign({ vig: S0.vig, end: S0.end, str: S0.str, rank: S0.rank, maxStims: S0.maxStims, done: S0.done || {}, align, alignAt, choices, seen, reached: S0.reached || {} }, story);

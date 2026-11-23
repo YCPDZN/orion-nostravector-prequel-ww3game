@@ -7,11 +7,14 @@ const CH4_PARTS = [
       'Talina Alvarez never went back to the Pact. In the spring, she told Orion she was carrying his child.',
       'Tonight the siege began, and Talina went into labour at a field hospital that is now cut off. The Pact\'s hunters are already at its gates.'] },
   { numeral: 'II', title: 'The Bear', place: 'House of Soviets',
-    prologue: ['Talina and the child are safe behind the line.', 'Orion goes back to the front. In the heart of the city, the Bear is waiting.'] },
+    prologue: (S) => [S && S.family === 'abandoned' ? 'Orion did not stay. Talina and the child are on their way south, alone.' : S && S.family === 'command' ? 'British Command has taken Talina and the child behind the line.' : 'Talina and the child are safe behind the line.',
+      'Orion goes back to the front. In the heart of the city, the Bear is waiting.'] },
 ];
 /* ---------------- Chapter V: where the war ends ----------------
    Every choice in the game moves Orion's and Thomas's alignment; after Kaliningrad the two tiers decide the final battle.
    9 outcomes. Each part: where it is fought, the boss, and who you play. */
+/* Orion and Talina's son: if Orion abandons them the night he is born, he carries his mother's name */
+window.CROXIAN = (S) => (S && S.family === 'abandoned' ? 'Croxian Alvarez' : 'Croxian Mascar');
 const CH5_PLACE = { harbin: 'Harbin', moscow: 'Moscow', london: 'New London' };
 const CH5_BOSS = { yi: 'Marshal Yi Liang', orlov: 'General Vladimir Orlov', thomas: 'Thomas Hawthorne', orion: 'Orion Mascar', josiah: 'Josiah Williams I' };
 const P5 = (place, boss, hero) => ({ place, boss, hero });
@@ -39,7 +42,7 @@ const REC = {
   pilot: { good: 'let a Pact pilot go free on Dover beach', neutral: 'took the pilot on Dover beach prisoner', evil: 'left the pilot on Dover beach to the drones' },
   talina3: { good: 'saved her at Normandy', neutral: 'gave her to British Command at Normandy', evil: 'killed her in the church square at Normandy' },
   ines: { good: 'spared her sister Inés at Normandy', neutral: 'sent her sister Inés to British Command', evil: 'killed her sister Inés at Normandy' },
-  garrison: { good: 'fed the Kaliningrad garrison that surrendered to him', neutral: 'left the Kaliningrad garrison under guard in the snow', evil: 'left none of the Kaliningrad garrison alive' },
+  family: { good: 'stayed with Talina the night his son was born', neutral: 'handed Talina and his newborn son to British Command', evil: 'walked away from Talina and his newborn son' },
   rubble: { good: 'dug a mother and her daughter out of the rubble of Kaliningrad', neutral: 'left a mother and her daughter under the rubble for the rescue teams', evil: 'took the supplies of a mother and her daughter trapped in the rubble' },
 };
 const list = (a) => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + (a.length > 2 ? ',' : '') + ' and ' + a[a.length - 1];
@@ -101,8 +104,10 @@ window.CH5.ending = function (S) {
   if (LAST5[last.boss]) out.push(LAST5[last.boss][pick || 'neutral']);
   out.push(FINAL5[r.key]);
   const fallen = r.o === 'evil' && r.t !== 'evil'; // Orion was brought down by Thomas
-  if (S.child === 'born') out.push(fallen ? 'Croxian Mascar grew up with his mother in Seville, carrying his father\'s name and none of his war.'
+  if (S.child === 'born') out.push(S.family === 'abandoned' ? 'Croxian Alvarez grew up in Seville with his mother\'s name. When he asked about his father, Talina told him the war had taken him. In every way that mattered, it had.'
+    : fallen ? 'Croxian Mascar grew up with his mother in Seville, carrying his father\'s name and none of his war.'
     : r.key === 'evil/evil' ? 'Croxian Mascar grew up in his father\'s city, the son of the man who ruled it.'
+    : S.family === 'command' ? 'Croxian Mascar grew up in a house British Command chose for him, with his mother\'s temper and his father\'s eyes. His father came home to him in the end.'
     : 'Croxian Mascar grew up in a country at peace, with his mother\'s temper and his father\'s eyes. Both of them.');
   if (S.ines === 'companion' && !fallen) out.push('Inés Alvarez went home to Seville at last. She never forgave Orion, and she never stayed away for long.');
   out.push('The Third World War ended in the spring of 2095. It had lasted fifteen years.');
@@ -113,13 +118,15 @@ window.CH5.ending = function (S) {
 window.CH5.narration = function (S) {
   S = S || {}; const C = S.choices || {}, r = CH5.route(S), out = ['Spring, 2095.',
     'Kaliningrad has fallen. The war that began in 2080 is ending, and how it ends has been decided by two men.'];
-  if (S.child === 'born') out.push('Behind the lines, Talina Alvarez is raising their son, Croxian Mascar, born on the first night of the siege. His father has held him twice.');
+  if (S.child === 'born') out.push(S.family === 'abandoned' ? 'In Seville, Talina Alvarez is raising her son alone. He was born on the first night of the siege, and she named him Croxian Alvarez. His father has never held him.'
+    : S.family === 'command' ? 'Behind the lines, in a house British Command chose, Talina Alvarez is raising their son, Croxian Mascar, born on the first night of the siege. His father writes when he can.'
+    : 'Behind the lines, Talina Alvarez is raising their son, Croxian Mascar, born on the first night of the siege. His father has held him twice.');
   else if (S.ines === 'companion') out.push('Inés Alvarez still marches with them. She has never said a word about her sister.');
   const o = [];
   if (C.core) o.push(REC.core[C.core]);
   if (S.talina === 'executed') o.push('executed Talina Alvarez at Dover'); else if (S.talina === 'fled') o.push('let Talina Alvarez walk away at Dover');
   if (C.talina3) o.push(REC.talina3[C.talina3]); if (C.ines) o.push(REC.ines[C.ines]);
-  if (C.rubble) o.push(REC.rubble[C.rubble]); if (C.garrison) o.push(REC.garrison[C.garrison]);
+  if (C.family) o.push(REC.family[C.family]); if (C.rubble) o.push(REC.rubble[C.rubble]);
   if (o.length) out.push('Since the night New London burned, Orion Mascar ' + list(o) + '.');
   if (C.pilot) out.push('Thomas Hawthorne ' + REC.pilot[C.pilot] + ', and followed Orion everywhere else.');
   out.push('The war has made Orion ' + LABEL.o[r.o] + ', and Thomas ' + LABEL.t[r.t] + '.');
