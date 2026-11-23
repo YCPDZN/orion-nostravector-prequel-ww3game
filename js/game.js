@@ -80,7 +80,7 @@ GM.pickHero = function () {
   const ally = def.ally === 'ines' && GM.save.ines === 'companion';
   if (ally && !GM.ally) { const prev = OE.scene; OE.scene = new OE.Node(); GM.ally = new A.SwordAlly(GM.assets.ines, [3.0, 0.3, 1.1]); OE.scene = prev; }
   if (GM.ally) { if (GM.ally.node.parent) GM.ally.node.parent.remove(GM.ally.node); GM.ally.on = ally; GM.ally.light.intensity = 0; if (ally) LV.root.add(GM.ally.node); }
-  document.querySelector('.bars').dataset.who = key === 'thomas' ? 'VITALS // APPR. T. HAWTHORNE' : 'VITALS // CMDR. O. MASCAR';
+  document.querySelector('.bars').dataset.who = key === 'thomas' ? 'VITALS // APPR. THOMAS HAWTHORNE' : 'VITALS // CMDR. ORION MASCAR';
 };
 GM.loadLevel = function (id) {
   if (!LEVELS[id]) id = 1;
