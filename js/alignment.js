@@ -122,16 +122,27 @@ AL.open = function (id, after) {
   $('chLeave').style.display = c.auto ? 'none' : ''; $('chLeave').textContent = 'STEP AWAY';
   $('choice').classList.remove('hidden');
 };
+/* how one choice moves the two alignments */
+function applyChoice(a, c, o) {
+  const d = o.align === 'good' ? STEP : o.align === 'evil' ? -STEP : 0, cl = (v) => Math.max(-100, Math.min(100, v));
+  if (c.only === 'o') { a.o = cl(a.o + d); if (o.thomasOpposite) a.t = cl(a.t - d); } // Orion's choice; sparing Ines turns Thomas the other way
+  else if (c.chooser === 't') a.t = cl(a.t + d);
+  else { a.o = cl(a.o + d); a.t = cl(a.t + d * THOMAS_SHARE); }
+  return a;
+}
+/* alignment is decided entirely by the choices made: rebuild it from a set of choices, in story order (used when a replay undoes some) */
+AL.fromChoices = function (choices) {
+  const a = { o: 0, t: 0 };
+  for (const c of CHOICES) { const k = choices && choices[c.id]; const o = k && c.options.find((x) => x.align === k); if (o) applyChoice(a, c, o); }
+  return a;
+};
 function choose(i) {
   const c = current, o = c.options[i]; const S = GM.save;
   S.choices = S.choices || {}; S.choices[c.id] = o.align;
-  const d = o.align === 'good' ? STEP : o.align === 'evil' ? -STEP : 0;
   const a = S.align || (S.align = { o: 0, t: 0 });
   const before = [AL.tier('o'), AL.tier('t')];
   if (o.set) Object.assign(S, o.set); // what this choice decided, for later chapters
-  if (c.only === 'o') { a.o = OE.clamp(a.o + d, -100, 100); if (o.thomasOpposite) a.t = OE.clamp(a.t - d, -100, 100); } // Orion's choice; sparing Ines turns Thomas the other way
-  else if (c.chooser === 't') a.t = OE.clamp(a.t + d, -100, 100);
-  else { a.o = OE.clamp(a.o + d, -100, 100); a.t = OE.clamp(a.t + d * THOMAS_SHARE, -100, 100); }
+  applyChoice(a, c, o);
   if (o.reward) {
     if (o.reward.scrap) S.scrap += o.reward.scrap;
     if (o.reward.stims) GM.player.stims += o.reward.stims;

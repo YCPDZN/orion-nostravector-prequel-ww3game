@@ -326,7 +326,7 @@ function setupUI() {
   $('svBack').onclick = () => { AU.ui(); show(savesReturn); };
   $('pNext').onclick = () => { AU.ui(); GM.advance(); }; $('rNext').onclick = () => { AU.ui(); GM.advance(); };
   $('cineSkip').onclick = () => { GM.cine.skip(); };
-  $('bNew').onclick = () => { AU.init(); AU.ui(); GM.save = JSON.parse(JSON.stringify(NEW_SAVE)); startChapter(1); };
+  $('bNew').onclick = () => { AU.init(); AU.ui(); GM.save = clone(NEW_SAVE); startChapter(1, { fresh: true }); }; // a clean start: not built on any save
   $('birth').onclick = (e) => { if (e.target.id === 'birthSkip') GM.birth.skip(); else GM.birth.advance(); };
   $('bChapters').onclick = () => { AU.init(); AU.ui(); openChapters('title'); };
   $('chBack').onclick = () => { AU.ui(); show(chapterReturn); };
@@ -458,13 +458,22 @@ function baseSave() {
 }
 GM.baseSave = baseSave;
 function startChapter(n, opts = {}) {
-  // replaying keeps Orion's rank, stats, alignment and past choices; the mission itself starts over
-  const S0 = baseSave();
-  const align = clone(S0.align || { o: 0, t: 0 }), alignAt = clone(S0.alignAt || {});
-  const choices = clone(S0.choices || {}); // choices already made stay made, so a replay doesn't shift alignment twice
+  /* New Game (opts.fresh) starts from nothing: both neutral, no choices, no progress.
+     Replaying keeps Orion's rank, stats and unlocked chapters, but rewinds the story to the start of that chapter (or part):
+     its choices and every later one are undone so they can be made again, and alignment is rebuilt from the choices that remain,
+     so a replay never counts a choice twice. That way every one of Chapter V's nine endings can be reached. */
+  const S0 = opts.fresh ? clone(NEW_SAVE) : baseSave();
+  const p2 = opts.part === 2, choices = clone(S0.choices || {}), alignAt = clone(S0.alignAt || {});
+  const r5 = n === 5 && CH5.route(S0), inPart2 = () => n !== 5 || (r5.parts[1] && r5.parts[1].place !== 'london'); // Chapter V: the surrender is in whichever part isn't New London
+  for (const c of GM.align.CHOICES) if (c.chapter > n || (c.chapter === n && (!p2 || inPart2()))) delete choices[c.id];
+  for (const k of Object.keys(alignAt)) if (+k > n) delete alignAt[k];
+  const align = GM.align.fromChoices(choices);
+  const story = { // what earlier chapters decided, kept only if the replay starts after it was decided
+    talina: n > 2 || (n === 2 && p2) ? S0.talina : undefined, eye: n > 2 || (n === 2 && p2) ? !!S0.eye : false,
+    talina3: n > 3 ? S0.talina3 : undefined, ines: n > 3 ? S0.ines : undefined, child: n > 4 || (n === 4 && p2) ? S0.child : undefined };
   const seen = clone(S0.seen || {});
   for (const id of Object.keys(LEVELS)) if (String(id)[0] === String(n)) { delete seen[introKey(isNaN(id) ? id : +id)]; delete seen['talk_' + LEVELS[id].boss.seen]; }
-  const keep = { vig: S0.vig, end: S0.end, str: S0.str, rank: S0.rank, maxStims: S0.maxStims, done: S0.done || {}, align, alignAt, choices, seen, eye: !!S0.eye, reached: S0.reached || {}, talina: S0.talina, talina3: S0.talina3, ines: S0.ines, child: S0.child };
+  const keep = Object.assign({ vig: S0.vig, end: S0.end, str: S0.str, rank: S0.rank, maxStims: S0.maxStims, done: S0.done || {}, align, alignAt, choices, seen, reached: S0.reached || {} }, story);
   GM.save = Object.assign(clone(NEW_SAVE), keep, { started: true, chapter: n, part: opts.part || 1 });
   GM.save.stats = { time: 0, deaths: 0, kills: 0 };
   if (opts.part === 2) { GM.save.eyeLost = true; GM.save.eye = true; }
