@@ -39,6 +39,7 @@ const REC = {
   pilot: { good: 'let a Pact pilot go free on Dover beach', neutral: 'took the pilot on Dover beach prisoner', evil: 'left the pilot on Dover beach to the drones' },
   talina3: { good: 'saved her at Normandy', neutral: 'gave her to British Command at Normandy', evil: 'killed her in the church square at Normandy' },
   ines: { good: 'spared her sister Inés at Normandy', neutral: 'sent her sister Inés to British Command', evil: 'killed her sister Inés at Normandy' },
+  garrison: { good: 'fed the Kaliningrad garrison that surrendered to him', neutral: 'left the Kaliningrad garrison under guard in the snow', evil: 'left none of the Kaliningrad garrison alive' },
   rubble: { good: 'dug a mother and her daughter out of the rubble of Kaliningrad', neutral: 'left a mother and her daughter under the rubble for the rescue teams', evil: 'took the supplies of a mother and her daughter trapped in the rubble' },
 };
 const list = (a) => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + (a.length > 2 ? ',' : '') + ' and ' + a[a.length - 1];
@@ -118,7 +119,7 @@ window.CH5.narration = function (S) {
   if (C.core) o.push(REC.core[C.core]);
   if (S.talina === 'executed') o.push('executed Talina Alvarez at Dover'); else if (S.talina === 'fled') o.push('let Talina Alvarez walk away at Dover');
   if (C.talina3) o.push(REC.talina3[C.talina3]); if (C.ines) o.push(REC.ines[C.ines]);
-  if (C.rubble) o.push(REC.rubble[C.rubble]);
+  if (C.rubble) o.push(REC.rubble[C.rubble]); if (C.garrison) o.push(REC.garrison[C.garrison]);
   if (o.length) out.push('Since the night New London burned, Orion Mascar ' + list(o) + '.');
   if (C.pilot) out.push('Thomas Hawthorne ' + REC.pilot[C.pilot] + ', and followed Orion everywhere else.');
   out.push('The war has made Orion ' + LABEL.o[r.o] + ', and Thomas ' + LABEL.t[r.t] + '.');

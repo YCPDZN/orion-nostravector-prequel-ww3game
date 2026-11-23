@@ -89,7 +89,7 @@ Orion's choices decide who he becomes, and Thomas follows his lead. Both start *
 | I — The Siege of New London | The Warden's Core (after the boss falls) |
 | II — Ashes of Dover | The Pilot |
 | III — Iron Tide | The Field Hospital |
-| IV — Winter of the Bear | Survivors in the Rubble |
+| IV — Winter of the Bear | Survivors in the Rubble, then The Garrison (after the Bear; moves only Orion) |
 | V — Under One Banner | The Surrender |
 
 ## Souls-like systems

@@ -497,7 +497,7 @@ GM.canAdvance = () => finishedIn(GM.save) && !!nextChapter();
 GM.advance = function () {
   const S = GM.save, n = nextChapter(); if (!n || !finishedIn(S)) return;
   show(null);
-  if (!(S.done && S.done[S.chapter])) GM.align.open(LV.def.choice, chapterComplete); // never reached the Complete screen: make the choice / record it first
+  if (!(S.done && S.done[S.chapter])) GM.align.openAll(LV.def.choice, chapterComplete); // never reached the Complete screen: make the choice / record it first
   else startChapter(n.id);
 };
 const refreshAdvance = () => { const n = nextChapter(), ok = GM.canAdvance(); for (const id of ['pNext', 'rNext']) { const b = $(id); b.style.display = ok ? '' : 'none'; if (n) b.textContent = `CHAPTER ${n.numeral}: ${n.title.toUpperCase()}`; } };
@@ -893,7 +893,7 @@ function step(dt, inp) {
     if (GM._inMenu) { // back from the menu stage to New London
       GM._inMenu = false; GM.menu.leave(); OE.scene = GM.worldRoot; Object.assign(OE.R, JSON.parse(JSON.stringify(GM.worldEnv)));
     }
-    if (st === 'play') { GM.save.stats.time += dt; if (GM.chapterEndT > 0) { GM.chapterEndT -= dt; if (GM.chapterEndT <= 0) { if (GM.save.chapter === 5 && (GM.save.part || 1) < partsIn(chapterDef(5), GM.save)) GM.toPart2(); else if (LV.def.cutscene) GM.cine.start(LV.def.cutscene); else GM.align.open(LV.def.choice, chapterComplete); } } }
+    if (st === 'play') { GM.save.stats.time += dt; if (GM.chapterEndT > 0) { GM.chapterEndT -= dt; if (GM.chapterEndT <= 0) { if (GM.save.chapter === 5 && (GM.save.part || 1) < partsIn(chapterDef(5), GM.save)) GM.toPart2(); else if (LV.def.cutscene) GM.cine.start(LV.def.cutscene); else GM.align.openAll(LV.def.choice, chapterComplete); } } }
     if (inp.lock) toggleLock();
     const P = GM.player;
     if (P.state === 'rest') P.setState('move', null);

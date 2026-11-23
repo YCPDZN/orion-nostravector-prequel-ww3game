@@ -66,6 +66,17 @@ const CHOICES = [
       { align: 'neutral', say: 'Mark it for the rescue teams. We can\'t stop.', reply: 'Command will send someone... if there\'s anyone left to send.', result: 'Orion sprays a beacon mark on the rubble and moves on.', vo: [17, 18] },
       { align: 'evil', say: 'Take whatever supplies they had and keep moving.', reply: '...Orion. They\'re people.', result: 'Their supplies go into Orion\'s pack. The knocking stops.', reward: { scrap: 150 }, vo: [19, 20] },
     ] },
+  // Chapter IV, after the Bear falls: what Orion does with the garrison that surrenders. Only Orion's alignment moves: it is his order alone.
+  // (This is what lets a father turn: Orion can spare Talina at Normandy, see Croxian born, and still end the war as Chaotic Evil.)
+  { id: 'garrison', chapter: 4, title: 'The Garrison', auto: true, only: 'o', vox: 4,
+    scene: 'The Bear lies dead across the square. What is left of the Kaliningrad garrison comes out of the House of Soviets with their hands raised: boys, old men, and a colonel carrying a white flag.',
+    thomas: 'Commander, there must be two hundred of them. Command says there\'s no transport for prisoners until the spring. What are your orders?',
+    options: [
+      { align: 'good', say: 'Feed them and get them out of the snow. They surrendered. That still means something.', reply: 'Yes, sir. ...Thank you, sir.', result: 'Orion\'s own rations go to the garrison first. The colonel salutes him, and Orion returns it.' },
+      { align: 'neutral', say: 'Disarm them and hold them in the square. Command can sort out the rest.', reply: 'Understood. I\'ll set a watch.', result: 'The garrison sits in the snow under guard, waiting for Command to remember them.', reward: { scrap: 150 } },
+      { align: 'evil', say: 'We have no room for prisoners. None of them fights again.', get reply() { return GM.save.child === 'born' ? '...Orion. You have a son now.' : '...Orion. They surrendered.'; },
+        result: 'Thomas walks to the far end of the square and does not look back.', reward: { scrap: 300 } },
+    ] },
   // Chapter V: the beaten general offers the surrender of his army for his life (Harbin or Moscow routes only)
   { id: 'surrender', chapter: 5, title: 'The Surrender', auto: true, when: () => GM.levelId(GM.save) !== '5l' && GM.heroKey !== 'thomas',
     get scene() { return (GM.boss && GM.boss.T.name.split(',')[0] || 'The general') + ' kneels before Orion, offering the surrender of his whole army in exchange for his life.'; },
@@ -85,6 +96,8 @@ const CHOICES = [
     ] },
 ];
 AL.CHOICES = CHOICES;
+/* several choices in a row (Chapter IV ends with the Rubble, if it was passed by, then the Garrison); ones already made are skipped */
+AL.openAll = function (ids, after) { const q = [].concat(ids || []); const next = () => q.length ? AL.open(q.shift(), next) : after && after(); next(); };
 const ASKER = { pilot: 'Pact Pilot', talina: 'Talina', ines: 'Inés', yi: 'Yi Liang', orlov: 'Orlov' };
 AL.forChapter = (n) => { try { return CHOICES.find((c) => c.chapter === n && (!c.when || c.when())) || CHOICES.find((c) => c.chapter === n); } catch (e) { return CHOICES.find((c) => c.chapter === n); } };
 const done = (id) => !!(GM.save.choices && GM.save.choices[id]);

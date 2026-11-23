@@ -289,7 +289,7 @@ window.LEVELS = {
       ['trooper', [-4, 0, 112]], ['trooper', [3, 0, 116]], ['drone', [0, 0, 118]]],
     boss: { type: 'bear', pos: [0, 0, 162], seen: 'boss4' },
     ally: 'ines', // fights beside Orion if he spared her at Normandy
-    choice: 'rubble',
+    choice: ['rubble', 'garrison'], // the Rubble (if Orion walked past it), then the Garrison once the Bear is down
     ambience: 'snow',
     env: SNOW_NIGHT,
     voice: { who: 'bear', lang: 'ru-RU', file: null, vo: 4, lines: {
