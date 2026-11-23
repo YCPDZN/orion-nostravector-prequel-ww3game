@@ -57,6 +57,26 @@ A.rifleRig = function (ch, s, out) {
   return out;
 };
 
+/* a copy of `asset` that plays `donor`'s clips under these names. All rigs share the same bone list and an identity rest pose,
+   so rotation tracks transfer as they are; only the Hips translation track is shifted to the receiving body's hip height. */
+A.borrowClips = function (asset, donor, names) {
+  const clips = Object.assign({}, asset.clips), bi = (a, n) => a.bones.findIndex((b) => b.name === n);
+  const hD = donor.bones[bi(donor, 'Hips')].t, hA = asset.bones[bi(asset, 'Hips')].t;
+  for (const n of names) {
+    const c = donor.clips[n]; if (!c) continue;
+    const out = { name: c.name, loop: c.loop, dur: c.dur, rot: {}, tr: {} };
+    for (const k in c.rot) { const j = bi(asset, donor.bones[k].name); if (j >= 0) out.rot[j] = c.rot[k]; }
+    for (const k in c.tr) {
+      const name = donor.bones[k].name, j = bi(asset, name); if (j < 0) continue;
+      const tr = c.tr[k]; if (name !== 'Hips') { out.tr[j] = tr; continue; }
+      const vals = Float32Array.from(tr.vals); for (let i = 0; i < vals.length; i += 3) for (let q = 0; q < 3; q++) vals[i + q] += hA[q] - hD[q];
+      out.tr[j] = { times: tr.times, vals, dt: tr.dt };
+    }
+    clips[n] = out;
+  }
+  return Object.assign({}, asset, { clips });
+};
+
 /* muzzle flash, tracer, casing and impact for one rifle round */
 A.rifleFx = function (rifleNode, muzzle, tp, hit, listener) {
   const W_ = rifleNode.world; const m = M4.point([0, 0, 0], W_, [0, 0.04, 0.74]);
@@ -354,13 +374,15 @@ A.Duelist = class {
     this.spinA = 0;
   }
   hitY() { return 1.15; }
-  get spd() { return this.phase2 ? 1.22 : 1; }
+  /* T.elite (Chapter V's evil Orion and evil Thomas, the hardest fights in the game): faster, reads and parries more,
+     barely pauses between combos, harder to stagger, and hits harder once wounded */
+  get spd() { return this.T.elite ? (this.phase2 ? 1.38 : 1.14) : this.phase2 ? 1.22 : 1; }
   set(s, clip, fade = 0.1, speed = 1) { this.state = s; this.t = 0; if (clip) this.ch.play(clip, fade, speed, true); }
   damage(amount, fromPos, opts = {}) {
     if (!this.alive || !this.active || this.iframe || this.state === 'defeated') return false;
     const ay = yawTo(this.pos, fromPos), facing = Math.abs(OE.angDiff(this.yaw, ay)) < 1.1;
-    const free = this.state === 'chase' || this.state === 'guard';
-    if (facing && (this.state === 'guard' || (free && !opts.heavy && !opts.light && rnd() < (this.phase2 ? 0.42 : 0.3)))) {
+    const free = this.state === 'chase' || this.state === 'guard', E = this.T.elite;
+    if (facing && (this.state === 'guard' || (free && !opts.heavy && !opts.light && rnd() < (E ? (this.phase2 ? 0.55 : 0.42) : this.phase2 ? 0.42 : 0.3)))) {
       // parried
       if (this.state !== 'guard') this.set('guard', 'Block', 0.06); this.guardT = 0.45; this.riposte = rnd() < 0.6;
       GM.fx.sparks([this.pos[0] + Math.sin(ay) * 0.5, 1.3, this.pos[2] + Math.cos(ay) * 0.5], [Math.sin(ay), 0, Math.cos(ay)], 22, [2.6, 1.2, 3.2]);
@@ -369,7 +391,7 @@ A.Duelist = class {
     this.hp -= amount; this.showBar = 3; GM.fx.blood([this.pos[0], 1.3, this.pos[2]]);
     this.poiseDmg += amount;
     if (!this.phase2 && this.hp < this.maxHp * 0.5) { this.phase2 = true; this.set('taunt', 'Block', 0.1); GM.onBossPhase2(this); this.poiseDmg = 0; }
-    else if (this.poiseDmg > (opts.heavy ? 60 : 95) && this.state !== 'attack') { this.poiseDmg = 0; this.knockYaw = ay + Math.PI; this.set('hit', 'Hit', 0.05); }
+    else if (this.poiseDmg > (opts.heavy ? 60 : 95) * (E ? 1.5 : 1) && this.state !== 'attack') { this.poiseDmg = 0; this.knockYaw = ay + Math.PI; this.set('hit', 'Hit', 0.05); }
     if (this.hp <= 0) { this.hp = 0; this.defeat(); }
     return true;
   }
@@ -379,6 +401,10 @@ A.Duelist = class {
   startCombo() {
     if (this.T.spin && rnd() < (this.phase2 ? 0.5 : 0.3)) { this.startSpin(); return; }
     const r = rnd(); const p2 = this.phase2;
+    if (this.T.elite) { // longer strings, and a heavy finisher whenever wounded
+      this.combo = r < 0.3 ? ['Attack1', 'Attack2', 'Attack1'] : r < 0.6 ? ['Attack1', 'Attack2', 'Heavy'] : r < 0.8 ? ['Attack2', 'Attack1', p2 ? 'Heavy' : 'Attack2'] : p2 ? ['Attack2', 'Heavy'] : ['Heavy'];
+      if (rnd() < 0.3) GM.wardenTaunt(); return this.nextSwing();
+    }
     this.combo = r < 0.35 ? ['Attack1', 'Attack2'] : r < 0.6 ? ['Attack1', 'Attack2', p2 ? 'Heavy' : 'Attack1'] : r < 0.8 ? ['Attack2', 'Attack1'] : ['Heavy'];
     if (rnd() < 0.3) GM.wardenTaunt();
     this.nextSwing();
@@ -386,7 +412,7 @@ A.Duelist = class {
   startSpin() { // both blades out, two full turns, cutting anything close
     this.set('spin', 'SpinPose', 0.1); this.spinA = 0; this.spinHits = 0; this.lit = 1; if (rnd() < 0.5) GM.wardenTaunt();
   }
-  nextSwing() { const c = this.combo.shift(); if (!c) { this.set('chase', null); this.cd = R(0.7, 1.5) / this.spd; return; } this.atk = DUEL[c]; this.hitDone = false; this.set('attack', c, 0.08, this.spd); }
+  nextSwing() { const c = this.combo.shift(); if (!c) { this.set('chase', null); this.cd = (this.T.elite ? R(0.45, 1.0) : R(0.7, 1.5)) / this.spd; return; } this.atk = DUEL[c]; this.hitDone = false; this.set('attack', c, 0.08, this.spd); }
   update(dt) {
     this.t += dt; this.showBar -= dt;
     const P = GM.player, S = this.state;
@@ -401,7 +427,7 @@ A.Duelist = class {
     else if (S === 'chase') {
       face(8);
       // dodge a telegraphed swing
-      if (P.state === 'attack' && d < 3.2 && P.ch.t < 0.25 && rnd() < dt * (this.phase2 ? 9 : 6)) {
+      if (P.state === 'attack' && d < 3.2 && P.ch.t < 0.25 && rnd() < dt * (this.phase2 ? 9 : 6) * (this.T.elite ? 1.3 : 1)) {
         this.rollDir = ty + Math.PI + (rnd() < 0.5 ? 1 : -1) * R(0.6, 1.3); this.set('roll', 'Roll', 0.06, 1.05); return sync();
       }
       if (d > 2.6) {
@@ -422,7 +448,7 @@ A.Duelist = class {
       if (t > a.lunge[0] && t < a.lunge[1] && d > 1.3) { const v = a.lunge[2] / (a.lunge[1] - a.lunge[0]); this.pos[0] += Math.sin(this.yaw) * v * dt; this.pos[2] += Math.cos(this.yaw) * v * dt; }
       this.lit = t > a.hit[0] - 0.1 && t < a.hit[1] + 0.05 ? 1 : 0;
       if (!this.hitDone && t >= a.hit[0] && t <= a.hit[1] && d < a.range + P.radius && Math.abs(OE.angDiff(this.yaw, ty)) < a.arc / 2 * Math.PI / 180) {
-        this.hitDone = true; P.damage(this.T.dmg * a.dmg * (this.phase2 ? 1.1 : 1), this.pos, { boss: true, unblockable: a.unblockable });
+        this.hitDone = true; P.damage(this.T.dmg * a.dmg * (this.phase2 ? (this.T.elite ? 1.2 : 1.1) : 1), this.pos, { boss: true, unblockable: a.unblockable });
       }
       if (this.ch.finished || t > this.ch.cur.dur - 0.04) { this.lit = 0; this.nextSwing(); }
     } else if (S === 'spin') {

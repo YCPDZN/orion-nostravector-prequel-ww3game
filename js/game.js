@@ -144,7 +144,9 @@ GM.boot = async function () {
     const talinaP = await OE.loadGLB(dec(ORION_MODELS.talinaP));
     msg('Loading the Pact\'s leaders', 0.85); await tick();
     const orlov = await OE.loadGLB(dec(ORION_MODELS.orlov)), yi = await OE.loadGLB(dec(ORION_MODELS.yi)), josiah = await OE.loadGLB(dec(ORION_MODELS.josiah));
-    GM.assets = { orion, thomas, orionEye, talina, ines, talinaP, orlov, yi, josiah };
+    // Thomas as a boss on the evil routes fights with a sabre like Orion's: lend his rig Orion's sword clips (same bones, same rest pose)
+    const thomasSword = A.borrowClips(thomas, orionEye, ['Idle', 'Walk', 'Run', 'Attack1', 'Attack2', 'Heavy', 'Block']);
+    GM.assets = { orion, thomas, thomasSword, orionEye, talina, ines, talinaP, orlov, yi, josiah };
     GM.heroes.orion = GM.player = new A.Player(orion); GM.companion = new A.Companion(thomas);
     msg('Building New London', 0.95); await tick();
     GM.loadLevel(1);
